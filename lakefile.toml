@@ -1,0 +1,15 @@
+name = "brendle-hung-formal"
+version = "0.1.0"
+defaultTargets = ["brendle-hung"]
+
+[[lean_lib]]
+name = "BrendleHung"
+
+[[lean_exe]]
+name = "brendle-hung"
+root = "Main"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.29.1"

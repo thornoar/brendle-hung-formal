@@ -1,0 +1,21 @@
+brendle:
+    type: article
+    title: A Metric on $SS^2 times SS^2$ With Positive Sectional Curvature
+    author:
+        - Brendle, Simon
+        - Hung, Pei-Ken
+    date: 2026
+
+cheeger:
+    type: article
+    title: Some examples of manifolds with nonnegative curvature
+    author: Cheeger, J.
+    date: 1973
+
+kleiner:
+    type: article
+    title: On the topology of positively curved 4-manifolds with symmetry
+    author:
+        - Hsiang, W.-Y.
+        - Kleiner, B.
+    date: 1989
