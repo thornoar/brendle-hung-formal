@@ -1,12 +1,12 @@
 name = "brendle-hung-formal"
 version = "0.1.0"
-defaultTargets = ["brendle-hung"]
+defaultTargets = ["brendle-hung-formal"]
 
 [[lean_lib]]
-name = "BrendleHung"
+name = "BrendleHungFormal"
 
 [[lean_exe]]
-name = "brendle-hung"
+name = "brendle-hung-formal"
 root = "Main"
 
 [[require]]
