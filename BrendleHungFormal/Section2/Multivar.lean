@@ -27,29 +27,39 @@ notation:1024 "ℝ" "^" d:1024 => Vector d
 noncomputable def norm {d : ℕ} (x : ℝ^d) : ℝ
 := √(∑ i : Fin d, x i ^ 2)
 
-/-- The open ball `B_r^d` in coordinate space. -/
-def openBall (d : ℕ) (r : ℝ) : Set (ℝ^d) :=
-  {x | norm x < r}
+-- The open ball `B_r^d` in coordinate space.
+def openBall (d : ℕ) (r : ℝ) : Set ℝ^d
+:= {x | norm x < r}
 
-/-- The closed ball `\bar B_r^d` in coordinate space. -/
-def closedBall (d : ℕ) (r : ℝ) : Set (ℝ^d) :=
-  {x | norm x ≤ r}
+-- The closed ball `\bar B_r^d` in coordinate space.
+def closedBall (d : ℕ) (r : ℝ) : Set ℝ^d
+:= {x | norm x ≤ r}
+
+def segment (a : ℝ) : Set ℝ
+:= {x | |x| ≤ a}
+
+-- The cubic truncation used in the Section 2 expansion.
+def taylor3From (f0 f1 f2 f3 : ℝ^m -> ℝ^n -> ℝ) (x : ℝ^m) (w : ℝ^n) (s : ℝ) : ℝ :=
+  f0 x w + s * f1 x w + s ^ 2 * f2 x w + s ^ 3 * f3 x w
+
+-- A Lean-friendly `O(s^4)` hypothesis for `u(x,w,s) = u0 + s u1 + s^2 u2 + s^3 u3 + O(s^4)`.
+def HasExpansion3 (f0 f1 f2 f3 : ℝ^m -> ℝ^n -> ℝ) (f : ℝ^m → ℝ^n → ℝ → ℝ) : Prop :=
+  ∃ ρ : ℝ^m → ℝ^n → ℝ → ℝ,
+    ∀ x w s,
+      f x w s = taylor3From f0 f1 f2 f3 x w s + s ^ 4 * ρ x w s
 
 open Function (uncurry)
-
 notation "Smooth" => ContDiff ℝ (⊤ : ℕ∞)
-
 variable {m n : ℕ}
 
 structure InitialData where
   r0 : ℝ
   s0 : ℝ
+  u : ℝ^m -> ℝ^n -> ℝ -> ℝ
   u0 : ℝ^m -> ℝ^n -> ℝ
   u1 : ℝ^m -> ℝ^n -> ℝ
   u2 : ℝ^m -> ℝ^n -> ℝ
   u3 : ℝ^m -> ℝ^n -> ℝ
-
-variable (udata : InitialData)
 
 structure InitialAssumptions where
   data : InitialData
@@ -75,16 +85,7 @@ structure InitialAssumptions where
   --   x ∈ closedBall m r0 →
   --   Matrix.PosDef (data.u0WW x 0)
 
-/-- The cubic truncation used in the Section 2 expansion. -/
-def uTrunc (x : ℝ^m) (w : ℝ^n) (s : ℝ) : ℝ :=
-  udata.u0 x w + s * udata.u1 x w + s ^ 2 * udata.u2 x w + s ^ 3 * udata.u3 x w
-
-/-- A Lean-friendly `O(s^4)` hypothesis for
-`u(x,w,s) = u0 + s u1 + s^2 u2 + s^3 u3 + O(s^4)`. -/
-def HasTaylorExpansionUpTo3 (u : ℝ^m → ℝ^n → ℝ → ℝ) : Prop :=
-  ∃ ρ : ℝ^m → ℝ^n → ℝ → ℝ,
-    ∀ x w s,
-      u x w s = uTrunc udata x w s + s ^ 4 * ρ x w s
+variable (ua : InitialAssumptions)
 
 noncomputable abbrev Dw (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n) : (ℝ^n →L[ℝ] ℝ) :=
   fderiv ℝ (f x) w
@@ -100,22 +101,22 @@ noncomputable abbrev Dwww (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n)
 def e (i : Fin n) : ℝ^n := Pi.single i 1
 
 noncomputable def u0W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
-:= Dw udata.u0 x w (e i)
+:= Dw ua.data.u0 x w (e i)
 
 noncomputable def u1W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
-:= Dw udata.u1 x w (e i)
+:= Dw ua.data.u1 x w (e i)
 
 noncomputable def u2W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
-:= Dw udata.u2 x w (e i)
+:= Dw ua.data.u2 x w (e i)
 
 noncomputable def u0WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
-:= Matrix.of fun i j => Dww udata.u0 x w (e i) (e j)
+:= Matrix.of fun i j => Dww ua.data.u0 x w (e i) (e j)
 
 noncomputable def u1WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
-:= Matrix.of fun i j => Dww udata.u1 x w (e i) (e j)
+:= Matrix.of fun i j => Dww ua.data.u1 x w (e i) (e j)
 
 noncomputable def u0WWW (x : ℝ^m) (w : ℝ^n) (i j k : Fin n) : ℝ
-:= Dwww udata.u0 x w (e i) (e j) (e k)
+:= Dwww ua.data.u0 x w (e i) (e j) (e k)
 
 
 
