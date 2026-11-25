@@ -2,6 +2,7 @@ import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 /- import Mathlib.Analysis.Asymptotics.Defs -/
 import Mathlib.Analysis.Calculus.ContDiff.Basic
 import Mathlib.Analysis.Calculus.ContDiff.FiniteDimension
+import Mathlib.Analysis.Calculus.LocalExtr.Basic
 /- import Mathlib.Analysis.Calculus.ImplicitProdDomain -/
 /- import Mathlib.Analysis.InnerProductSpace.PiL2 -/
 /- import Mathlib.Analysis.Normed.Module.FiniteDimension -/
@@ -38,19 +39,20 @@ def closedBall (d : ℕ) (r : ℝ) : Set ℝ^d
 def segment (a : ℝ) : Set ℝ
 := {x | |x| ≤ a}
 
--- The cubic truncation used in the Section 2 expansion.
-def taylor3From (f0 f1 f2 f3 : ℝ^m -> ℝ^n -> ℝ) (x : ℝ^m) (w : ℝ^n) (s : ℝ) : ℝ :=
-  f0 x w + s * f1 x w + s ^ 2 * f2 x w + s ^ 3 * f3 x w
-
 -- A Lean-friendly `O(s^4)` hypothesis for `u(x,w,s) = u0 + s u1 + s^2 u2 + s^3 u3 + O(s^4)`.
-def HasExpansion3 (f0 f1 f2 f3 : ℝ^m -> ℝ^n -> ℝ) (f : ℝ^m → ℝ^n → ℝ → ℝ) : Prop :=
+def HasExpansion3 (r : ℝ) (a : ℝ) (f0 f1 f2 f3 : ℝ^m -> ℝ^n -> ℝ) (f : ℝ^m → ℝ^n → ℝ → ℝ) : Prop :=
   ∃ ρ : ℝ^m → ℝ^n → ℝ → ℝ,
     ∀ x w s,
-      f x w s = taylor3From f0 f1 f2 f3 x w s + s ^ 4 * ρ x w s
+      x ∈ closedBall m r ->
+      w ∈ closedBall n r ->
+      s ∈ segment a ->
+      f x w s = f0 x w + s * f1 x w + s ^ 2 * f2 x w + s ^ 3 * f3 x w + s ^ 4 * ρ x w s
 
 open Function (uncurry)
 notation "Smooth" => ContDiff ℝ (⊤ : ℕ∞)
-variable {m n : ℕ}
+
+axiom m : ℕ
+axiom n : ℕ
 
 structure InitialData where
   r0 : ℝ
@@ -81,43 +83,90 @@ structure InitialAssumptions where
   u1AtZero : ∀ x : ℝ^m, data.u1 x 0 = 0
   u2Smooth : Smooth (uncurry data.u0)
   u3Smooth : Smooth (uncurry data.u0)
+  uExp : HasExpansion3 r0 s0 data.u0 data.u1 data.u2 data.u3 data.u
   -- h0PositiveDefinite : ∀ x : ℝ^m,
   --   x ∈ closedBall m r0 →
   --   Matrix.PosDef (data.u0WW x 0)
 
-variable (ua : InitialAssumptions)
+axiom ua : InitialAssumptions
 
-noncomputable abbrev Dw (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n) : (ℝ^n →L[ℝ] ℝ) :=
+abbrev inBounds {m : ℕ} (x : ℝ^m) : Prop
+:= x ∈ closedBall m ua.r0
+
+noncomputable section
+
+abbrev Dw (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n) : (ℝ^n →L[ℝ] ℝ) :=
   fderiv ℝ (f x) w
 
-noncomputable abbrev Dww (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n)
+abbrev Dww (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n)
 : (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ))
 := fderiv ℝ (Dw f x) w
 
-noncomputable abbrev Dwww (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n)
+abbrev Dwww (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n)
 : (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ)))
 := fderiv ℝ (Dww f x) w
 
 def e (i : Fin n) : ℝ^n := Pi.single i 1
 
-noncomputable def u0W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
+def u0W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
 := Dw ua.data.u0 x w (e i)
 
-noncomputable def u1W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
+def u1W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
 := Dw ua.data.u1 x w (e i)
 
-noncomputable def u2W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
+def u2W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
 := Dw ua.data.u2 x w (e i)
 
-noncomputable def u0WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
+def u0WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
 := Matrix.of fun i j => Dww ua.data.u0 x w (e i) (e j)
 
-noncomputable def u1WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
+def u1WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
 := Matrix.of fun i j => Dww ua.data.u1 x w (e i) (e j)
 
-noncomputable def u0WWW (x : ℝ^m) (w : ℝ^n) (i j k : Fin n) : ℝ
+def u0WWW (x : ℝ^m) (w : ℝ^n) (i j k : Fin n) : ℝ
 := Dwww ua.data.u0 x w (e i) (e j) (e k)
 
+end
 
+theorem normCont : forall (d : ℕ), Continuous (norm (d := d))
+:= by
+  intro d
+  let g : ℝ^d → ℝ := fun w => ∑ i : Fin d, w i ^ 2
+  have hgCont : Continuous g := by
+    simpa [g] using
+      (continuous_finset_sum (s := Finset.univ)
+        (f := fun i : Fin d => fun w : ℝ^d => w i ^ 2)
+        (fun i _ => (continuous_apply i).pow 2))
+  simpa [norm, g] using Real.continuous_sqrt.comp hgCont
+
+theorem u0WAtZero :
+  forall x,
+    inBounds x -> u0W x 0 = 0
+:= by
+  intro x hx
+  have hminOn : IsMinOn (ua.data.u0 x) (openBall n ua.r0) (0 : ℝ^n) := by
+    rewrite [isMinOn_iff]
+    intro w hw
+    have hw' : w ∈ closedBall n ua.r0 := by
+      simpa [openBall, closedBall] using (le_of_lt hw)
+    have hquadratic : ua.data.u0 x w ≥ ua.σ * norm w ^ 2 := ua.u0Quadratic x w hx hw'
+    have hzero : ua.data.u0 x 0 = 0 := ua.u0AtZero x hx
+    have hnonneg : 0 ≤ ua.σ * norm w ^ 2 := by
+      nlinarith [ua.hσ, sq_nonneg (norm w)]
+    nlinarith [hzero, hnonneg, hquadratic]
+  have hnormCont : Continuous (norm (d := n)) := normCont n
+  have hOpenBallNhds : openBall n ua.r0 ∈ nhds (0 : ℝ^n) := by
+    refine IsOpen.mem_nhds ?_ ?_
+    · simpa [openBall] using (isOpen_lt hnormCont continuous_const)
+    · simpa [openBall, norm] using ua.hr0
+  have hlocalMin : IsLocalMin (ua.data.u0 x) (0 : ℝ^n) := hminOn.isLocalMin hOpenBallNhds
+  have hfderivZero : fderiv ℝ (ua.data.u0 x) 0 = 0 := IsLocalMin.fderiv_eq_zero hlocalMin
+  ext i
+  simpa [u0W, Dw] using DFunLike.congr_fun hfderivZero (e i)
+
+theorem u0WWAtZero :
+  forall x, x ∈ closedBall n ua.r0 ->
+  Matrix.PosDef (u0WW n 0)
+:= 
 
 end BrendleHung.Section2
