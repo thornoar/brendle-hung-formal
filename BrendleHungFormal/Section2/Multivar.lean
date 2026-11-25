@@ -3,6 +3,7 @@ import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Analysis.Calculus.ContDiff.Basic
 import Mathlib.Analysis.Calculus.ContDiff.FiniteDimension
 import Mathlib.Analysis.Calculus.LocalExtr.Basic
+import Mathlib.Analysis.Calculus.FDeriv.Symmetric
 /- import Mathlib.Analysis.Calculus.ImplicitProdDomain -/
 /- import Mathlib.Analysis.InnerProductSpace.PiL2 -/
 /- import Mathlib.Analysis.Normed.Module.FiniteDimension -/
@@ -49,7 +50,7 @@ def HasExpansion3 (r : ℝ) (a : ℝ) (f0 f1 f2 f3 : ℝ^m -> ℝ^n -> ℝ) (f :
       f x w s = f0 x w + s * f1 x w + s ^ 2 * f2 x w + s ^ 3 * f3 x w + s ^ 4 * ρ x w s
 
 open Function (uncurry)
-notation "Smooth" => ContDiff ℝ (⊤ : ℕ∞)
+notation "Smooth" => ContDiff ℝ (⊤ : WithTop ℕ∞)
 
 axiom m : ℕ
 axiom n : ℕ
@@ -65,10 +66,8 @@ structure InitialData where
 
 structure InitialAssumptions where
   data : InitialData
-  r0 : ℝ
-  hr0 : r0 > 0
-  s0 : ℝ
-  hs0 : s0 > 0
+  hr0 : data.r0 > 0
+  hs0 : data.s0 > 0
   σ : ℝ
   hσ : σ > 0
   u0Smooth : Smooth (uncurry data.u0)
@@ -91,7 +90,7 @@ structure InitialAssumptions where
 axiom ua : InitialAssumptions
 
 abbrev inBounds {m : ℕ} (x : ℝ^m) : Prop
-:= x ∈ closedBall m ua.r0
+:= x ∈ closedBall m ua.data.r0
 
 noncomputable section
 
@@ -144,10 +143,10 @@ theorem u0WAtZero :
     inBounds x -> u0W x 0 = 0
 := by
   intro x hx
-  have hminOn : IsMinOn (ua.data.u0 x) (openBall n ua.r0) (0 : ℝ^n) := by
+  have hminOn : IsMinOn (ua.data.u0 x) (openBall n ua.data.r0) (0 : ℝ^n) := by
     rewrite [isMinOn_iff]
     intro w hw
-    have hw' : w ∈ closedBall n ua.r0 := by
+    have hw' : w ∈ closedBall n ua.data.r0 := by
       simpa [openBall, closedBall] using (le_of_lt hw)
     have hquadratic : ua.data.u0 x w ≥ ua.σ * norm w ^ 2 := ua.u0Quadratic x w hx hw'
     have hzero : ua.data.u0 x 0 = 0 := ua.u0AtZero x hx
@@ -155,7 +154,7 @@ theorem u0WAtZero :
       nlinarith [ua.hσ, sq_nonneg (norm w)]
     nlinarith [hzero, hnonneg, hquadratic]
   have hnormCont : Continuous (norm (d := n)) := normCont n
-  have hOpenBallNhds : openBall n ua.r0 ∈ nhds (0 : ℝ^n) := by
+  have hOpenBallNhds : openBall n ua.data.r0 ∈ nhds (0 : ℝ^n) := by
     refine IsOpen.mem_nhds ?_ ?_
     · simpa [openBall] using (isOpen_lt hnormCont continuous_const)
     · simpa [openBall, norm] using ua.hr0
@@ -164,9 +163,48 @@ theorem u0WAtZero :
   ext i
   simpa [u0W, Dw] using DFunLike.congr_fun hfderivZero (e i)
 
+-- theorem u0WWHermitian :
+--   forall x, x ∈ closedBall m ua.data.r0 ->
+--   Matrix.IsHermitian (u0WW x 0)
+-- := by
+--   intro x hx
+--   let f : ℝ^n → ℝ := fun w => ua.data.u0 x w
+--   have hfSmooth : Smooth f := ua.u0Smooth.comp (contDiff_const.prodMk contDiff_id)
+--   have hf2 : ContDiff ℝ (2 : WithTop ℕ∞) f := by
+--     refine (hfSmooth.of_le (le_of_lt ?_))
+--     simpa using (WithTop.coe_lt_top (2 : ℕ∞))
+--   have hsymm : IsSymmSndFDerivAt ℝ f 0 :=
+--     hf2.contDiffAt (x := 0) |>.isSymmSndFDerivAt
+--       (n := (↑(2 : ℕ∞) : WithTop ℕ∞))
+--       (by rw [minSmoothness_of_isRCLikeNormedField]; exact le_rfl)
+--   rw [Matrix.IsHermitian.ext_iff]
+--   intro i j
+--   simpa [u0WW, Dww, Dw, f] using (hsymm.eq (e i) (e j)).symm
+
 theorem u0WWAtZero :
-  forall x, x ∈ closedBall n ua.r0 ->
-  Matrix.PosDef (u0WW n 0)
-:= 
+  forall x, x ∈ closedBall m ua.data.r0 ->
+  Matrix.PosDef (u0WW x 0)
+:= by
+  intro x hx
+  let f := ua.data.u0 x
+  have : f 0 = 0 := by simpa using ua.u0AtZero x hx
+  refine ⟨?_, ?_⟩
+  -- Hermitian
+  let f : ℝ^n → ℝ := fun w => ua.data.u0 x w
+  have hfSmooth : Smooth f := ua.u0Smooth.comp (contDiff_const.prodMk contDiff_id)
+  have hf2 : ContDiff ℝ (2 : WithTop ℕ∞) f := by
+    refine (hfSmooth.of_le (le_of_lt ?_))
+    simpa using (WithTop.coe_lt_top (2 : ℕ∞))
+  have hsymm : IsSymmSndFDerivAt ℝ f 0 :=
+    hf2.contDiffAt (x := 0) |>.isSymmSndFDerivAt
+      (n := (↑(2 : ℕ∞) : WithTop ℕ∞))
+      (by rw [minSmoothness_of_isRCLikeNormedField]; exact le_rfl)
+  rw [Matrix.IsHermitian.ext_iff]
+  intro i j
+  simpa [u0WW, Dww, Dw, f] using (hsymm.eq (e i) (e j)).symm
+  -- w^T H w > 0
+  intro w wnonzero
+  sorry
+  
 
 end BrendleHung.Section2
