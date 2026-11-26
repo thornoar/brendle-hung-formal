@@ -1,6 +1,7 @@
 import BrendleHungFormal.Section2.Multivar
 
 open Function (uncurry)
+open scoped BigOperators Matrix
 
 section BrendleHung.Section2
 
@@ -22,7 +23,6 @@ structure InitialData where
 axiom data : InitialData
 
 structure InitialAssumptions where
-  -- data : InitialData
   hr0 : data.r0 > 0
   hs0 : data.s0 > 0
   σ : ℝ
@@ -93,6 +93,41 @@ lemma u0WWAtZero (x : ℝ^m) (hx : inBounds x) : Matrix.PosDef (u0WW x 0)
       hsmooth hAtZero hquad)
 
 structure BigUData where
-  U : D (d := m) data.r0 -> segment data.s0 -> ℝ
+  U : ℝ^m -> ℝ -> ℝ
+  barw : ℝ^m -> ℝ^n
+  U2 : ℝ^m -> ℝ
+  U3 : ℝ^m -> ℝ
+
+-- The following four definitions correspond to the objects introduced in
+-- Section 2 of the paper: U(x,s), \bar w(x), U^{(2)}(x), and U^{(3)}(x).
+
+noncomputable def bud : BigUData :=
+  let barw x := (u0WW x 0)⁻¹ *ᵥ (fun α : Fin n => - u1W x 0 (e α))
+  {
+    U x s := ⨅ w : D (d := n) data.r0, data.u x w s
+    barw := barw
+    U2 x := data.u2 x 0 + ((1 : ℝ) / 2) * ∑ α : Fin n, u1W x 0 (e α) * barw x α
+    U3 x :=
+      data.u3 x 0
+       + ∑ α : Fin n, u2W x 0 (e α) * barw x α
+       + ((1 : ℝ) / 2) * ∑ α : Fin n, ∑ β : Fin n,
+           u1WW x 0 α β * barw x α * barw x β
+       + ((1 : ℝ) / 6) * ∑ α : Fin n, ∑ β : Fin n, ∑ γ : Fin n,
+           u0WWW x 0 α β γ * barw x α * barw x β * barw x γ
+  }
+
+-- This is equation (1) in the paper, rewritten as
+-- `∑ β, u0WW x 0 α β * barw x β = - u1W x 0 (e α)`.
+lemma barw_spec (x : ℝ^m) (hx : inBounds x) :
+  u0WW x 0 *ᵥ bud.barw x = fun α : Fin n => - u1W x 0 (e α)
+:= by
+  have hpos : (u0WW x 0).PosDef := u0WWAtZero x hx
+  have hdet : IsUnit (u0WW x 0).det :=
+    (Matrix.isUnit_iff_isUnit_det (u0WW x 0)).mp hpos.isUnit
+  ext α
+  change (u0WW x 0 *ᵥ ((u0WW x 0)⁻¹ *ᵥ (fun β : Fin n => - u1W x 0 (e β))) : Fin n → ℝ) α = _
+  rw [Matrix.mulVec_mulVec, Matrix.mul_nonsing_inv _ hdet, Matrix.one_mulVec]
+
+
 
 end Section2
