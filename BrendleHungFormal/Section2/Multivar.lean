@@ -25,6 +25,9 @@ open scoped BigOperators
 abbrev Vector (d : ℕ) := Fin d → ℝ
 notation:1024 "ℝ" "^" d:1024 => Vector d
 
+instance {d : ℕ} : HMul ℝ ℝ^d ℝ^d where
+  hMul a v i := a * (v i)
+
 -- The Euclidean norm of a coordinate vector.
 noncomputable def norm {d : ℕ} (x : ℝ^d) : ℝ
 := √(∑ i : Fin d, x i ^ 2)
@@ -94,8 +97,9 @@ abbrev inBounds {m : ℕ} (x : ℝ^m) : Prop
 
 noncomputable section
 
-abbrev Dw (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n) : (ℝ^n →L[ℝ] ℝ) :=
-  fderiv ℝ (f x) w
+-- abbrev Dw (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) : ℝ^n -> ℝ^n →L[ℝ] ℝ
+abbrev Dw (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) : ℝ^n -> ℝ^n →L[ℝ] ℝ
+:= fderiv ℝ (f x)
 
 abbrev Dww (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n)
 : (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ))
@@ -107,22 +111,22 @@ abbrev Dwww (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n)
 
 def e (i : Fin n) : ℝ^n := Pi.single i 1
 
-def u0W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
-:= Dw ua.data.u0 x w (e i)
+abbrev u0W (x : ℝ^m) (w : ℝ^n) : ℝ^n -> ℝ
+:= Dw ua.data.u0 x w
 
-def u1W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
-:= Dw ua.data.u1 x w (e i)
+abbrev u1W (x : ℝ^m) (w : ℝ^n) : ℝ^n -> ℝ
+:= Dw ua.data.u1 x w
 
-def u2W (x : ℝ^m) (w : ℝ^n) (i : Fin n) : ℝ
-:= Dw ua.data.u2 x w (e i)
+abbrev u2W (x : ℝ^m) (w : ℝ^n) : ℝ^n -> ℝ
+:= Dw ua.data.u2 x w
 
-def u0WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
+abbrev u0WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
 := Matrix.of fun i j => Dww ua.data.u0 x w (e i) (e j)
 
-def u1WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
+abbrev u1WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
 := Matrix.of fun i j => Dww ua.data.u1 x w (e i) (e j)
 
-def u0WWW (x : ℝ^m) (w : ℝ^n) (i j k : Fin n) : ℝ
+abbrev u0WWW (x : ℝ^m) (w : ℝ^n) (i j k : Fin n) : ℝ
 := Dwww ua.data.u0 x w (e i) (e j) (e k)
 
 end
@@ -139,8 +143,8 @@ theorem normCont : forall (d : ℕ), Continuous (norm (d := d))
   simpa [norm, g] using Real.continuous_sqrt.comp hgCont
 
 theorem u0WAtZero :
-  forall x,
-    inBounds x -> u0W x 0 = 0
+  forall x, inBounds x ->
+  u0W x 0 = 0
 := by
   intro x hx
   have hminOn : IsMinOn (ua.data.u0 x) (openBall n ua.data.r0) (0 : ℝ^n) := by
@@ -161,25 +165,7 @@ theorem u0WAtZero :
   have hlocalMin : IsLocalMin (ua.data.u0 x) (0 : ℝ^n) := hminOn.isLocalMin hOpenBallNhds
   have hfderivZero : fderiv ℝ (ua.data.u0 x) 0 = 0 := IsLocalMin.fderiv_eq_zero hlocalMin
   ext i
-  simpa [u0W, Dw] using DFunLike.congr_fun hfderivZero (e i)
-
--- theorem u0WWHermitian :
---   forall x, x ∈ closedBall m ua.data.r0 ->
---   Matrix.IsHermitian (u0WW x 0)
--- := by
---   intro x hx
---   let f : ℝ^n → ℝ := fun w => ua.data.u0 x w
---   have hfSmooth : Smooth f := ua.u0Smooth.comp (contDiff_const.prodMk contDiff_id)
---   have hf2 : ContDiff ℝ (2 : WithTop ℕ∞) f := by
---     refine (hfSmooth.of_le (le_of_lt ?_))
---     simpa using (WithTop.coe_lt_top (2 : ℕ∞))
---   have hsymm : IsSymmSndFDerivAt ℝ f 0 :=
---     hf2.contDiffAt (x := 0) |>.isSymmSndFDerivAt
---       (n := (↑(2 : ℕ∞) : WithTop ℕ∞))
---       (by rw [minSmoothness_of_isRCLikeNormedField]; exact le_rfl)
---   rw [Matrix.IsHermitian.ext_iff]
---   intro i j
---   simpa [u0WW, Dww, Dw, f] using (hsymm.eq (e i) (e j)).symm
+  simpa [u0W, Dw] using DFunLike.congr_fun hfderivZero i
 
 theorem u0WWAtZero :
   forall x, x ∈ closedBall m ua.data.r0 ->
@@ -187,11 +173,10 @@ theorem u0WWAtZero :
 := by
   intro x hx
   let f := ua.data.u0 x
-  have : f 0 = 0 := by simpa using ua.u0AtZero x hx
+  have hfSmooth : Smooth f := ua.u0Smooth.comp (contDiff_const.prodMk contDiff_id)
+  have fAtZero : f 0 = 0 := by simpa using ua.u0AtZero x hx
   refine ⟨?_, ?_⟩
   -- Hermitian
-  let f : ℝ^n → ℝ := fun w => ua.data.u0 x w
-  have hfSmooth : Smooth f := ua.u0Smooth.comp (contDiff_const.prodMk contDiff_id)
   have hf2 : ContDiff ℝ (2 : WithTop ℕ∞) f := by
     refine (hfSmooth.of_le (le_of_lt ?_))
     simpa using (WithTop.coe_lt_top (2 : ℕ∞))
@@ -204,7 +189,9 @@ theorem u0WWAtZero :
   simpa [u0WW, Dww, Dw, f] using (hsymm.eq (e i) (e j)).symm
   -- w^T H w > 0
   intro w wnonzero
-  sorry
-  
+  have fWAtZero : ∑ i, fderiv ℝ f 0 (e i) = 0 := by
+    have fDAtZero : ⇑(fderiv ℝ f 0) = 0 := by simpa [f, Dw, u0W] using u0WAtZero x hx
+    simp [fDAtZero]
+  let φ (t : ℝ) : ℝ^n := f (t * w)
 
 end BrendleHung.Section2
