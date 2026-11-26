@@ -313,81 +313,8 @@ theorem expansion_of_U :
   ∃ s0 : ℝ, s0 > 0 ∧
   HasExpansion3 (B data.r0) s0 0 0 bud.U2 bud.U3 bud.U
 := by
-  refine ⟨data.s0 / 2, by nlinarith [asm.hs0], ?_⟩
-  unfold HasExpansion3
-  -- Construct a smooth remainder from the implicit-function solution `w*(p,s)`.
-  -- The full Taylor coefficient identification is still pending.
-  refine ⟨fun _ => 0, by simpa using (contDiff_const : Smooth (fun _ : ℝ^m × ℝ => (0 : ℝ))), ?_⟩
-  intro p s hp hs
-  have hplt : norm p < data.r0 := by simpa [B] using hp
-  have hpD : inBounds p := by
-    change norm p ≤ data.r0
-    exact le_of_lt hplt
-  have hpos : Matrix.PosDef (u0WW p 0) := u0WWAtZero p hpD
-  have hdet : IsUnit (u0WW p 0).det :=
-    (Matrix.isUnit_iff_isUnit_det (u0WW p 0)).mp hpos.isUnit
-  -- Implicit function theorem setup for F((p,s), w) = gradW p w s.
-  let F : (ℝ^m × ℝ) × ℝ^n → ℝ^n := fun z => gradW z.1.1 z.2 z.1.2
-  have hF_smooth : Smooth F := gradWParam_smooth
-  have hF0 : F ((p, (0 : ℝ)), (0 : ℝ^n)) = 0 := by
-    simpa [F] using gradW_zero p hpD
-  have hFderiv_w : HasFDerivAt (fun w : ℝ^n => F ((p, (0 : ℝ)), w))
-      ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap) 0 := by
-    simpa [F] using hasFDerivAt_gradW_w p hpD
-  have hInr : fderiv ℝ F ((p, (0 : ℝ)), (0 : ℝ^n)) ∘L
-      ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)
-      = ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap) := by
-    have hcomp :
-        fderiv ℝ (fun w : ℝ^n => F ((p, (0 : ℝ)), w)) 0 =
-          fderiv ℝ F ((p, (0 : ℝ)), (0 : ℝ^n)) ∘L
-            ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n) := by
-      have hlin : HasFDerivAt (fun w : ℝ^n => ((p, (0 : ℝ)), w))
-          (ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)) 0 := by
-        exact HasFDerivAt.prodMk
-          (hasFDerivAt_const ((p, (0 : ℝ)) : ℝ^m × ℝ) (0 : ℝ^n))
-          (hasFDerivAt_id (0 : ℝ^n))
-      have hFdiff : DifferentiableAt ℝ F ((p, (0 : ℝ)), (0 : ℝ^n)) :=
-        (hF_smooth.differentiable (by simp)).differentiableAt
-      simpa [Function.comp] using (hFdiff.hasFDerivAt.comp (0 : ℝ^n) hlin).fderiv
-    rw [← hcomp]
-    exact hFderiv_w.fderiv
-  have hInv : (fderiv ℝ F ((p, (0 : ℝ)), (0 : ℝ^n)) ∘L
-      ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)).IsInvertible := by
-    rw [hInr]
-    let e : (Fin n → ℝ) ≃ₗ[ℝ] (Fin n → ℝ) :=
-      Matrix.toLinearEquiv (Pi.basisFun ℝ (Fin n)) (u0WW p 0) hdet
-    refine ⟨e.toContinuousLinearEquiv, ?_⟩
-    ext x i
-    simp [e, Matrix.toLin_eq_toLin']
-  -- Obtain a local implicit function w*(p,s) with gradW p (w*(p,s)) s = 0.
-  have hIFT := (hF_smooth.contDiffAt :
-      ContDiffAt ℝ (⊤ : WithTop ℕ∞) F ((p, (0 : ℝ)), (0 : ℝ^n)))
-  let wStar : (ℝ^m × ℝ) → ℝ^n := hIFT.implicitFunction (by simp) hInv
-  have hwStar_self : wStar (p, (0 : ℝ)) = 0 := by
-    simpa [wStar] using hIFT.implicitFunction_apply_self (by simp) hInv
-  have hwStar_eq :
-      ∀ᶠ q : ℝ^m × ℝ in 𝓝 (p, (0 : ℝ)),
-        F (q, wStar q) = F ((p, (0 : ℝ)), (0 : ℝ^n)) := by
-    simpa [wStar] using hIFT.eventually_apply_implicitFunction (by simp) hInv
-  have hwStar_iff :
-      ∀ᶠ v : (ℝ^m × ℝ) × ℝ^n in 𝓝 ((p, (0 : ℝ)), (0 : ℝ^n)),
-        F v = F ((p, (0 : ℝ)), (0 : ℝ^n)) ↔ wStar v.1 = v.2 := by
-    simpa [wStar] using hIFT.eventually_apply_eq_iff_implicitFunction (by simp) hInv
-  have hwStar_smooth : ContDiffAt ℝ (⊤ : WithTop ℕ∞) wStar (p, (0 : ℝ)) := by
-    simpa [wStar] using hIFT.contDiffAt_implicitFunction (by simp) hInv
-  have hwStar_cont : ContinuousAt wStar (p, (0 : ℝ)) := hwStar_smooth.continuousAt
-  -- wStar stays in the small ball near 0 for small (q,s).
-  have hwStar_mem : ∀ᶠ q : ℝ^m × ℝ in 𝓝 (p, (0 : ℝ)), wStar q ∈ B (data.r0 / 2) := by
-    have hB0 : B (data.r0 / 2) ∈ 𝓝 (0 : ℝ^n) := by
-      refine IsOpen.mem_nhds ?_ ?_
-      · simpa [B] using (isOpen_lt (normCont n) continuous_const)
-      · simpa [B, BrendleHung.Section2.Multivar.norm] using by linarith [asm.hr0]
-    have hB0' : B (data.r0 / 2) ∈ 𝓝 (wStar (p, (0 : ℝ))) := by simpa [hwStar_self] using hB0
-    simpa using hwStar_cont.preimage_mem_nhds hB0'
-  -- Local minimizer identification: for small (q,s), wStar(q,s) is in D and minimizes u(q,·,s).
-  rcases (asm.uExp : HasExpansion3 (D data.r0 ×ˢ D data.r0) data.s0
-      (↓data.u0) (↓data.u1) (↓data.u2) (↓data.u3) (↓data.u)) with ⟨ρu, hρuSmooth, hρu⟩
-  have hDcompact : IsCompact (D (d := n) data.r0) := by
+  -- Uniform compactness and bounds for choosing s0.
+  have hDcompact_n : IsCompact (D (d := n) data.r0) := by
     have hclosed : IsClosed (D (d := n) data.r0) := by
       simpa [D] using isClosed_le (normCont n) continuous_const
     have hsub : (D (d := n) data.r0) ⊆ Metric.closedBall (0 : ℝ^n) data.r0 := by
@@ -407,31 +334,251 @@ theorem expansion_of_U :
         nlinarith [sq_abs (x i), sq_nonneg (BrendleHung.Section2.Multivar.norm x - |x i|)]
       exact habs.trans hx'
     exact (isCompact_closedBall (0 : ℝ^n) data.r0).of_isClosed_subset hclosed hsub
-  -- wStar(q) lies in D data.r0 near (p,0).
-  have hwStar_memD : ∀ᶠ q : ℝ^m × ℝ in 𝓝 (p, (0 : ℝ)), wStar q ∈ D (d := n) data.r0 := by
-    filter_upwards [hwStar_mem] with q hq
-    have hlt : BrendleHung.Section2.Multivar.norm (wStar q) < data.r0 / 2 := by
-      simpa [B] using hq
-    have hle : BrendleHung.Section2.Multivar.norm (wStar q) ≤ data.r0 := by linarith [asm.hr0]
-    simpa [D] using hle
-  -- wStar(q) is a critical point: gradW = 0.
-  have hwStar_crit : ∀ᶠ q : ℝ^m × ℝ in 𝓝 (p, (0 : ℝ)), gradW q.1 (wStar q) q.2 = 0 := by
-    filter_upwards [hwStar_eq] with q hq
-    have h0 : F ((p, (0 : ℝ)), (0 : ℝ^n)) = 0 := hF0
-    simpa [F, h0] using hq
-  -- Local uniqueness of critical points near 0 from IFT.
-  have hwStar_unique :
-      ∀ᶠ v : (ℝ^m × ℝ) × ℝ^n in 𝓝 ((p, (0 : ℝ)), (0 : ℝ^n)),
-        gradW v.1.1 v.2 v.1.2 = 0 → wStar v.1 = v.2 := by
-    filter_upwards [hwStar_iff] with v hv
-    intro hg
-    have : F v = F ((p, (0 : ℝ)), (0 : ℝ^n)) := by simpa [F, hF0] using hg
-    exact hv.mp this
-  -- TODO (task 1 completion): show that for small s, wStar(p,s) is the global minimizer
-  -- of w ↦ data.u p w s on D data.r0, hence bud.U p s = data.u p (wStar p s) s.
-  -- This uses the quadratic lower bound on u0, bounded perturbation terms from asm.uExp,
-  -- and compactness of D to rule out boundary minimizers.
-  -- Remaining: Taylor coefficients and smooth remainder ρ for HasExpansion3.
-  sorry
+  have hDcompact_m0 : IsCompact (D (d := m) data.r0) := by
+    have hclosed : IsClosed (D (d := m) data.r0) := by
+      simpa [D] using isClosed_le (normCont m) continuous_const
+    have hsub : (D (d := m) data.r0) ⊆ Metric.closedBall (0 : ℝ^m) data.r0 := by
+      intro x hx
+      rw [Metric.mem_closedBall, dist_zero_right]
+      refine pi_norm_le_iff_of_nonneg (by linarith [asm.hr0]) |>.2 ?_
+      intro i
+      have hx' : BrendleHung.Section2.Multivar.norm x ≤ data.r0 := by simpa [D] using hx
+      have hsq : (x i) ^ 2 ≤ BrendleHung.Section2.Multivar.norm x ^ 2 := by
+        rw [BrendleHung.Section2.Multivar.norm_square]
+        exact Finset.single_le_sum (f := fun j => (x j) ^ 2)
+          (fun j _ => sq_nonneg (x j)) (Finset.mem_univ i)
+      have habs : |x i| ≤ BrendleHung.Section2.Multivar.norm x := by
+        have hnonneg : 0 ≤ BrendleHung.Section2.Multivar.norm x := by
+          unfold BrendleHung.Section2.Multivar.norm
+          exact Real.sqrt_nonneg _
+        nlinarith [sq_abs (x i), sq_nonneg (BrendleHung.Section2.Multivar.norm x - |x i|)]
+      exact habs.trans hx'
+    exact (isCompact_closedBall (0 : ℝ^m) data.r0).of_isClosed_subset hclosed hsub
+  have hDomCompact0 : IsCompact (D (d := m) data.r0 ×ˢ D (d := n) data.r0) :=
+    hDcompact_m0.prod hDcompact_n
+  obtain ⟨M1, hM1⟩ := hDomCompact0.exists_bound_of_continuousOn
+    (asm.u1Smooth.continuous.continuousOn : ContinuousOn (↓data.u1) (D (d := m) data.r0 ×ˢ D (d := n) data.r0))
+  obtain ⟨M2, hM2⟩ := hDomCompact0.exists_bound_of_continuousOn
+    (asm.u2Smooth.continuous.continuousOn : ContinuousOn (↓data.u2) (D (d := m) data.r0 ×ˢ D (d := n) data.r0))
+  obtain ⟨M3, hM3⟩ := hDomCompact0.exists_bound_of_continuousOn
+    (asm.u3Smooth.continuous.continuousOn : ContinuousOn (↓data.u3) (D (d := m) data.r0 ×ˢ D (d := n) data.r0))
+  rcases (asm.uExp : HasExpansion3 (D data.r0 ×ˢ D data.r0) data.s0
+      (↓data.u0) (↓data.u1) (↓data.u2) (↓data.u3) (↓data.u)) with ⟨ρu0, hρu0Smooth, hρu0⟩
+  have hseg_compact0 : IsCompact (BrendleHung.Section2.Multivar.segment data.s0) := by
+    have hsub : BrendleHung.Section2.Multivar.segment data.s0 ⊆ Set.Icc (-data.s0) data.s0 := by
+      intro s hs
+      exact abs_le.mp (by simpa [BrendleHung.Section2.Multivar.segment] using hs)
+    have hclosed : IsClosed (BrendleHung.Section2.Multivar.segment data.s0) := by
+      simpa [BrendleHung.Section2.Multivar.segment] using isClosed_le continuous_abs continuous_const
+    exact isCompact_Icc.of_isClosed_subset hclosed hsub
+  have hKcompact0 : IsCompact (((D (d := m) data.r0 ×ˢ D (d := n) data.r0) :
+      Set (ℝ^m × ℝ^n)) ×ˢ BrendleHung.Section2.Multivar.segment data.s0) :=
+    hDomCompact0.prod hseg_compact0
+  obtain ⟨Mρ, hMρ⟩ := hKcompact0.exists_bound_of_continuousOn hρu0Smooth.continuous.continuousOn
+  -- Choose s0 small enough for boundary exclusion.
+  let Bnd : ℝ := |M1| + 2 * |M2| + 2 * |M3| + 2 * |Mρ| + 1
+  have hBnd_pos : 0 < Bnd := by dsimp [Bnd]; linarith [abs_nonneg M1, abs_nonneg M2, abs_nonneg M3, abs_nonneg Mρ]
+  have hboundary : 0 < asm.σ * data.r0 ^ 2 / 4 := by
+    have hσ := asm.hσ; have hr0 := asm.hr0; positivity
+  let s1 : ℝ := min (data.s0 / 2) (min 1 (asm.σ * data.r0 ^ 2 / 4 / Bnd / 2))
+  have hs1_pos : 0 < s1 := by
+    refine lt_min (by linarith [asm.hs0]) (lt_min one_pos ?_)
+    exact div_pos (div_pos hboundary hBnd_pos) (by norm_num)
+  refine ⟨s1, hs1_pos, ?_⟩
+  unfold HasExpansion3
+  -- Algebraic remainder; smoothness and coefficient identification are proved below/in-progress.
+  let ρ : ℝ^m × ℝ → ℝ := fun (q, t) =>
+    if t = 0 then 0 else (bud.U q t - t ^ 2 * bud.U2 q - t ^ 3 * bud.U3 q) / t ^ 4
+  refine ⟨ρ, ?_, ?_⟩
+  · -- Smoothness of the remainder requires Taylor expansion via the implicit-function minimizer.
+    sorry
+  · intro p s hp hs
+    have hplt : norm p < data.r0 := by simpa [B] using hp
+    have hpD : inBounds p := by
+      change norm p ≤ data.r0
+      exact le_of_lt hplt
+    have hpos : Matrix.PosDef (u0WW p 0) := u0WWAtZero p hpD
+    have hdet : IsUnit (u0WW p 0).det :=
+      (Matrix.isUnit_iff_isUnit_det (u0WW p 0)).mp hpos.isUnit
+    -- Implicit function theorem setup for F((p,s), w) = gradW p w s.
+    let F : (ℝ^m × ℝ) × ℝ^n → ℝ^n := fun z => gradW z.1.1 z.2 z.1.2
+    have hF_smooth : Smooth F := gradWParam_smooth
+    have hF0 : F ((p, (0 : ℝ)), (0 : ℝ^n)) = 0 := by
+      simpa [F] using gradW_zero p hpD
+    have hFderiv_w : HasFDerivAt (fun w : ℝ^n => F ((p, (0 : ℝ)), w))
+        ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap) 0 := by
+      simpa [F] using hasFDerivAt_gradW_w p hpD
+    have hInr : fderiv ℝ F ((p, (0 : ℝ)), (0 : ℝ^n)) ∘L
+        ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)
+        = ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap) := by
+      have hcomp :
+          fderiv ℝ (fun w : ℝ^n => F ((p, (0 : ℝ)), w)) 0 =
+            fderiv ℝ F ((p, (0 : ℝ)), (0 : ℝ^n)) ∘L
+              ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n) := by
+        have hlin : HasFDerivAt (fun w : ℝ^n => ((p, (0 : ℝ)), w))
+            (ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)) 0 := by
+          exact HasFDerivAt.prodMk
+            (hasFDerivAt_const ((p, (0 : ℝ)) : ℝ^m × ℝ) (0 : ℝ^n))
+            (hasFDerivAt_id (0 : ℝ^n))
+        have hFdiff : DifferentiableAt ℝ F ((p, (0 : ℝ)), (0 : ℝ^n)) :=
+          (hF_smooth.differentiable (by simp)).differentiableAt
+        simpa [Function.comp] using (hFdiff.hasFDerivAt.comp (0 : ℝ^n) hlin).fderiv
+      rw [← hcomp]
+      exact hFderiv_w.fderiv
+    have hInv : (fderiv ℝ F ((p, (0 : ℝ)), (0 : ℝ^n)) ∘L
+        ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)).IsInvertible := by
+      rw [hInr]
+      let e : (Fin n → ℝ) ≃ₗ[ℝ] (Fin n → ℝ) :=
+        Matrix.toLinearEquiv (Pi.basisFun ℝ (Fin n)) (u0WW p 0) hdet
+      refine ⟨e.toContinuousLinearEquiv, ?_⟩
+      ext x i
+      simp [e, Matrix.toLin_eq_toLin']
+    -- Obtain a local implicit function w*(p,s) with gradW p (w*(p,s)) s = 0.
+    have hIFT := (hF_smooth.contDiffAt :
+        ContDiffAt ℝ (⊤ : WithTop ℕ∞) F ((p, (0 : ℝ)), (0 : ℝ^n)))
+    let wStar : (ℝ^m × ℝ) → ℝ^n := hIFT.implicitFunction (by simp) hInv
+    have hwStar_self : wStar (p, (0 : ℝ)) = 0 := by
+      simpa [wStar] using hIFT.implicitFunction_apply_self (by simp) hInv
+    have hwStar_eq :
+        ∀ᶠ q : ℝ^m × ℝ in 𝓝 (p, (0 : ℝ)),
+          F (q, wStar q) = F ((p, (0 : ℝ)), (0 : ℝ^n)) := by
+      simpa [wStar] using hIFT.eventually_apply_implicitFunction (by simp) hInv
+    have hwStar_iff :
+        ∀ᶠ v : (ℝ^m × ℝ) × ℝ^n in 𝓝 ((p, (0 : ℝ)), (0 : ℝ^n)),
+          F v = F ((p, (0 : ℝ)), (0 : ℝ^n)) ↔ wStar v.1 = v.2 := by
+      simpa [wStar] using hIFT.eventually_apply_eq_iff_implicitFunction (by simp) hInv
+    have hwStar_smooth : ContDiffAt ℝ (⊤ : WithTop ℕ∞) wStar (p, (0 : ℝ)) := by
+      simpa [wStar] using hIFT.contDiffAt_implicitFunction (by simp) hInv
+    have hwStar_cont : ContinuousAt wStar (p, (0 : ℝ)) := hwStar_smooth.continuousAt
+    -- wStar stays in the small ball near 0 for small (q,s).
+    have hwStar_mem : ∀ᶠ q : ℝ^m × ℝ in 𝓝 (p, (0 : ℝ)), wStar q ∈ B (data.r0 / 2) := by
+      have hB0 : B (data.r0 / 2) ∈ 𝓝 (0 : ℝ^n) := by
+        refine IsOpen.mem_nhds ?_ ?_
+        · simpa [B] using (isOpen_lt (normCont n) continuous_const)
+        · simpa [B, BrendleHung.Section2.Multivar.norm] using by linarith [asm.hr0]
+      have hB0' : B (data.r0 / 2) ∈ 𝓝 (wStar (p, (0 : ℝ))) := by simpa [hwStar_self] using hB0
+      simpa using hwStar_cont.preimage_mem_nhds hB0'
+    -- Local minimizer identification: for small (q,s), wStar(q,s) is in D and minimizes u(q,·,s).
+    rcases (asm.uExp : HasExpansion3 (D data.r0 ×ˢ D data.r0) data.s0
+        (↓data.u0) (↓data.u1) (↓data.u2) (↓data.u3) (↓data.u)) with ⟨ρu, hρuSmooth, hρu⟩
+    have hDcompact : IsCompact (D (d := n) data.r0) := by
+      have hclosed : IsClosed (D (d := n) data.r0) := by
+        simpa [D] using isClosed_le (normCont n) continuous_const
+      have hsub : (D (d := n) data.r0) ⊆ Metric.closedBall (0 : ℝ^n) data.r0 := by
+        intro x hx
+        rw [Metric.mem_closedBall, dist_zero_right]
+        refine pi_norm_le_iff_of_nonneg (by linarith [asm.hr0]) |>.2 ?_
+        intro i
+        have hx' : BrendleHung.Section2.Multivar.norm x ≤ data.r0 := by simpa [D] using hx
+        have hsq : (x i) ^ 2 ≤ BrendleHung.Section2.Multivar.norm x ^ 2 := by
+          rw [BrendleHung.Section2.Multivar.norm_square]
+          exact Finset.single_le_sum (f := fun j => (x j) ^ 2)
+            (fun j _ => sq_nonneg (x j)) (Finset.mem_univ i)
+        have habs : |x i| ≤ BrendleHung.Section2.Multivar.norm x := by
+          have hnonneg : 0 ≤ BrendleHung.Section2.Multivar.norm x := by
+            unfold BrendleHung.Section2.Multivar.norm
+            exact Real.sqrt_nonneg _
+          nlinarith [sq_abs (x i), sq_nonneg (BrendleHung.Section2.Multivar.norm x - |x i|)]
+        exact habs.trans hx'
+      exact (isCompact_closedBall (0 : ℝ^n) data.r0).of_isClosed_subset hclosed hsub
+    -- wStar(q) lies in D data.r0 near (p,0).
+    have hwStar_memD : ∀ᶠ q : ℝ^m × ℝ in 𝓝 (p, (0 : ℝ)), wStar q ∈ D (d := n) data.r0 := by
+      filter_upwards [hwStar_mem] with q hq
+      have hlt : BrendleHung.Section2.Multivar.norm (wStar q) < data.r0 / 2 := by
+        simpa [B] using hq
+      have hle : BrendleHung.Section2.Multivar.norm (wStar q) ≤ data.r0 := by linarith [asm.hr0]
+      simpa [D] using hle
+    -- wStar(q) is a critical point: gradW = 0.
+    have hwStar_crit : ∀ᶠ q : ℝ^m × ℝ in 𝓝 (p, (0 : ℝ)), gradW q.1 (wStar q) q.2 = 0 := by
+      filter_upwards [hwStar_eq] with q hq
+      have h0 : F ((p, (0 : ℝ)), (0 : ℝ^n)) = 0 := hF0
+      simpa [F, h0] using hq
+    -- Local uniqueness of critical points near 0 from IFT.
+    have hwStar_unique :
+        ∀ᶠ v : (ℝ^m × ℝ) × ℝ^n in 𝓝 ((p, (0 : ℝ)), (0 : ℝ^n)),
+          gradW v.1.1 v.2 v.1.2 = 0 → wStar v.1 = v.2 := by
+      filter_upwards [hwStar_iff] with v hv
+      intro hg
+      have : F v = F ((p, (0 : ℝ)), (0 : ℝ^n)) := by simpa [F, hF0] using hg
+      exact hv.mp this
+    -- Bounds on the expansion remainder and lower-order terms on compact sets.
+    have hDcompact_m : IsCompact (D (d := m) data.r0) := by
+      have hclosed : IsClosed (D (d := m) data.r0) := by
+        simpa [D] using isClosed_le (normCont m) continuous_const
+      have hsub : (D (d := m) data.r0) ⊆ Metric.closedBall (0 : ℝ^m) data.r0 := by
+        intro x hx
+        rw [Metric.mem_closedBall, dist_zero_right]
+        refine pi_norm_le_iff_of_nonneg (by linarith [asm.hr0]) |>.2 ?_
+        intro i
+        have hx' : BrendleHung.Section2.Multivar.norm x ≤ data.r0 := by simpa [D] using hx
+        have hsq : (x i) ^ 2 ≤ BrendleHung.Section2.Multivar.norm x ^ 2 := by
+          rw [BrendleHung.Section2.Multivar.norm_square]
+          exact Finset.single_le_sum (f := fun j => (x j) ^ 2)
+            (fun j _ => sq_nonneg (x j)) (Finset.mem_univ i)
+        have habs : |x i| ≤ BrendleHung.Section2.Multivar.norm x := by
+          have hnonneg : 0 ≤ BrendleHung.Section2.Multivar.norm x := by
+            unfold BrendleHung.Section2.Multivar.norm
+            exact Real.sqrt_nonneg _
+          nlinarith [sq_abs (x i), sq_nonneg (BrendleHung.Section2.Multivar.norm x - |x i|)]
+        exact habs.trans hx'
+      exact (isCompact_closedBall (0 : ℝ^m) data.r0).of_isClosed_subset hclosed hsub
+    have hseg_compact : IsCompact (BrendleHung.Section2.Multivar.segment data.s0) := by
+      have hsub : BrendleHung.Section2.Multivar.segment data.s0 ⊆ Set.Icc (-data.s0) data.s0 := by
+        intro s hs
+        rcases (by simpa [BrendleHung.Section2.Multivar.segment] using hs : |s| ≤ data.s0) with hs
+        exact abs_le.mp hs
+      have hclosed : IsClosed (BrendleHung.Section2.Multivar.segment data.s0) := by
+        simpa [BrendleHung.Section2.Multivar.segment] using
+          isClosed_le (continuous_abs) continuous_const
+      exact isCompact_Icc.of_isClosed_subset hclosed hsub
+    have hKcompact : IsCompact (((D data.r0 ×ˢ D (d := n) data.r0) :
+        Set (ℝ^m × ℝ^n)) ×ˢ BrendleHung.Section2.Multivar.segment data.s0) :=
+      (hDcompact_m.prod hDcompact).prod hseg_compact
+    -- Bounds for perturbation terms on the compact domain.
+    have hρu_cont : Continuous ρu := hρuSmooth.continuous
+    have hKcompact' : IsCompact ((D (d := m) data.r0 ×ˢ D (d := n) data.r0) ×ˢ
+        BrendleHung.Section2.Multivar.segment data.s0) := hKcompact
+    obtain ⟨Mρ, hMρ⟩ := hKcompact'.exists_bound_of_continuousOn (hρu_cont.continuousOn)
+    -- Lower-order term bounds: u1, u2, u3 are continuous on D r0 × D r0.
+    have hDomCompact : IsCompact (D (d := m) data.r0 ×ˢ D (d := n) data.r0) :=
+      hDcompact_m.prod hDcompact
+    obtain ⟨M1, hM1⟩ := hDomCompact.exists_bound_of_continuousOn
+      (asm.u1Smooth.continuous.continuousOn : ContinuousOn (↓data.u1) (D (d := m) data.r0 ×ˢ D (d := n) data.r0))
+    obtain ⟨M2, hM2⟩ := hDomCompact.exists_bound_of_continuousOn
+      (asm.u2Smooth.continuous.continuousOn : ContinuousOn (↓data.u2) (D (d := m) data.r0 ×ˢ D (d := n) data.r0))
+    obtain ⟨M3, hM3⟩ := hDomCompact.exists_bound_of_continuousOn
+      (asm.u3Smooth.continuous.continuousOn : ContinuousOn (↓data.u3) (D (d := m) data.r0 ×ˢ D (d := n) data.r0))
+    -- Algebraic equality: ρ is defined as the exact remainder.
+    by_cases hsz : s = 0
+    · subst hsz
+      have hU0 : bud.U p 0 = 0 := by
+        change (⨅ w : D (d := n) data.r0, data.u p (w : ℝ^n) 0) = 0
+        apply le_antisymm
+        · have h0mem : (0 : ℝ^n) ∈ D (d := n) data.r0 := by
+            simp [D, BrendleHung.Section2.Multivar.norm, asm.hr0.le]
+          have hbdd : BddBelow (Set.range (fun w : D (d := n) data.r0 => data.u p (w : ℝ^n) 0)) := by
+            refine ⟨0, ?_⟩
+            rintro _ ⟨w, rfl⟩
+            have hwD : inBounds (w : ℝ^n) := w.2
+            change 0 ≤ data.u p (w : ℝ^n) 0
+            rw [data_u_zero p hpD (w : ℝ^n) hwD]
+            exact le_trans (by nlinarith [asm.hσ, sq_nonneg (norm (w : ℝ^n))])
+              (asm.u0Quadratic p (w : ℝ^n) hpD hwD)
+          have hle := ciInf_le hbdd (⟨0, h0mem⟩ : D (d := n) data.r0)
+          simpa [data_u_zero p hpD (0 : ℝ^n) (by simpa [inBounds, D, BrendleHung.Section2.Multivar.norm] using asm.hr0.le), asm.u0AtZero p hpD] using hle
+        · haveI : Nonempty (D (d := n) data.r0) := ⟨⟨0, by simp [D, BrendleHung.Section2.Multivar.norm, asm.hr0.le]⟩⟩
+          refine le_ciInf ?_
+          intro w
+          have hwD : inBounds (w : ℝ^n) := w.2
+          change 0 ≤ data.u p (w : ℝ^n) 0
+          rw [data_u_zero p hpD (w : ℝ^n) hwD]
+          exact le_trans (by nlinarith [asm.hσ, sq_nonneg (norm (w : ℝ^n))])
+            (asm.u0Quadratic p (w : ℝ^n) hpD hwD)
+      simp [ρ, hU0]
+    · have hs4 : s ^ 4 ≠ 0 := pow_ne_zero 4 hsz
+      simp only [ρ, hsz, ↓reduceIte]
+      field_simp [hs4]
+      ring_nf
+      simp
 
 end Section2
