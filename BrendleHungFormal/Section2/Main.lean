@@ -6,6 +6,10 @@ section BrendleHung.Section2
 
 open BrendleHung.Section2.Multivar
 
+-- Keep the short name `norm` for the coordinate-space norm in this file,
+-- without clashing with Mathlib's global `norm`.
+local notation "norm" => BrendleHung.Section2.Multivar.norm
+
 structure InitialData where
   r0 : ℝ
   s0 : ℝ
@@ -28,7 +32,7 @@ structure InitialAssumptions where
   u0Quadratic : ∀ x : ℝ^m, ∀ w : ℝ^n,
     x ∈ closedBall m r0 →
     w ∈ closedBall n r0 →
-    data.u0 x w ≥ σ * (euNorm w ^ 2)
+    data.u0 x w ≥ σ * (norm w ^ 2)
   u1Smooth : Smooth (uncurry data.u0)
   u1AtZero : ∀ x : ℝ^m, data.u1 x 0 = 0
   u2Smooth : Smooth (uncurry data.u0)
@@ -64,5 +68,30 @@ abbrev u0WWW (x : ℝ^m) (w : ℝ^n) (i j k : Fin n) : ℝ
 := diff3 (ua.data.u0 x) w (e i) (e j) (e k)
 
 end
+
+lemma u0WAtZero (x : ℝ^m) (hx : inBounds x) : u0W x 0 = 0
+:= by
+  have hAtZero : ua.data.u0 x 0 = 0 := ua.u0AtZero x hx
+  have hquad : ∀ w : ℝ^n, w ∈ openBall n ua.data.r0 →
+      ua.data.u0 x w ≥ ua.σ * (norm w ^ 2) := by
+    intro w hw
+    exact ua.u0Quadratic x w hx (by simpa [openBall, closedBall] using le_of_lt hw)
+  have hderiv := ineq_zero_deriv (ua.data.u0 x) ua.data.r0 ua.hr0 ua.σ ua.hσ hAtZero hquad
+  ext w
+  simpa [u0W] using congrArg (fun L : ℝ^n →L[ℝ] ℝ => L w) hderiv
+
+lemma u0WWAtZero (x : ℝ^m) (hx : inBounds x) : Matrix.PosDef (u0WW x 0)
+:= by
+  have hAtZero : ua.data.u0 x 0 = 0 := ua.u0AtZero x hx
+  have hquad : ∀ w : ℝ^n, w ∈ openBall n ua.data.r0 →
+      ua.data.u0 x w ≥ ua.σ * (norm w ^ 2) := by
+    intro w hw
+    exact ua.u0Quadratic x w hx (by simpa [openBall, closedBall] using le_of_lt hw)
+  have hsmooth : Smooth (ua.data.u0 x) := by
+    simpa [Function.comp_def, Function.uncurry_def] using
+      (ua.u0Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
+  simpa [u0WW, matrixOf] using
+    (ineq_pos_def (ua.data.u0 x) ua.data.r0 ua.hr0 ua.σ ua.hσ
+      hsmooth hAtZero hquad)
 
 end Section2
