@@ -12,15 +12,7 @@ import Mathlib.Analysis.Calculus.FDeriv.Symmetric
 import Mathlib.LinearAlgebra.Matrix.PosDef
 /- import Mathlib.Topology.MetricSpace.Basic -/
 
-/-!
-Starting definitions for Section 2 of Brendle--Hung.
-
-This module uses `Fin m -> ℝ` and `Fin n -> ℝ` for coordinate vectors.
-It deliberately separates the coefficient data needed for the abstract
-calculation from the analytical hypotheses under which the calculation holds.
--/
-
-namespace BrendleHung.Section2
+namespace BrendleHung.Section2.Multivar
 
 open scoped BigOperators Topology
 open Filter
@@ -28,25 +20,36 @@ open Filter
 abbrev Vector (d : ℕ) := Fin d → ℝ
 notation:1024 "ℝ" "^" d:1024 => Vector d
 
--- The Euclidean norm of a coordinate vector.
-noncomputable def norm {d : ℕ} (x : ℝ^d) : ℝ
+-- The Euclidean euNorm of a coordinate vector.
+noncomputable def euNorm {d : ℕ} (x : ℝ^d) : ℝ
 := √(∑ i : Fin d, x i ^ 2)
 
-lemma norm_sq {d : ℕ} (w : ℝ^d) : norm w ^ 2 = ∑ i : Fin d, w i ^ 2 := by
-  unfold norm
+lemma normCont : forall (d : ℕ), Continuous (euNorm (d := d))
+:= by
+  intro d
+  let g : ℝ^d → ℝ := fun w => ∑ i : Fin d, w i ^ 2
+  have hgCont : Continuous g := by
+    simpa [g] using
+      (continuous_finset_sum (s := Finset.univ)
+        (f := fun i : Fin d => fun w : ℝ^d => w i ^ 2)
+        (fun i _ => (continuous_apply i).pow 2))
+  simpa [euNorm, g] using Real.continuous_sqrt.comp hgCont
+
+lemma norm_square {d : ℕ} (w : ℝ^d) : euNorm w ^ 2 = ∑ i : Fin d, w i ^ 2 := by
+  unfold euNorm
   rw [Real.sq_sqrt (Finset.sum_nonneg fun i hi => sq_nonneg (w i))]
 
-lemma norm_mul_sq {d : ℕ} (t : ℝ) (w : ℝ^d) :
-    norm (t • w) ^ 2 = t ^ 2 * norm w ^ 2 := by
-  rw [norm_sq, norm_sq]
+lemma norm_mul_sq {d : ℕ} (t : ℝ) (w : ℝ^d) : euNorm (t • w) ^ 2 = t ^ 2 * euNorm w ^ 2
+:= by
+  rewrite [norm_square, norm_square]
   change (∑ i : Fin d, (t * w i) ^ 2) = t ^ 2 * ∑ i : Fin d, w i ^ 2
   rw [Finset.mul_sum]
   apply Finset.sum_congr rfl
   intro i hi
   ring
 
-lemma norm_pos_of_ne_zero {d : ℕ} {w : ℝ^d} (hw : w ≠ 0) : 0 < norm w := by
-  unfold norm
+lemma ne_zero_norm_pos {d : ℕ} {w : ℝ^d} (hw : w ≠ 0) : 0 < euNorm w := by
+  unfold euNorm
   apply Real.sqrt_pos.2
   have hex : ∃ i : Fin d, w i ≠ 0 := by
     by_contra h
@@ -55,19 +58,21 @@ lemma norm_pos_of_ne_zero {d : ℕ} {w : ℝ^d} (hw : w ≠ 0) : 0 < norm w := b
     funext i
     exact h i
   rcases hex with ⟨i, hi⟩
-  exact Finset.sum_pos' (fun j hj => sq_nonneg (w j))
-    ⟨i, Finset.mem_univ i, sq_pos_of_ne_zero hi⟩
+  exact Finset.sum_pos' (fun j hj => sq_nonneg (w j)) ⟨i, Finset.mem_univ i, sq_pos_of_ne_zero hi⟩
 
 -- The open ball `B_r^d` in coordinate space.
 def openBall (d : ℕ) (r : ℝ) : Set ℝ^d
-:= {x | norm x < r}
+:= {x | euNorm x < r}
 
 -- The closed ball `\bar B_r^d` in coordinate space.
-def closedBall (d : ℕ) (r : ℝ) : Set ℝ^d
-:= {x | norm x ≤ r}
+public def closedBall (d : ℕ) (r : ℝ) : Set ℝ^d
+:= {x | euNorm x ≤ r}
 
 def segment (a : ℝ) : Set ℝ
 := {x | |x| ≤ a}
+
+axiom m : ℕ
+axiom n : ℕ
 
 -- A Lean-friendly `O(s^4)` hypothesis for `u(x,w,s) = u0 + s u1 + s^2 u2 + s^3 u3 + O(s^4)`.
 def HasExpansion3 (r : ℝ) (a : ℝ) (f0 f1 f2 f3 : ℝ^m -> ℝ^n -> ℝ) (f : ℝ^m → ℝ^n → ℝ → ℝ) : Prop :=
@@ -78,129 +83,56 @@ def HasExpansion3 (r : ℝ) (a : ℝ) (f0 f1 f2 f3 : ℝ^m -> ℝ^n -> ℝ) (f :
       s ∈ segment a ->
       f x w s = f0 x w + s * f1 x w + s ^ 2 * f2 x w + s ^ 3 * f3 x w + s ^ 4 * ρ x w s
 
-open Function (uncurry)
 notation "Smooth" => ContDiff ℝ (⊤ : WithTop ℕ∞)
-
-axiom m : ℕ
-axiom n : ℕ
-
-structure InitialData where
-  r0 : ℝ
-  s0 : ℝ
-  u : ℝ^m -> ℝ^n -> ℝ -> ℝ
-  u0 : ℝ^m -> ℝ^n -> ℝ
-  u1 : ℝ^m -> ℝ^n -> ℝ
-  u2 : ℝ^m -> ℝ^n -> ℝ
-  u3 : ℝ^m -> ℝ^n -> ℝ
-
-structure InitialAssumptions where
-  data : InitialData
-  hr0 : data.r0 > 0
-  hs0 : data.s0 > 0
-  σ : ℝ
-  hσ : σ > 0
-  u0Smooth : Smooth (uncurry data.u0)
-  u0AtZero : ∀ x : ℝ^m,
-    x ∈ closedBall m r0 →
-    data.u0 x 0 = 0
-  u0Quadratic : ∀ x : ℝ^m, ∀ w : ℝ^n,
-    x ∈ closedBall m r0 →
-    w ∈ closedBall n r0 →
-    data.u0 x w ≥ σ * (norm w ^ 2)
-  u1Smooth : Smooth (uncurry data.u0)
-  u1AtZero : ∀ x : ℝ^m, data.u1 x 0 = 0
-  u2Smooth : Smooth (uncurry data.u0)
-  u3Smooth : Smooth (uncurry data.u0)
-  uExp : HasExpansion3 r0 s0 data.u0 data.u1 data.u2 data.u3 data.u
-  -- h0PositiveDefinite : ∀ x : ℝ^m,
-  --   x ∈ closedBall m r0 →
-  --   Matrix.PosDef (data.u0WW x 0)
-
-axiom ua : InitialAssumptions
-
-abbrev inBounds {m : ℕ} (x : ℝ^m) : Prop
-:= x ∈ closedBall m ua.data.r0
 
 noncomputable section
 
--- abbrev Dw (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) : ℝ^n -> ℝ^n →L[ℝ] ℝ
-abbrev Dw (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) : ℝ^n -> ℝ^n →L[ℝ] ℝ
-:= fderiv ℝ (f x)
-
-abbrev Dww (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n)
-: (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ))
-:= fderiv ℝ (Dw f x) w
-
-abbrev Dwww (f : ℝ^m → ℝ^n → ℝ) (x : ℝ^m) (w : ℝ^n)
-: (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ)))
-:= fderiv ℝ (Dww f x) w
-
 def e (i : Fin n) : ℝ^n := Pi.single i 1
 
-abbrev u0W (x : ℝ^m) (w : ℝ^n) : ℝ^n -> ℝ
-:= Dw ua.data.u0 x w
+abbrev diff (f : ℝ^n → ℝ) : ℝ^n -> ℝ^n →L[ℝ] ℝ
+:= fderiv ℝ f
 
-abbrev u1W (x : ℝ^m) (w : ℝ^n) : ℝ^n -> ℝ
-:= Dw ua.data.u1 x w
+abbrev diff2 (f : ℝ^n → ℝ) (w : ℝ^n)
+: (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ))
+:= fderiv ℝ (diff f) w
 
-abbrev u2W (x : ℝ^m) (w : ℝ^n) : ℝ^n -> ℝ
-:= Dw ua.data.u2 x w
+abbrev matrixOf (op : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ)) : Matrix (Fin n) (Fin n) ℝ
+:= Matrix.of fun i j => op (e i) (e j)
 
-abbrev u0WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
-:= Matrix.of fun i j => Dww ua.data.u0 x w (e i) (e j)
-
-abbrev u1WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
-:= Matrix.of fun i j => Dww ua.data.u1 x w (e i) (e j)
-
-abbrev u0WWW (x : ℝ^m) (w : ℝ^n) (i j k : Fin n) : ℝ
-:= Dwww ua.data.u0 x w (e i) (e j) (e k)
+abbrev diff3 (f : ℝ^n → ℝ) (w : ℝ^n)
+: (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ)))
+:= fderiv ℝ (diff2 f) w
 
 end
 
-theorem normCont : forall (d : ℕ), Continuous (norm (d := d))
+theorem ineq_zero_deriv (f : ℝ^n -> ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σh : σ > 0) :
+  (f 0 = 0) ->
+  (forall w : ℝ^n, w ∈ openBall n r -> f w ≥ σ * (euNorm w ^ 2)) ->
+  diff f 0 = 0
 := by
-  intro d
-  let g : ℝ^d → ℝ := fun w => ∑ i : Fin d, w i ^ 2
-  have hgCont : Continuous g := by
-    simpa [g] using
-      (continuous_finset_sum (s := Finset.univ)
-        (f := fun i : Fin d => fun w : ℝ^d => w i ^ 2)
-        (fun i _ => (continuous_apply i).pow 2))
-  simpa [norm, g] using Real.continuous_sqrt.comp hgCont
-
-theorem u0WAtZero :
-  forall x, inBounds x ->
-  u0W x 0 = 0
-:= by
-  intro x hx
-  have hminOn : IsMinOn (ua.data.u0 x) (openBall n ua.data.r0) (0 : ℝ^n) := by
+  intro fAtZero quad
+  have hminOn : IsMinOn f (openBall n r) (0 : ℝ^n) := by
     rewrite [isMinOn_iff]
     intro w hw
-    have hw' : w ∈ closedBall n ua.data.r0 := by
-      simpa [openBall, closedBall] using (le_of_lt hw)
-    have hquadratic : ua.data.u0 x w ≥ ua.σ * norm w ^ 2 := ua.u0Quadratic x w hx hw'
-    have hzero : ua.data.u0 x 0 = 0 := ua.u0AtZero x hx
-    have hnonneg : 0 ≤ ua.σ * norm w ^ 2 := by
-      nlinarith [ua.hσ, sq_nonneg (norm w)]
-    nlinarith [hzero, hnonneg, hquadratic]
-  have hnormCont : Continuous (norm (d := n)) := normCont n
-  have hOpenBallNhds : openBall n ua.data.r0 ∈ nhds (0 : ℝ^n) := by
+    have hquadratic : f w ≥ σ * euNorm w ^ 2 := quad w hw
+    have hnonneg : 0 ≤ σ * euNorm w ^ 2 := by
+      nlinarith [σh, sq_nonneg (euNorm w)]
+    nlinarith [fAtZero, hnonneg, hquadratic]
+  have hnormCont : Continuous (euNorm (d := n)) := normCont n
+  have hOpenBallNhds : openBall n r ∈ nhds (0 : ℝ^n) := by
     refine IsOpen.mem_nhds ?_ ?_
     · simpa [openBall] using (isOpen_lt hnormCont continuous_const)
-    · simpa [openBall, norm] using ua.hr0
-  have hlocalMin : IsLocalMin (ua.data.u0 x) (0 : ℝ^n) := hminOn.isLocalMin hOpenBallNhds
-  have hfderivZero : fderiv ℝ (ua.data.u0 x) 0 = 0 := IsLocalMin.fderiv_eq_zero hlocalMin
-  ext i
-  simpa [u0W, Dw] using DFunLike.congr_fun hfderivZero i
+    · simpa [openBall, euNorm] using rh
+  have hlocalMin : IsLocalMin f (0 : ℝ^n) := hminOn.isLocalMin hOpenBallNhds
+  exact IsLocalMin.fderiv_eq_zero hlocalMin
 
-theorem u0WWAtZero :
-  forall x, x ∈ closedBall m ua.data.r0 ->
-  Matrix.PosDef (u0WW x 0)
+theorem ineq_pos_def (f : ℝ^n → ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σh : σ > 0) :
+  Smooth f ->
+  f 0 = 0 →
+  (∀ w : ℝ^n, w ∈ openBall n r → f w ≥ σ * (euNorm w ^ 2)) →
+  Matrix.PosDef (matrixOf $ diff2 f 0)
 := by
-  intro x hx
-  let f : ℝ^n -> ℝ := ua.data.u0 x
-  have hfSmooth : Smooth f := ua.u0Smooth.comp (contDiff_const.prodMk contDiff_id)
-  have fAtZero : f 0 = 0 := by simpa using ua.u0AtZero x hx
+  intro hfSmooth fAtZero hquad
   refine ⟨?_, ?_⟩
   -- Hermitian
   have hf2 : ContDiff ℝ (2 : WithTop ℕ∞) f := by
@@ -212,17 +144,13 @@ theorem u0WWAtZero :
       (by rw [minSmoothness_of_isRCLikeNormedField]; exact le_rfl)
   rw [Matrix.IsHermitian.ext_iff]
   intro i j
-  simpa [u0WW, Dww, Dw, f] using (hsymm.eq (e i) (e j)).symm
+  simpa [diff2, diff] using (hsymm.eq (e i) (e j)).symm
 
   -- w^T H w > 0
   intro w wnonzero
   let v : ℝ^n := ⇑w
-  have hvne : v ≠ 0 := by
-    intro hv
-    apply wnonzero
-    ext i
-    simpa [v] using congrFun hv i
-  have hvnormpos : 0 < norm v := norm_pos_of_ne_zero hvne
+  have hvne : v ≠ 0 := by intro hv; apply wnonzero; ext i; simpa using congrFun hv i
+  have hvnormpos : 0 < euNorm v := ne_zero_norm_pos hvne
 
   -- Slice f along the line t ↦ t v.
   let φ : ℝ → ℝ := fun t => f (t • v)
@@ -234,8 +162,7 @@ theorem u0WWAtZero :
   have hφ0 : φ 0 = 0 := by simp [φ, fAtZero]
   have hφ1 : deriv φ 0 = 0 := by
     have hgrad : fderiv ℝ f 0 = 0 := by
-      ext z
-      simpa [f, Dw, u0W] using congrFun (u0WAtZero x hx) z
+      simpa [diff] using ineq_zero_deriv f r rh σ σh fAtZero hquad
     have hfderiv : HasFDerivAt f (fderiv ℝ f 0) 0 :=
       (hfSmooth.differentiable (by simp)).differentiableAt.hasFDerivAt
     have hline : HasDerivAt (fun t : ℝ => t • v) v 0 := by
@@ -254,16 +181,16 @@ theorem u0WWAtZero :
     rw [hφ2diag, iteratedFDeriv_two_apply]
 
   -- For small t, t v still lies in the ball where the quadratic lower bound holds.
-  have hcont_norm_smul : Continuous (fun t : ℝ => norm (t • v)) := by
+  have hcont_norm_smul : Continuous (fun t : ℝ => euNorm (t • v)) := by
     have hlin_cont : Continuous (fun t : ℝ => t • v) :=
       continuous_id.smul continuous_const
     exact (normCont n).comp hlin_cont
-  have hsmall : ∀ᶠ t in 𝓝 (0 : ℝ), t • v ∈ closedBall n ua.data.r0 := by
-    have hnhds : {t : ℝ | norm (t • v) < ua.data.r0} ∈ 𝓝 (0 : ℝ) := by
+  have hsmall : ∀ᶠ t in 𝓝 (0 : ℝ), t • v ∈ openBall n r := by
+    have hnhds : {t : ℝ | euNorm (t • v) < r} ∈ 𝓝 (0 : ℝ) := by
       refine IsOpen.mem_nhds (isOpen_lt hcont_norm_smul continuous_const) ?_
-      simpa [norm] using ua.hr0
+      simpa [euNorm] using rh
     filter_upwards [hnhds] with t ht
-    exact le_of_lt ht
+    exact ht
 
   -- Taylor expansion of φ to order 2 at 0, using φ 0 = 0 and φ' 0 = 0.
   have hφSmooth2 : ContDiff ℝ (2 : ℕ) φ := hφSmooth.of_le (by simp)
@@ -275,9 +202,9 @@ theorem u0WWAtZero :
       simp [taylorWithinEval, taylorWithin, taylorCoeffWithin, Finset.sum_range_succ, hφ0, hφ1] <;> ring
 
   let A : ℝ := iteratedDeriv 2 φ 0
-  let c : ℝ := ua.σ * norm v ^ 2
+  let c : ℝ := σ * euNorm v ^ 2
   have hcpos : 0 < c := by
-    exact mul_pos ua.hσ (sq_pos_of_pos hvnormpos)
+    exact mul_pos σh (sq_pos_of_pos hvnormpos)
   have hεpos : 0 < c / 2 := by positivity
   have hev : ∀ᶠ t in 𝓝 (0 : ℝ), ‖φ t - t ^ 2 / 2 * A‖ ≤ (c / 2) * ‖t ^ 2‖ :=
     ho.bound hεpos
@@ -285,14 +212,13 @@ theorem u0WWAtZero :
   have hev' : ∀ᶠ t in nhdsWithin (0 : ℝ) (Set.Ioi 0),
       ‖φ t - t ^ 2 / 2 * A‖ ≤ (c / 2) * ‖t ^ 2‖ := hev.filter_mono nhdsWithin_le_nhds
   have hsmall' : ∀ᶠ t in nhdsWithin (0 : ℝ) (Set.Ioi 0),
-      t • v ∈ closedBall n ua.data.r0 := hsmall.filter_mono nhdsWithin_le_nhds
+      t • v ∈ openBall n r := hsmall.filter_mono nhdsWithin_le_nhds
   haveI : NeBot (nhdsWithin (0 : ℝ) (Set.Ioi 0)) := nhdsWithin_Ioi_neBot le_rfl
   rcases Filter.Eventually.exists ((hpos.and hev').and hsmall') with
     ⟨t, ⟨htpos, htbound⟩, htsmall⟩
 
   have hlow : c * t ^ 2 ≤ φ t := by
-    have hq : f (t • v) ≥ ua.σ * norm (t • v) ^ 2 := by
-      simpa [f] using ua.u0Quadratic x (t • v) hx htsmall
+    have hq : f (t • v) ≥ σ * euNorm (t • v) ^ 2 := hquad (t • v) htsmall
     rw [norm_mul_sq] at hq
     dsimp [φ, c]
     nlinarith
@@ -318,7 +244,7 @@ theorem u0WWAtZero :
       simp [e, Ne.symm hbj]
     · intro hj
       simp at hj
-  have hsum_eq : (∑ i : Fin n, ∑ j : Fin n, w i * u0WW x 0 i j * w j) = A := by
+  have hsum_eq : (∑ i : Fin n, ∑ j : Fin n, w i * diff2 f 0 (e i) (e j) * w j) = A := by
     let B : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ) := fderiv ℝ (fderiv ℝ f) 0
     have hB : B v v =
         ∑ i : Fin n, ∑ j : Fin n, w i * w j * B (e i) (e j) := by
@@ -338,26 +264,28 @@ theorem u0WWAtZero :
       apply Finset.sum_congr rfl
       intro j hj
       ring
-    change (∑ i : Fin n, ∑ j : Fin n, w i * u0WW x 0 i j * w j) = iteratedDeriv 2 φ 0
+    change (∑ i : Fin n, ∑ j : Fin n, w i * diff2 f 0 (e i) (e j) * w j) = iteratedDeriv 2 φ 0
     rw [← hφ2] at hB
     rw [hB]
     apply Finset.sum_congr rfl
     intro i hi
     apply Finset.sum_congr rfl
     intro j hj
-    simp [B, u0WW, Dww, Dw, f]
+    simp [B, diff2, diff]
     ring
   have hfinsupp_eq :
-      w.sum (fun i xi => w.sum fun j xj => star xi * u0WW x 0 i j * xj) =
-        ∑ i : Fin n, ∑ j : Fin n, w i * u0WW x 0 i j * w j := by
+      w.sum (fun i xi => w.sum fun j xj => star xi * diff2 f 0 (e i) (e j) * xj) =
+        ∑ i : Fin n, ∑ j : Fin n, w i * diff2 f 0 (e i) (e j) * w j := by
     rw [Finsupp.sum_fintype w
-      (fun i xi => w.sum fun j xj => star xi * u0WW x 0 i j * xj) (by simp)]
+      (fun i xi => w.sum fun j xj => star xi * diff2 f 0 (e i) (e j) * xj) (by simp)]
     apply Finset.sum_congr rfl
     intro i hi
     rw [Finsupp.sum_fintype w
-      (fun j xj => star (w i) * u0WW x 0 i j * xj) (by simp)]
+      (fun j xj => star (w i) * diff2 f 0 (e i) (e j) * xj) (by simp)]
     simp [star_trivial, mul_comm, mul_left_comm]
+  change 0 < w.sum (fun i xi => w.sum fun j xj =>
+    star xi * diff2 f 0 (e i) (e j) * xj)
   rw [hfinsupp_eq, hsum_eq]
   exact hApos
 
-end BrendleHung.Section2
+end BrendleHung.Section2.Multivar
