@@ -24,7 +24,7 @@ notation:1024 "ℝ" "^" d:1024 => Vector d
 noncomputable def norm {d : ℕ} (x : ℝ^d) : ℝ
 := √(∑ i : Fin d, x i ^ 2)
 
-lemma normCont : forall (d : ℕ), Continuous (norm (d := d))
+lemma normCont : ∀ (d : ℕ), Continuous (norm (d := d))
 := by
   intro d
   let g : ℝ^d → ℝ := fun w => ∑ i : Fin d, w i ^ 2
@@ -61,11 +61,11 @@ lemma ne_zero_norm_pos {d : ℕ} {w : ℝ^d} (hw : w ≠ 0) : 0 < norm w := by
   exact Finset.sum_pos' (fun j hj => sq_nonneg (w j)) ⟨i, Finset.mem_univ i, sq_pos_of_ne_zero hi⟩
 
 -- The open ball `B_r^d` in coordinate space.
-def openBall (d : ℕ) (r : ℝ) : Set ℝ^d
+def B {d : ℕ} (r : ℝ) : Set ℝ^d
 := {x | norm x < r}
 
 -- The closed ball `\bar B_r^d` in coordinate space.
-public def closedBall (d : ℕ) (r : ℝ) : Set ℝ^d
+public def D {d : ℕ} (r : ℝ) : Set ℝ^d
 := {x | norm x ≤ r}
 
 def segment (a : ℝ) : Set ℝ
@@ -78,8 +78,8 @@ axiom n : ℕ
 def HasExpansion3 (r : ℝ) (a : ℝ) (f0 f1 f2 f3 : ℝ^m -> ℝ^n -> ℝ) (f : ℝ^m → ℝ^n → ℝ → ℝ) : Prop :=
   ∃ ρ : ℝ^m → ℝ^n → ℝ → ℝ,
     ∀ x w s,
-      x ∈ closedBall m r ->
-      w ∈ closedBall n r ->
+      x ∈ D r ->
+      w ∈ D r ->
       s ∈ segment a ->
       f x w s = f0 x w + s * f1 x w + s ^ 2 * f2 x w + s ^ 3 * f3 x w + s ^ 4 * ρ x w s
 
@@ -107,11 +107,11 @@ end
 
 theorem ineq_zero_deriv (f : ℝ^n -> ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σh : σ > 0) :
   (f 0 = 0) ->
-  (forall w : ℝ^n, w ∈ openBall n r -> f w ≥ σ * (norm w ^ 2)) ->
+  (∀ w : ℝ^n, w ∈ B r -> f w ≥ σ * (norm w ^ 2)) ->
   diff f 0 = 0
 := by
   intro fAtZero quad
-  have hminOn : IsMinOn f (openBall n r) (0 : ℝ^n) := by
+  have hminOn : IsMinOn f (B r) (0 : ℝ^n) := by
     rewrite [isMinOn_iff]
     intro w hw
     have hquadratic : f w ≥ σ * norm w ^ 2 := quad w hw
@@ -119,17 +119,17 @@ theorem ineq_zero_deriv (f : ℝ^n -> ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σ
       nlinarith [σh, sq_nonneg (norm w)]
     nlinarith [fAtZero, hnonneg, hquadratic]
   have hnormCont : Continuous (norm (d := n)) := normCont n
-  have hOpenBallNhds : openBall n r ∈ nhds (0 : ℝ^n) := by
+  have hOpenBallNhds : B r ∈ nhds (0 : ℝ^n) := by
     refine IsOpen.mem_nhds ?_ ?_
-    · simpa [openBall] using (isOpen_lt hnormCont continuous_const)
-    · simpa [openBall, norm] using rh
+    · simpa [B] using (isOpen_lt hnormCont continuous_const)
+    · simpa [B, norm] using rh
   have hlocalMin : IsLocalMin f (0 : ℝ^n) := hminOn.isLocalMin hOpenBallNhds
   exact IsLocalMin.fderiv_eq_zero hlocalMin
 
 theorem ineq_pos_def (f : ℝ^n → ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σh : σ > 0) :
   Smooth f ->
   f 0 = 0 →
-  (∀ w : ℝ^n, w ∈ openBall n r → f w ≥ σ * (norm w ^ 2)) →
+  (∀ w : ℝ^n, w ∈ B r → f w ≥ σ * (norm w ^ 2)) →
   Matrix.PosDef (matrixOf $ diff2 f 0)
 := by
   intro hfSmooth fAtZero hquad
@@ -179,7 +179,7 @@ theorem ineq_pos_def (f : ℝ^n → ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σh 
 
   -- For small t, t v still lies in the ball where the quadratic lower bound holds.
   have hcont_norm_smul : Continuous (fun t : ℝ => norm (t • v)) := by exact (normCont n).comp (continuous_id.smul continuous_const)
-  have hsmall : ∀ᶠ t in 𝓝 (0 : ℝ), t • v ∈ openBall n r := by
+  have hsmall : ∀ᶠ t in 𝓝 (0 : ℝ), t • v ∈ B r := by
     have hnhds : {t : ℝ | norm (t • v) < r} ∈ 𝓝 (0 : ℝ) := by
       refine IsOpen.mem_nhds (isOpen_lt hcont_norm_smul continuous_const) ?_
       simpa [norm] using rh
@@ -193,7 +193,7 @@ theorem ineq_pos_def (f : ℝ^n → ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σh 
   have hcpos : 0 < c := by
     exact mul_pos σh (sq_pos_of_pos hvnormpos)
   have hsmall' : ∀ᶠ t in nhdsWithin (0 : ℝ) (Set.Ioi 0),
-      t • v ∈ openBall n r := hsmall.filter_mono nhdsWithin_le_nhds
+      t • v ∈ B r := hsmall.filter_mono nhdsWithin_le_nhds
 
   have ht := Real.taylor_tendsto (f := φ) (x₀ := (0 : ℝ)) (n := (2 : ℕ))
     (s := Set.univ) convex_univ (by simp) hφSmooth2.contDiffOn
