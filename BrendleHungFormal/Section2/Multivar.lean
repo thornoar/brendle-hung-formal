@@ -74,16 +74,16 @@ def segment (a : ℝ) : Set ℝ
 axiom m : ℕ
 axiom n : ℕ
 
--- A Lean-friendly `O(s^4)` hypothesis for `u(x,w,s) = u0 + s u1 + s^2 u2 + s^3 u3 + O(s^4)`.
-def HasExpansion3 (r : ℝ) (a : ℝ) (f0 f1 f2 f3 : ℝ^m -> ℝ^n -> ℝ) (f : ℝ^m → ℝ^n → ℝ → ℝ) : Prop :=
-  ∃ ρ : ℝ^m → ℝ^n → ℝ → ℝ,
-    ∀ x w s,
-      x ∈ D r ->
-      w ∈ D r ->
-      s ∈ segment a ->
-      f x w s = f0 x w + s * f1 x w + s ^ 2 * f2 x w + s ^ 3 * f3 x w + s ^ 4 * ρ x w s
-
 notation "Smooth" => ContDiff ℝ (⊤ : WithTop ℕ∞)
+
+-- A Lean-friendly `O(s^4)` hypothesis for `u(x,w,s) = u0 + s u1 + s^2 u2 + s^3 u3 + O(s^4)`.
+def HasExpansion3 {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E] (ball : Set E) (a : ℝ) (f0 f1 f2 f3 : E -> ℝ) (f : E -> ℝ → ℝ) : Prop :=
+  ∃ ρ : E × ℝ → ℝ,
+    Smooth ρ ∧
+    ∀ p s,
+      p ∈ ball ->
+      s ∈ segment a ->
+      f p s = f0 p + s * f1 p + s ^ 2 * f2 p + s ^ 3 * f3 p + s ^ 4 * ρ (p, s)
 
 noncomputable section
 
