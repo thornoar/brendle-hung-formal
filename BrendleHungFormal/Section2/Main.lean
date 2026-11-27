@@ -291,6 +291,43 @@ lemma zD3_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α β γ : Fin n) :
   simp only [mul_add, Finset.mul_sum, mul_assoc, v0T]
   abel
 
+
+/-- The term `S_{αβ}` in the second `z`-derivative formula for `v1`. -/
+abbrev v1S (y : ℝ^m) (α β : Fin n) : ℝ :=
+  (∑ i : Fin m, ∑ γ : Fin n,
+    upsilonZ y 0 *
+      (u1XW y i γ * zD1 (psiZ y) β γ * zD1 (phiZ y) α i)) +
+  (∑ γ : Fin n,
+    zD1 (upsilonZ y) α * (u1W y 0 (e γ) * zD1 (psiZ y) β γ))
+
+/-- The function `v1` vanishes at `z=0`. -/
+lemma v1_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : ccd.v1 y 0 = 0 := by
+  change upsilonZ y 0 * u1B y 0 = 0
+  rw [u1B_zero y hy]
+  simp
+
+/-- The first `z`-derivative formula for `v1` at zero. -/
+lemma zD1_v1 (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    zD1 (ccd.v1 y) α =
+      ∑ γ : Fin n,
+        upsilonZ y 0 * u1W y 0 (e γ) * zD1 (psiZ y) α γ := by
+  rw [zD1_v1_prod y hy α, u1B_zero y hy, zD1_u1B_expanded y hy α]
+  simp [Finset.mul_sum, mul_assoc]
+
+/-- The second `z`-derivative formula for `v1` at zero. -/
+lemma zD2_v1 (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
+    zD2 (ccd.v1 y) α β =
+      (∑ γ : Fin n, ∑ δ : Fin n,
+        upsilonZ y 0 * (u1WW y 0 γ δ *
+          zD1 (psiZ y) α γ * zD1 (psiZ y) β δ)) +
+      (∑ γ : Fin n,
+        upsilonZ y 0 * (u1W y 0 (e γ) * zD2 (psiZ y) α β γ)) +
+      v1S y α β + v1S y β α := by
+  rw [zD2_v1_prod y hy α β, zD2_u1B_expanded y hy α β,
+    zD1_u1B_expanded y hy β, zD1_u1B_expanded y hy α]
+  simp only [mul_add, Finset.mul_sum, v1S]
+  abel
+
 end
 
 end Section2

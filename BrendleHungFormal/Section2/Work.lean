@@ -102,20 +102,6 @@ lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w)
 noncomputable def gradW (p : ℝ^m) (w : ℝ^n) (s : ℝ) : ℝ^n :=
   fun α => fderiv ℝ (fun w' : ℝ^n => asm.u p w' s) w (e α)
 
-/-- For fixed `p`, the map `(w,s) ↦ gradW p w s` is smooth. -/
-lemma gradW_smooth (p : ℝ^m) :
-    SmoothGlobal (fun q : ℝ^n × ℝ => gradW p q.1 q.2)
-:= by
-  rw [contDiff_pi]
-  intro α
-  let f : ℝ^n × ℝ → ℝ^n → ℝ := fun q w => asm.u p w q.2
-  have hf : SmoothGlobal (uncurry f) := by
-    have hcomp : SmoothGlobal (fun z : (ℝ^n × ℝ) × ℝ^n => (p, z.2, z.1.2)) := by fun_prop
-    simpa [f, Function.uncurry_def] using asm.uSmooth.comp hcomp
-  simpa [gradW, f] using
-    (hf.fderiv_apply (g := fun q : ℝ^n × ℝ => q.1) (k := fun _ : ℝ^n × ℝ => e α)
-      (by fun_prop) (by fun_prop) (by simp))
-
 /-- The critical point equation holds at `(w,s) = (0,0)`. -/
 lemma gradW_zero (p : ℝ^m) (hp : inBounds p) : gradW p 0 0 = 0 := by
   have hB : B asm.r0 ∈ 𝓝 (0 : ℝ^n) := B_mem_nhds_zero asm.hr0
@@ -127,35 +113,6 @@ lemma gradW_zero (p : ℝ^m) (hp : inBounds p) : gradW p 0 0 = 0 := by
     rw [Filter.EventuallyEq.fderiv_eq hEq]
   have hz : u0W p 0 = 0 := u0WAtZero p hp
   simpa [gradW, u0W, hderiv] using congrArg (fun L : ℝ^n → ℝ => L (e α)) hz
-
--- The vector \hat w(x) appearing in the paper's expansion proof.
-noncomputable def hatw (x : ℝ^m) : ℝ^n :=
-  (u0WW x 0)⁻¹ *ᵥ (fun α : Fin n =>
-    - u2W x 0 (e α)
-    - ∑ β : Fin n, u1WW x 0 α β * bud.barw x β
-    - ((1 : ℝ) / 2) * ∑ β : Fin n, ∑ γ : Fin n,
-        u0WWW x 0 α β γ * bud.barw x β * bud.barw x γ)
-
-/-- Defining identity for `hatw`, obtained by applying `u0WW(x,0)` to its definition. -/
-lemma hatw_spec (x : ℝ^m) (hx : inBounds x) :
-    u0WW x 0 *ᵥ hatw x =
-      fun α : Fin n =>
-        - u2W x 0 (e α)
-        - ∑ β : Fin n, u1WW x 0 α β * bud.barw x β
-        - ((1 : ℝ) / 2) * ∑ β : Fin n, ∑ γ : Fin n,
-            u0WWW x 0 α β γ * bud.barw x β * bud.barw x γ
-:= by
-  have hpos : (u0WW x 0).PosDef := u0WWAtZero x hx
-  have hdet : IsUnit (u0WW x 0).det :=
-    (Matrix.isUnit_iff_isUnit_det (u0WW x 0)).mp hpos.isUnit
-  ext α
-  change (u0WW x 0 *ᵥ ((u0WW x 0)⁻¹ *ᵥ
-    (fun β : Fin n =>
-      - u2W x 0 (e β)
-      - ∑ γ : Fin n, u1WW x 0 β γ * bud.barw x γ
-      - ((1 : ℝ) / 2) * ∑ γ : Fin n, ∑ δ : Fin n,
-          u0WWW x 0 β γ δ * bud.barw x γ * bud.barw x δ)) : Fin n → ℝ) α = _
-  rw [Matrix.mulVec_mulVec, Matrix.mul_nonsing_inv _ hdet, Matrix.one_mulVec]
 
 /-- One coordinate of the derivative of `w ↦ gradW p w 0` is the corresponding row of `u0WW p 0`. -/
 lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
@@ -581,10 +538,6 @@ lemma isCompact_D (r : ℝ) : IsCompact (BrendleHung.Section2.Multivar.D (d := n
 lemma D_zero_mem : (0 : ℝ^n) ∈ D (d := n) asm.r0 :=
   zero_mem_D (d := n) (r := asm.r0) (le_of_lt asm.hr0)
 
-/-- The domain ball `D r0` is nonempty. -/
-lemma D_nonempty : (BrendleHung.Section2.Multivar.D (d := n) asm.r0 : Set ℝ^n).Nonempty :=
-  ⟨0, D_zero_mem⟩
-
 -- Existence of a minimizer of `w ↦ u(x,w,s)` on the compact set `D r0`, and
 -- the fact that `U(x,s)` is equal to the minimum.
 lemma exists_minimizer (x : ℝ^m) (s : ℝ) :
@@ -595,7 +548,7 @@ lemma exists_minimizer (x : ℝ^m) (s : ℝ) :
   have hucont : Continuous (fun w : ℝ^n => asm.u x w s) := by
     have hcomp : Continuous (fun w : ℝ^n => (x, w, s)) := by fun_prop
     exact asm.uSmooth.continuous.comp hcomp
-  rcases (isCompact_D asm.r0).exists_isMinOn D_nonempty hucont.continuousOn with
+  rcases (isCompact_D asm.r0).exists_isMinOn ⟨0, D_zero_mem⟩ hucont.continuousOn with
     ⟨w, hwD, hwmin⟩
   refine ⟨w, hwD, hwmin, ?_⟩
   have hbdd : BddBelow (Set.range (fun wsub : D (d := n) asm.r0 => asm.u x wsub.1 s)) := by
@@ -1327,13 +1280,6 @@ lemma barw_contDiffAt (x : ℝ^m) (hx : inBounds x) : ContDiffAt ℝ ⊤ bud.bar
     exact hyinv.inverse_apply_eq.mpr (barw_spec_of_det_ne_zero y hydet).symm
   exact hExpr.congr_of_eventuallyEq hEqEv.symm
 
-/-- The Jacobian determinant is nonzero wherever the coordinate change is
-assumed to be invertible. -/
-lemma CoordChangeAssumptions.psi_jacobian_det_ne_zero
-    (y : ℝ^m) (hy : y ∈ cca.Ω) :
-    (zJacobian cca.ψ y).det ≠ 0
-:= by exact ((Matrix.isUnit_iff_isUnit_det (zJacobian cca.ψ y)).mp (cca.ψ_jacobian_inv y hy)).ne_zero
-
 /-- For `y ∈ Ω`, the `z`-slice of `ψ` is globally smooth near `z = 0`. -/
 lemma CoordChangeAssumptions.psi_z_smoothAt
     (y : ℝ^m) (hy : y ∈ cca.Ω) :
@@ -1449,13 +1395,6 @@ lemma prod_vec_split (v : ℝ^m × ℝ^n) : (v.1, (0 : ℝ^n)) + (0, v.2) = v :=
 lemma pi_sum_basis {d : ℕ} (v : ℝ^d) : v = ∑ i : Fin d, v i • e i := by
   ext j
   simp [e, Pi.single_apply]
-
-/-- A product vector is the pair of coordinate expansions of its two components. -/
-lemma prod_sum_basis (v : ℝ^m × ℝ^n) :
-    v = ((∑ i : Fin m, v.1 i • e i), (∑ α : Fin n, v.2 α • e α)) := by
-  ext j
-  · simp [e, Pi.single_apply, mul_comm]
-  · simp [e, Pi.single_apply, mul_comm]
 
 /-- The first derivative of `u0Prod` splits into pure `x` and `w` parts. -/
 lemma u0D1_split (q : ℝ^m × ℝ^n) (v : ℝ^m × ℝ^n) :
@@ -1998,6 +1937,271 @@ lemma u0D3_at_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (u v dv : ℝ^m × ℝ^n) :
   simp [mul_comm, mul_left_comm]
   try abel
 
+/-- The uncurried first-order coefficient `u1` on the product space. -/
+abbrev u1Prod (q : ℝ^m × ℝ^n) : ℝ := asm.u1 q.1 q.2
+
+/-- First derivative of `u1Prod`. -/
+abbrev u1D1 (q : ℝ^m × ℝ^n) : (ℝ^m × ℝ^n) →L[ℝ] ℝ := fderiv ℝ u1Prod q
+
+/-- Second derivative of `u1Prod`. -/
+abbrev u1D2 (q : ℝ^m × ℝ^n) : (ℝ^m × ℝ^n) →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ℝ) := fderiv ℝ u1D1 q
+
+/-- Mixed `x^i w^α` derivative of `u1` at `(x,0)`. -/
+abbrev u1XW (x : ℝ^m) (i : Fin m) (α : Fin n) : ℝ :=
+  fderiv ℝ (fun x' : ℝ^m => u1W x' 0 (e α)) x (e i)
+
+/-- Smoothness of the product-space version of `u1`. -/
+lemma u1Prod_smooth : SmoothGlobal u1Prod := by
+  simpa [u1Prod] using asm.u1Smooth
+
+/-- Smoothness of the first derivative of `u1Prod`. -/
+lemma u1D1_smooth : SmoothGlobal u1D1 := by
+  simpa [u1D1] using u1Prod_smooth.fderiv_right (m := ⊤) (by simp)
+
+/-- The derivative of `u1Prod` in a pure `w` direction is the `w`-derivative of `u1`. -/
+lemma u1D1_snd (x : ℝ^m) (w v : ℝ^n) :
+    u1D1 (x, w) (0, v) = diff (asm.u1 x) w v := by
+  have hG : DifferentiableAt ℝ (fun w' : ℝ^n => (x, w')) w := by fun_prop
+  have hU : DifferentiableAt ℝ u1Prod (x, w) := u1Prod_smooth.differentiable (by simp) _
+  have hGderiv : fderiv ℝ (fun w' : ℝ^n => (x, w')) w =
+      ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_right x w).fderiv
+  have hEq : fderiv ℝ (fun w' : ℝ^n => u1Prod (x, w')) w =
+      u1D1 (x, w) ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := by
+    simpa [u1D1, hGderiv] using fderiv_comp' w hU hG
+  have hSlice : (fun w' : ℝ^n => u1Prod (x, w')) = (fun w' : ℝ^n => asm.u1 x w') := rfl
+  rw [hSlice] at hEq
+  simpa using (congrArg (fun L : ℝ^n →L[ℝ] ℝ => L v) hEq).symm
+
+/-- The derivative of `u1Prod` in a pure `x` direction is the `x`-derivative at fixed `w`. -/
+lemma u1D1_fst (x v : ℝ^m) (w : ℝ^n) :
+    u1D1 (x, w) (v, 0) = fderiv ℝ (fun x' : ℝ^m => asm.u1 x' w) x v := by
+  have hG : DifferentiableAt ℝ (fun x' : ℝ^m => (x', w)) x := by fun_prop
+  have hU : DifferentiableAt ℝ u1Prod (x, w) := u1Prod_smooth.differentiable (by simp) _
+  have hGderiv : fderiv ℝ (fun x' : ℝ^m => (x', w)) x =
+      ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_left x w).fderiv
+  have hEq : fderiv ℝ (fun x' : ℝ^m => u1Prod (x', w)) x =
+      u1D1 (x, w) ∘L ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := by
+    simpa [u1D1, hGderiv] using fderiv_comp' x hU hG
+  have hSlice : (fun x' : ℝ^m => u1Prod (x', w)) = (fun x' : ℝ^m => asm.u1 x' w) := rfl
+  rw [hSlice] at hEq
+  simpa using (congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hEq).symm
+
+/-- The first derivative of `u1Prod` splits into pure `x` and `w` parts. -/
+lemma u1D1_split (q : ℝ^m × ℝ^n) (v : ℝ^m × ℝ^n) :
+    u1D1 q v = u1D1 q (v.1, 0) + u1D1 q (0, v.2) := by
+  conv_lhs => rw [← prod_vec_split v]
+  rw [map_add]
+
+/-- The pure `x` derivative of `u1Prod` vanishes at `(y,0)` for `y ∈ Ω`. -/
+lemma u1D1_fst_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v : ℝ^m) :
+    u1D1 (y, 0) (v, 0) = 0 := by
+  rw [u1D1_fst]
+  have h : (fun x : ℝ^m => asm.u1 x 0) =ᶠ[𝓝 y] (fun _ : ℝ^m => 0) := by
+    filter_upwards [cca.Ω_open.mem_nhds hy] with x hx
+    exact asm.u1AtZero x (B_subset_D (cca.Ω_subset_B hx))
+  have hfd : fderiv ℝ (fun x : ℝ^m => asm.u1 x 0) y =
+      fderiv ℝ (fun _ : ℝ^m => (0 : ℝ)) y := h.fderiv_eq
+  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfd
+
+/-- The first derivative of `u1Prod` at `(y,0)` only has a `w` contribution. -/
+lemma u1D1_at_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v : ℝ^m × ℝ^n) :
+    u1D1 (y, 0) v = ∑ α : Fin n, u1W y 0 (e α) * v.2 α := by
+  rw [u1D1_split, u1D1_fst_zero y hy, u1D1_snd]
+  have h := clm_apply_eq_sum_basis (diff (asm.u1 y) 0) v.2
+  simpa [u1W, mul_comm] using h
+
+/-- Second derivative of `u1Prod` in two pure `w` directions. -/
+lemma u1D2_snd_snd (x : ℝ^m) (w v dv : ℝ^n) :
+    u1D2 (x, w) (0, v) (0, dv) =
+      fderiv ℝ (fun w' : ℝ^n => diff (asm.u1 x) w' dv) w v := by
+  have hG : DifferentiableAt ℝ (fun w' : ℝ^n => (x, w')) w := by fun_prop
+  have hU : DifferentiableAt ℝ u1D1 (x, w) := u1D1_smooth.differentiable (by simp) _
+  have hGderiv : fderiv ℝ (fun w' : ℝ^n => (x, w')) w =
+      ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_right x w).fderiv
+  have hEq : fderiv ℝ (fun w' : ℝ^n => u1D1 (x, w')) w =
+      u1D2 (x, w) ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := by
+    simpa [u1D2, hGderiv] using fderiv_comp' w hU hG
+  have hfun : (fun w' : ℝ^n => u1D1 (x, w') (0, dv)) =
+      (fun w' : ℝ^n => diff (asm.u1 x) w' dv) := by
+    funext w'
+    exact u1D1_snd x w' dv
+  have hval := congrArg (fun L : ℝ^n →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ℝ) => L v (0, dv)) hEq
+  simp only [ContinuousLinearMap.comp_apply, ContinuousLinearMap.inr_apply] at hval
+  have hc : DifferentiableAt ℝ (fun w' : ℝ^n => u1D1 (x, w')) w := hU.comp w hG
+  have happ := fderiv_clm_apply hc (differentiableAt_const (c := (0, dv)))
+  have hval2 : (fderiv ℝ (fun w' : ℝ^n => u1D1 (x, w') (0, dv)) w) v =
+      ((fderiv ℝ (fun w' : ℝ^n => u1D1 (x, w')) w) v) (0, dv) := by
+    simpa using congrArg (fun L : ℝ^n →L[ℝ] ℝ => L v) happ
+  calc
+    u1D2 (x, w) (0, v) (0, dv) = ((fderiv ℝ (fun w' : ℝ^n => u1D1 (x, w')) w) v) (0, dv) := hval.symm
+    _ = (fderiv ℝ (fun w' : ℝ^n => u1D1 (x, w') (0, dv)) w) v := hval2.symm
+    _ = (fderiv ℝ (fun w' : ℝ^n => diff (asm.u1 x) w' dv) w) v := by rw [hfun]
+
+/-- Second derivative of `u1Prod` in coordinate `w` directions recovers `u1WW`. -/
+lemma u1D2_ww (x : ℝ^m) (w : ℝ^n) (α β : Fin n) :
+    u1D2 (x, w) (iw α) (iw β) = u1WW x w α β := by
+  rw [u1D2_snd_snd]
+  have hc : DifferentiableAt ℝ (diff (asm.u1 x)) w :=
+    ((u1_x_smooth x).fderiv_right (m := ⊤) (by simp)).differentiable (by simp) w
+  rw [fderiv_clm_apply hc (differentiableAt_const (c := e β))]
+  simp [u1WW, diff2, Matrix.of_apply]
+
+/-- Second derivative of `u1Prod` in an `x` direction then a `w` direction. -/
+lemma u1D2_fst_snd (x : ℝ^m) (v : ℝ^m) (w dv : ℝ^n) :
+    u1D2 (x, w) (v, 0) (0, dv) =
+      fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w) (0, dv)) x v := by
+  have hG : DifferentiableAt ℝ (fun x' : ℝ^m => (x', w)) x := by fun_prop
+  have hU : DifferentiableAt ℝ u1D1 (x, w) := u1D1_smooth.differentiable (by simp) _
+  have hGderiv : fderiv ℝ (fun x' : ℝ^m => (x', w)) x =
+      ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_left x w).fderiv
+  have hEq : fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w)) x =
+      u1D2 (x, w) ∘L ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := by
+    simpa [u1D2, hGderiv] using fderiv_comp' x hU hG
+  have hval := congrArg (fun L : ℝ^m →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ℝ) => L v (0, dv)) hEq
+  simp only [ContinuousLinearMap.comp_apply, ContinuousLinearMap.inl_apply] at hval
+  have hc : DifferentiableAt ℝ (fun x' : ℝ^m => u1D1 (x', w)) x := hU.comp x hG
+  have happ := fderiv_clm_apply hc (differentiableAt_const (c := (0, dv)))
+  have hval2 : (fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w) (0, dv)) x) v =
+      ((fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w)) x) v) (0, dv) := by
+    simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) happ
+  calc
+    u1D2 (x, w) (v, 0) (0, dv) = ((fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w)) x) v) (0, dv) := hval.symm
+    _ = (fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w) (0, dv)) x) v := hval2.symm
+
+/-- Second derivative of `u1Prod` in two pure `x` directions. -/
+lemma u1D2_fst_fst (x : ℝ^m) (v dv : ℝ^m) (w : ℝ^n) :
+    u1D2 (x, w) (v, 0) (dv, 0) =
+      fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w) (dv, 0)) x v := by
+  have hG : DifferentiableAt ℝ (fun x' : ℝ^m => (x', w)) x := by fun_prop
+  have hU : DifferentiableAt ℝ u1D1 (x, w) := u1D1_smooth.differentiable (by simp) _
+  have hGderiv : fderiv ℝ (fun x' : ℝ^m => (x', w)) x =
+      ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_left x w).fderiv
+  have hEq : fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w)) x =
+      u1D2 (x, w) ∘L ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := by
+    simpa [u1D2, hGderiv] using fderiv_comp' x hU hG
+  have hval := congrArg (fun L : ℝ^m →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ℝ) => L v (dv, 0)) hEq
+  simp only [ContinuousLinearMap.comp_apply, ContinuousLinearMap.inl_apply] at hval
+  have hc : DifferentiableAt ℝ (fun x' : ℝ^m => u1D1 (x', w)) x := hU.comp x hG
+  have happ := fderiv_clm_apply hc (differentiableAt_const (c := (dv, 0)))
+  have hval2 : (fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w) (dv, 0)) x) v =
+      ((fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w)) x) v) (dv, 0) := by
+    simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) happ
+  calc
+    u1D2 (x, w) (v, 0) (dv, 0) = ((fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w)) x) v) (dv, 0) := hval.symm
+    _ = (fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w) (dv, 0)) x) v := hval2.symm
+
+/-- The pure `x` second derivative of `u1Prod` vanishes at `(y,0)`. -/
+lemma u1D2_fst_fst_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v dv : ℝ^m) :
+    u1D2 (y, 0) (v, 0) (dv, 0) = 0 := by
+  rw [u1D2_fst_fst]
+  have hfun : (fun x : ℝ^m => u1D1 (x, 0) (dv, 0)) =ᶠ[𝓝 y] (fun _ : ℝ^m => 0) := by
+    filter_upwards [cca.Ω_open.mem_nhds hy] with x hx
+    exact u1D1_fst_zero x hx dv
+  have hfd : fderiv ℝ (fun x : ℝ^m => u1D1 (x, 0) (dv, 0)) y =
+      fderiv ℝ (fun _ : ℝ^m => (0 : ℝ)) y := hfun.fderiv_eq
+  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfd
+
+/-- The mixed `x^i w^α` derivative of `u1Prod` at `(y,0)` in a basis `w` direction. -/
+lemma u1D2_fst_snd_basis (y : ℝ^m) (v : ℝ^m) (α : Fin n) :
+    u1D2 (y, 0) (v, 0) (0, e α) = ∑ i : Fin m, v i * u1XW y i α := by
+  rw [u1D2_fst_snd]
+  have hfun : (fun x' : ℝ^m => u1D1 (x', 0) (0, e α)) =
+      (fun x' : ℝ^m => u1W x' 0 (e α)) := by
+    funext x'
+    rw [u1D1_snd]
+  rw [hfun]
+  have hv : v = ∑ i : Fin m, v i • e i := pi_sum_basis v
+  have hL := congrArg (fun w : ℝ^m => (fderiv ℝ (fun x' : ℝ^m => u1W x' 0 (e α)) y) w) hv
+  change (fun w : ℝ^m => (fderiv ℝ (fun x' : ℝ^m => u1W x' 0 (e α)) y) w) v = _
+  rw [hL]
+  change (fderiv ℝ (fun x' : ℝ^m => u1W x' 0 (e α)) y) (∑ i : Fin m, v i • e i) = _
+  rw [map_sum]
+  simp [u1XW, smul_eq_mul]
+
+/-- The mixed `x` then `w` second derivative of `u1Prod` at `(y,0)`. -/
+lemma u1D2_fst_snd_at_zero (y : ℝ^m) (v : ℝ^m) (ζ : ℝ^n) :
+    u1D2 (y, 0) (v, 0) (0, ζ) =
+      ∑ i : Fin m, ∑ α : Fin n, u1XW y i α * ζ α * v i := by
+  have hpair : ((0 : ℝ^m), ζ) = ∑ α : Fin n, ζ α • ((0 : ℝ^m), e α) := by
+    apply Prod.ext
+    · funext j
+      change (0 : ℝ) = (ContinuousLinearMap.fst ℝ ℝ^m ℝ^n
+        (∑ α : Fin n, ζ α • ((0 : ℝ^m), e α))) j
+      rw [map_sum]
+      simp
+    · funext j
+      change ζ j = (ContinuousLinearMap.snd ℝ ℝ^m ℝ^n
+        (∑ α : Fin n, ζ α • ((0 : ℝ^m), e α))) j
+      rw [map_sum]
+      simp [e, Pi.single_apply]
+  calc
+    u1D2 (y, 0) (v, 0) (0, ζ) =
+        u1D2 (y, 0) (v, 0) (∑ α : Fin n, ζ α • (0, e α)) := by rw [hpair]
+    _ = ∑ α : Fin n, ζ α * u1D2 (y, 0) (v, 0) (0, e α) := by
+      rw [map_sum]
+      simp only [ContinuousLinearMap.map_smulₛₗ, RingHom.id_apply]
+      simp [smul_eq_mul]
+    _ = ∑ α : Fin n, ζ α * (∑ i : Fin m, v i * u1XW y i α) := by
+      apply Finset.sum_congr rfl
+      intro α _
+      rw [u1D2_fst_snd_basis]
+    _ = ∑ i : Fin m, ∑ α : Fin n, u1XW y i α * ζ α * v i := by
+      rw [Finset.sum_comm]
+      simp [Finset.mul_sum, mul_comm, mul_left_comm]
+
+/-- Symmetry of the second derivative of `u1Prod`. -/
+lemma u1D2_symm (q : ℝ^m × ℝ^n) (v dv : ℝ^m × ℝ^n) :
+    u1D2 q v dv = u1D2 q dv v := by
+  have hsymm : IsSymmSndFDerivAt ℝ u1Prod q :=
+    u1Prod_smooth.contDiffAt.isSymmSndFDerivAt (by simp)
+  simpa [u1D2] using hsymm.eq v dv
+
+/-- The second derivative of `u1Prod` at `(y,0)` in the product basis. -/
+lemma u1D2_at_zero (y : ℝ^m) (hy : y ∈ cca.Ω)
+    (v dv : ℝ^m × ℝ^n) :
+    u1D2 (y, 0) v dv =
+      (∑ γ : Fin n, ∑ δ : Fin n, u1WW y 0 γ δ * dv.2 δ * v.2 γ) +
+      (∑ i : Fin m, ∑ α : Fin n, u1XW y i α * dv.2 α * v.1 i) +
+      (∑ i : Fin m, ∑ α : Fin n, u1XW y i α * v.2 α * dv.1 i) := by
+  have hsplit : u1D2 (y, 0) v dv =
+      u1D2 (y, 0) (v.1, 0) (dv.1, 0) + u1D2 (y, 0) (v.1, 0) (0, dv.2) +
+        u1D2 (y, 0) (0, v.2) (dv.1, 0) + u1D2 (y, 0) (0, v.2) (0, dv.2) := by
+    calc
+      u1D2 (y, 0) v dv = u1D2 (y, 0) ((v.1, 0) + (0, v.2)) dv := by rw [prod_vec_split]
+      _ = u1D2 (y, 0) (v.1, 0) dv + u1D2 (y, 0) (0, v.2) dv := by rw [map_add]; rfl
+      _ = u1D2 (y, 0) (v.1, 0) ((dv.1, 0) + (0, dv.2)) +
+          u1D2 (y, 0) (0, v.2) ((dv.1, 0) + (0, dv.2)) := by rw [prod_vec_split]
+      _ = _ := by rw [map_add, map_add]; abel
+  have hpure : u1D2 (y, 0) (0, v.2) (0, dv.2) =
+      ∑ γ : Fin n, ∑ δ : Fin n, u1WW y 0 γ δ * dv.2 δ * v.2 γ := by
+    let L : ℝ^n →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ℝ) :=
+      (u1D2 (y, 0)).comp (ContinuousLinearMap.inr ℝ ℝ^m ℝ^n)
+    have hL : L v.2 = ∑ γ : Fin n, v.2 γ • L (e γ) := by
+      conv_lhs => rw [pi_sum_basis v.2]
+      rw [map_sum]
+      simp
+    calc
+      u1D2 (y, 0) (0, v.2) (0, dv.2) = (L v.2) (0, dv.2) := rfl
+      _ = (∑ γ : Fin n, v.2 γ • L (e γ)) (0, dv.2) := by rw [hL]
+      _ = ∑ γ : Fin n, v.2 γ * (L (e γ)) (0, dv.2) := by
+        simp [Finset.sum_apply]
+      _ = ∑ γ : Fin n, v.2 γ * (∑ δ : Fin n, dv.2 δ * u1WW y 0 γ δ) := by
+        apply Finset.sum_congr rfl
+        intro γ _
+        have hb := clm_apply_eq_sum_basis (((u1D2 (y, 0)) (0, e γ)).comp
+          (ContinuousLinearMap.inr ℝ ℝ^m ℝ^n)) dv.2
+        simpa [L, u1WW, u1D2_ww] using congrArg (fun r : ℝ => v.2 γ * r) hb
+      _ = ∑ γ : Fin n, ∑ δ : Fin n, u1WW y 0 γ δ * dv.2 δ * v.2 γ := by
+        simp [Finset.mul_sum]
+        apply Finset.sum_congr rfl
+        intro γ _
+        apply Finset.sum_congr rfl
+        intro δ _
+        ring
+  rw [hsplit, u1D2_fst_fst_zero y hy, u1D2_fst_snd_at_zero y v.1 dv.2,
+    u1D2_symm (y, 0) (0, v.2) (dv.1, 0), u1D2_fst_snd_at_zero y dv.1 v.2, hpure]
+  abel
+
 /-- The derivative of `u0Prod ∘ G` in the direction `e α`. -/
 lemma zD1_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
     (hG : ContDiffAt ℝ ⊤ G z) (α : Fin n) :
@@ -2040,6 +2244,47 @@ lemma zD2_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
   rw [hcderiv] at hval
   simpa only [Dγ, ContinuousLinearMap.comp_apply, ContinuousLinearMap.flip_apply, add_comm] using hval
 
+/-- The derivative of `u1Prod ∘ G` in the direction `e α`. -/
+lemma zD1_u1_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
+    (hG : ContDiffAt ℝ ⊤ G z) (α : Fin n) :
+    fderiv ℝ (fun z' : ℝ^n => u1Prod (G z')) z (e α) =
+      u1D1 (G z) (fderiv ℝ G z (e α)) := by
+  have hU : DifferentiableAt ℝ u1Prod (G z) := u1Prod_smooth.differentiable (by simp) _
+  have hGd : DifferentiableAt ℝ G z := hG.differentiableAt (by simp)
+  have hcomp := fderiv_comp' z hU hGd
+  simpa [u1D1] using congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e α)) hcomp
+
+/-- The mixed derivative of `u1Prod ∘ G`, with the inner direction `e γ` and
+the outer direction `e β`. -/
+lemma zD2_u1_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
+    (hG : ContDiffAt ℝ ⊤ G z) (β γ : Fin n) :
+    fderiv ℝ (fun z' : ℝ^n =>
+        fderiv ℝ (fun z'' : ℝ^n => u1Prod (G z'')) z' (e γ)) z (e β) =
+      u1D2 (G z) (fderiv ℝ G z (e β)) (fderiv ℝ G z (e γ)) +
+      u1D1 (G z) (fderiv ℝ (fun z' : ℝ^n => fderiv ℝ G z' (e γ)) z (e β)) := by
+  let Dγ : ℝ^n → ℝ^m × ℝ^n := fun z' => fderiv ℝ G z' (e γ)
+  have hGd : DifferentiableAt ℝ G z := hG.differentiableAt (by simp)
+  have hfdG : ContDiffAt ℝ ⊤ (fderiv ℝ G) z := hG.fderiv_right (m := ⊤) (by simp)
+  have hDγd : DifferentiableAt ℝ Dγ z := by
+    exact ((hfdG.clm_apply (contDiffAt_const (c := e γ))).differentiableAt (by simp))
+  have hU1d : DifferentiableAt ℝ u1D1 (G z) := u1D1_smooth.differentiable (by simp) _
+  have hcd : DifferentiableAt ℝ (fun z' : ℝ^n => u1D1 (G z')) z := hU1d.comp z hGd
+  have hT : (fun z' : ℝ^n =>
+      fderiv ℝ (fun z'' : ℝ^n => u1Prod (G z'')) z' (e γ)) =ᶠ[𝓝 z]
+      (fun z' : ℝ^n => u1D1 (G z') (Dγ z')) := by
+    filter_upwards [hG.eventually (by simp)] with z' hz'
+    exact zD1_u1_comp_at G z' hz' γ
+  have hTderiv : fderiv ℝ (fun z' : ℝ^n =>
+      fderiv ℝ (fun z'' : ℝ^n => u1Prod (G z'')) z' (e γ)) z =
+      fderiv ℝ (fun z' : ℝ^n => u1D1 (G z') (Dγ z')) z := hT.fderiv_eq
+  rw [hTderiv]
+  have happ := fderiv_clm_apply hcd hDγd
+  have hcderiv : fderiv ℝ (fun z' : ℝ^n => u1D1 (G z')) z =
+      u1D2 (G z) ∘L fderiv ℝ G z := by
+    simpa [u1D2] using fderiv_comp' z hU1d hGd
+  have hval := congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e β)) happ
+  rw [hcderiv] at hval
+  simpa only [Dγ, ContinuousLinearMap.comp_apply, ContinuousLinearMap.flip_apply, add_comm] using hval
 /-- The third mixed derivative of `u0Prod ∘ G`, with the innermost direction
 `e γ`, middle direction `e β`, and outermost direction `e α`. -/
 lemma zD3_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
@@ -2412,33 +2657,6 @@ lemma dG_coordG_snd (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
   have hval := congrArg (fun L : ℝ^n →L[ℝ] (ℝ^m × ℝ^n) => L (e α)) hprod
   simpa [dG] using congrArg Prod.snd hval
 
-/-- First component of the mixed second `z`-derivative of `coordG`. -/
-lemma d2G_coordG_fst (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
-    (d2G (coordG y) 0 α β).1 =
-      fderiv ℝ (fun z' : ℝ^n => fderiv ℝ (phiZ y) z' (e β)) 0 (e α) := by
-  have hφev := (phi_z_smoothAt y hy).eventually (by simp)
-  have hψev := (CoordChangeAssumptions.psi_z_smoothAt y hy).eventually (by simp)
-  have hEq : (fun z : ℝ^n => dG (coordG y) z β) =ᶠ[𝓝 0]
-      (fun z : ℝ^n => (fderiv ℝ (phiZ y) z (e β), fderiv ℝ (psiZ y) z (e β))) := by
-    filter_upwards [hφev, hψev] with z hφ hψ
-    have hφd := hφ.differentiableAt (by simp)
-    have hψd := hψ.differentiableAt (by simp)
-    have hprod := hφd.fderiv_prodMk hψd
-    simpa [dG, coordG] using congrArg (fun L : ℝ^n →L[ℝ] (ℝ^m × ℝ^n) => L (e β)) hprod
-  have hφβd : DifferentiableAt ℝ (fun z : ℝ^n => fderiv ℝ (phiZ y) z (e β)) 0 := by
-    exact (((phi_z_smoothAt y hy).fderiv_right (m := ⊤) (by simp)).clm_apply
-      (contDiffAt_const (c := e β))).differentiableAt (by simp)
-  have hψβd : DifferentiableAt ℝ (fun z : ℝ^n => fderiv ℝ (psiZ y) z (e β)) 0 := by
-    exact (((CoordChangeAssumptions.psi_z_smoothAt y hy).fderiv_right (m := ⊤) (by simp)).clm_apply
-      (contDiffAt_const (c := e β))).differentiableAt (by simp)
-  have hprod2 : fderiv ℝ (fun z : ℝ^n =>
-      (fderiv ℝ (phiZ y) z (e β), fderiv ℝ (psiZ y) z (e β))) 0 =
-      (fderiv ℝ (fun z : ℝ^n => fderiv ℝ (phiZ y) z (e β)) 0).prod
-        (fderiv ℝ (fun z : ℝ^n => fderiv ℝ (psiZ y) z (e β)) 0) :=
-    hφβd.fderiv_prodMk hψβd
-  have hval := congrArg (fun L : ℝ^n →L[ℝ] (ℝ^m × ℝ^n) => L (e α)) (hEq.fderiv_eq.trans hprod2)
-  simpa [d2G] using congrArg Prod.fst hval
-
 /-- Second component of the mixed second `z`-derivative of `coordG`. -/
 lemma d2G_coordG_snd (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
     (d2G (coordG y) 0 α β).2 =
@@ -2646,6 +2864,98 @@ lemma zD3_v0_prod (y : ℝ^m) (hy : y ∈ cca.Ω) (α β γ : Fin n) :
     (upsilon_z_smoothAt y hy) (v0B_smoothAt y hy)
     (v0B_zero y hy) hB1 α β γ
   simpa [zD1, zD2] using h
+
+/-- The `u1` factor of `v1` after the coordinate change. -/
+abbrev u1B (y : ℝ^m) (z : ℝ^n) : ℝ := u1Prod (coordG y z)
+
+/-- Smoothness at `z=0` of the `u1` factor `u1B y`. -/
+lemma u1B_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    ContDiffAt ℝ ⊤ (u1B y) 0 := by
+  simpa [u1B, Function.comp_def] using
+    u1Prod_smooth.contDiffAt.comp 0 (coordG_smoothAt y hy)
+
+/-- The factor `u1B y` vanishes at `z=0`. -/
+lemma u1B_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : u1B y 0 = 0 := by
+  rw [u1B, coordG_zero y hy]
+  exact asm.u1AtZero y (B_subset_D (cca.Ω_subset_B hy))
+
+/-- The first `z`-derivative of `u1B y` at zero. -/
+lemma zD1_u1B (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    zD1 (u1B y) α = u1D1 (y, 0) (dG (coordG y) 0 α) := by
+  calc
+    zD1 (u1B y) α = u1D1 (coordG y 0) (dG (coordG y) 0 α) := by
+      simpa [u1B, zD1] using zD1_u1_comp_at (coordG y) 0 (coordG_smoothAt y hy) α
+    _ = u1D1 (y, 0) (dG (coordG y) 0 α) := by rw [coordG_zero y hy]
+
+/-- The second `z`-derivative of `u1B y` at zero. -/
+lemma zD2_u1B (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
+    zD2 (u1B y) α β =
+      u1D2 (y, 0) (dG (coordG y) 0 α) (dG (coordG y) 0 β) +
+      u1D1 (y, 0) (d2G (coordG y) 0 α β) := by
+  calc
+    zD2 (u1B y) α β =
+        u1D2 (coordG y 0) (dG (coordG y) 0 α) (dG (coordG y) 0 β) +
+        u1D1 (coordG y 0) (d2G (coordG y) 0 α β) := by
+          simpa [u1B, zD2, d2G] using
+            zD2_u1_comp_at (coordG y) 0 (coordG_smoothAt y hy) α β
+    _ = _ := by rw [coordG_zero y hy]
+
+/-- The first `z`-derivative of `u1B` in the coordinate basis. -/
+lemma zD1_u1B_expanded (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    zD1 (u1B y) α = ∑ γ : Fin n, u1W y 0 (e γ) * zD1 (psiZ y) α γ := by
+  rw [zD1_u1B y hy α, u1D1_at_zero y hy]
+  simp [zD1, dG_coordG_snd y hy]
+
+/-- The second-derivative `u1D2` contribution from two first `z`-derivatives of `coordG`. -/
+lemma u1D2_dG_dG_expanded (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
+    u1D2 (y, 0) (dG (coordG y) 0 α) (dG (coordG y) 0 β) =
+      (∑ γ : Fin n, ∑ δ : Fin n,
+        u1WW y 0 γ δ * zD1 (psiZ y) α γ * zD1 (psiZ y) β δ) +
+      (∑ i : Fin m, ∑ γ : Fin n,
+        u1XW y i γ * zD1 (psiZ y) β γ * zD1 (phiZ y) α i) +
+      (∑ i : Fin m, ∑ γ : Fin n,
+        u1XW y i γ * zD1 (psiZ y) α γ * zD1 (phiZ y) β i) := by
+  rw [u1D2_at_zero y hy]
+  simp_rw [dG_coordG_fst y hy, dG_coordG_snd y hy]
+  simp [zD1, mul_comm, mul_left_comm]
+
+/-- The first-derivative contribution from the second `z`-derivative of `coordG`. -/
+lemma u1D1_d2G_expanded (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
+    u1D1 (y, 0) (d2G (coordG y) 0 α β) =
+      ∑ γ : Fin n, u1W y 0 (e γ) * zD2 (psiZ y) α β γ := by
+  rw [u1D1_at_zero y hy]
+  simp [zD2, d2G_coordG_snd y hy]
+
+/-- The second `z`-derivative of `u1B` in the coordinate basis. -/
+lemma zD2_u1B_expanded (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
+    zD2 (u1B y) α β =
+      (∑ γ : Fin n, ∑ δ : Fin n,
+        u1WW y 0 γ δ * zD1 (psiZ y) α γ * zD1 (psiZ y) β δ) +
+      (∑ i : Fin m, ∑ γ : Fin n,
+        u1XW y i γ * zD1 (psiZ y) β γ * zD1 (phiZ y) α i) +
+      (∑ i : Fin m, ∑ γ : Fin n,
+        u1XW y i γ * zD1 (psiZ y) α γ * zD1 (phiZ y) β i) +
+      (∑ γ : Fin n, u1W y 0 (e γ) * zD2 (psiZ y) α β γ) := by
+  rw [zD2_u1B y hy α β, u1D2_dG_dG_expanded y hy α β, u1D1_d2G_expanded y hy α β]
+
+/-- Product-rule formula for the first `z`-derivative of `v1`. -/
+lemma zD1_v1_prod (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    zD1 (ccd.v1 y) α =
+      upsilonZ y 0 * zD1 (u1B y) α + zD1 (upsilonZ y) α * u1B y 0 := by
+  change zD1 (fun z : ℝ^n => upsilonZ y z * u1B y z) α = _
+  simpa [zD1] using zD1_mul_at (upsilonZ y) (u1B y) 0
+    (upsilon_z_smoothAt y hy) (u1B_smoothAt y hy) α
+
+/-- Product-rule formula for the second `z`-derivative of `v1`. -/
+lemma zD2_v1_prod (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
+    zD2 (ccd.v1 y) α β =
+      upsilonZ y 0 * zD2 (u1B y) α β +
+      zD1 (upsilonZ y) β * zD1 (u1B y) α +
+      zD1 (upsilonZ y) α * zD1 (u1B y) β := by
+  change zD2 (fun z : ℝ^n => upsilonZ y z * u1B y z) α β = _
+  have h := zD2_mul_at (upsilonZ y) (u1B y) 0
+    (upsilon_z_smoothAt y hy) (u1B_smoothAt y hy) α β
+  simpa [zD1, zD2, u1B_zero y hy] using h
 
 end
 
