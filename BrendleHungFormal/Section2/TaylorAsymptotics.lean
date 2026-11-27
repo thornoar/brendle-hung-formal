@@ -15,6 +15,61 @@ open scoped Topology BigOperators
 
 noncomputable section
 
+/-- The zeroth-order Taylor remainder of `φ` at zero. -/
+abbrev taylorRemainderZero
+    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F :=
+  fun z => φ z - φ 0
+
+/-- The first-order Taylor remainder of `φ` at zero. -/
+abbrev taylorRemainderOne
+    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F :=
+  fun z => φ z - φ 0 - fderiv ℝ φ 0 z
+
+/-- The second-order Taylor remainder of `φ` at zero. -/
+abbrev taylorRemainderTwo
+    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F :=
+  fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
+    (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z
+
+/-- The third-order Taylor remainder of `φ` at zero. -/
+abbrev taylorRemainderThree
+    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F :=
+  fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
+    (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z -
+    (1 / 6 : ℝ) • fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0 z z z
+
+/-- The zeroth-order remainder vanishes at the base point. -/
+@[simp] lemma taylorRemainderZero_apply_zero
+    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) :
+    taylorRemainderZero φ (0 : E) = 0 := by
+  simp [taylorRemainderZero]
+
+/-- The first-order remainder vanishes at the base point. -/
+@[simp] lemma taylorRemainderOne_apply_zero
+    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) :
+    taylorRemainderOne φ (0 : E) = 0 := by
+  simp [taylorRemainderOne]
+
+/-- The second-order remainder vanishes at the base point. -/
+@[simp] lemma taylorRemainderTwo_apply_zero
+    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) :
+    taylorRemainderTwo φ (0 : E) = 0 := by
+  simp [taylorRemainderTwo]
+
+/-- The third-order remainder vanishes at the base point. -/
+@[simp] lemma taylorRemainderThree_apply_zero
+    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) :
+    taylorRemainderThree φ (0 : E) = 0 := by
+  simp [taylorRemainderThree]
+
 /-- If `‖fderiv f y‖ ≤ C‖y-x‖^n` near `x`, then `f y - f x = O(‖y-x‖^(n+1))`. -/
 lemma bigO_of_fderiv_bound_pow
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
@@ -58,8 +113,8 @@ lemma taylor_one_isBigO_of_contDiffAt
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
     {φ : E → F} (hφ : ContDiffAt ℝ ⊤ φ (0 : E)) :
-    (fun z => φ z - φ 0 - fderiv ℝ φ 0 z) =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (2 : ℕ)) := by
-  let g : E → E →L[ℝ] F := fun z => fderiv ℝ φ z
+    (taylorRemainderOne φ) =O[𝓝 (0 : E)] (‖·‖ ^ (2 : ℕ)) := by
+  let g : E → E →L[ℝ] F := fderiv ℝ φ
   have hgcont : ContDiffAt ℝ 1 g (0 : E) := by
     simpa [g] using hφ.fderiv_right (m := (1 : WithTop ℕ∞)) (by simp)
   have hgdiff0 : DifferentiableAt ℝ g 0 := hgcont.differentiableAt_one
@@ -83,35 +138,30 @@ lemma taylor_one_isBigO_of_contDiffAt
   have hRφsub' : Metric.ball (0 : E) R ⊆ u :=
     (Metric.ball_subset_ball (min_le_right Rt Rφ)).trans hRφsub
   have hφloc : ContDiffOn ℝ 2 φ (Metric.ball (0 : E) R) := hucont.mono hRφsub'
-  have hgdiff : ∀ z ∈ Metric.ball (0 : E) R, DifferentiableAt ℝ g z := by
-    intro z hz
-    have hgOn : ContDiffOn ℝ 1 g (Metric.ball (0 : E) R) :=
-      hφloc.fderiv_of_isOpen Metric.isOpen_ball (by norm_num)
-    exact (hgOn.differentiableOn (by norm_num)).differentiableAt (Metric.isOpen_ball.mem_nhds hz)
   have hdiff' : ∀ z ∈ Metric.ball (0 : E) R,
-      DifferentiableAt ℝ (fun z => φ z - φ 0 - fderiv ℝ φ 0 z) z := by
+      DifferentiableAt ℝ (taylorRemainderOne φ) z := by
     intro z hz
     have h1 : DifferentiableAt ℝ φ z :=
       (hφloc.differentiableOn (by norm_num)).differentiableAt (Metric.isOpen_ball.mem_nhds hz)
     exact (h1.sub (differentiableAt_const (c := φ 0))).sub (fderiv ℝ φ 0).differentiableAt
   have hbound' : ∀ z ∈ Metric.ball (0 : E) R,
-      ‖fderiv ℝ (fun z => φ z - φ 0 - fderiv ℝ φ 0 z) z‖ ≤ |C| * ‖z - 0‖ ^ (1 : ℕ) := by
+      ‖fderiv ℝ (taylorRemainderOne φ) z‖ ≤ |C| * ‖z - 0‖ ^ (1 : ℕ) := by
     intro z hz
     have hzt : z ∈ t := hRtsub' (by simpa [Metric.mem_ball, dist_eq_norm] using hz)
     have hgz : ‖g z - g 0‖ ≤ |C| * ‖z‖ := ht z hzt
-    have hderiv : fderiv ℝ (fun z => φ z - φ 0 - fderiv ℝ φ 0 z) z = g z - g 0 := by
+    have hderiv : fderiv ℝ (taylorRemainderOne φ) z = g z - g 0 := by
       have h1φ : DifferentiableAt ℝ φ z :=
         (hφloc.differentiableOn (by norm_num)).differentiableAt (Metric.isOpen_ball.mem_nhds hz)
       have h1 : HasFDerivAt φ (g z) z := by simpa [g] using h1φ.hasFDerivAt
       have h2 : HasFDerivAt (fun _ : E => φ 0) (0 : E →L[ℝ] F) z :=
         hasFDerivAt_const (𝕜 := ℝ) (x := z) (c := φ 0)
-      have h3 : HasFDerivAt (fun z : E => fderiv ℝ φ 0 z) (fderiv ℝ φ 0) z :=
+      have h3 : HasFDerivAt (fderiv ℝ φ 0) (fderiv ℝ φ 0) z :=
         (fderiv ℝ φ 0).hasFDerivAt
       simpa [g] using (h1.sub h2 |>.sub h3).fderiv
     rw [hderiv]
     simpa [g] using hgz
   simpa using (bigO_of_fderiv_bound_pow
-    (f := fun z => φ z - φ 0 - fderiv ℝ φ 0 z)
+    (f := taylorRemainderOne φ)
     (x := (0 : E)) (R := R) (C := |C|) (n := 1) hR (abs_nonneg C) hdiff' hbound')
 
 /-- Zeroth-order Taylor estimate `φ z - φ 0 = O(‖z‖)` for a smooth map. -/
@@ -119,7 +169,7 @@ lemma smooth_taylor_zero_isBigO
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
     {φ : E → F} (hφ : ContDiff ℝ ⊤ φ) :
-    (fun z => φ z - φ 0) =O[𝓝 (0 : E)] (fun z => ‖z‖) := by
+    (taylorRemainderZero φ) =O[𝓝 (0 : E)] (fun z => ‖z‖) := by
   have h := (hφ.differentiable (by simp) (0 : E)).hasFDerivAt.isBigO_sub
   simpa only [sub_zero] using h.norm_right
 
@@ -128,7 +178,7 @@ lemma smooth_taylor_one_isBigO
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
     {φ : E → F} (hφ : ContDiff ℝ ⊤ φ) :
-    (fun z => φ z - φ 0 - fderiv ℝ φ 0 z) =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (2 : ℕ)) := by
+    (taylorRemainderOne φ) =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (2 : ℕ)) := by
   exact taylor_one_isBigO_of_contDiffAt (hφ.contDiffAt)
 
 /-- Second-order Taylor estimate with `O(‖z‖³)` remainder for a smooth map. -/
@@ -136,7 +186,7 @@ lemma smooth_taylor_two_isBigO
   {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F]
   {φ : E → F} (hφ : ContDiff ℝ ⊤ φ) :
-    (fun z => φ z - φ 0 - fderiv ℝ φ 0 z - (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z)
+    (taylorRemainderTwo φ)
     =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (3 : ℕ))
 := by
   let g : E → E →L[ℝ] F := fderiv ℝ φ
@@ -156,16 +206,15 @@ lemma smooth_taylor_two_isBigO
   have hsymm : IsSymmSndFDerivAt ℝ φ (0 : E) := by
     exact (hφ.contDiffAt).isSymmSndFDerivAt (by simp)
   have hdiff' : ∀ z ∈ Metric.ball (0 : E) R,
-      DifferentiableAt ℝ (fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-        (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z) z := by
+      DifferentiableAt ℝ (taylorRemainderTwo φ) z := by
     intro z hz
     have hquad_diff : DifferentiableAt ℝ (fun z : E => B z z) z :=
       (B.differentiableAt).clm_apply differentiableAt_id
     exact (((hφ.differentiable (by simp) z).sub (differentiableAt_const (c := φ 0))).sub
       (fderiv ℝ φ 0).differentiableAt).sub (hquad_diff.const_smul (1 / 2 : ℝ))
   have hbound' : ∀ z ∈ Metric.ball (0 : E) R,
-      ‖fderiv ℝ (fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-        (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z) z‖ ≤ |C| * ‖z - 0‖ ^ (2 : ℕ) := by
+      ‖fderiv ℝ (taylorRemainderTwo φ) z‖
+        ≤ |C| * ‖z - 0‖ ^ (2 : ℕ) := by
     intro z hz
     have hzt : z ∈ t := hRsub (by simpa [Metric.mem_ball, dist_eq_norm] using hz)
     have hgz : ‖g z - g 0 - B z‖ ≤ |C| * ‖z‖ ^ (2 : ℕ) := ht z hzt
@@ -181,19 +230,19 @@ lemma smooth_taylor_two_isBigO
       simp [hflip]
       rw [← add_smul]
       norm_num
-    have hderiv : fderiv ℝ (fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-        (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z) z = g z - g 0 - B z := by
+    have hderiv : fderiv ℝ (taylorRemainderTwo φ) z = g z - g 0 - B z := by
       have h1 : HasFDerivAt φ (g z) z := (hφ.differentiable (by simp) z).hasFDerivAt
       have h2 : HasFDerivAt (fun _ : E => φ 0) (0 : E →L[ℝ] F) z :=
         hasFDerivAt_const (𝕜 := ℝ) (x := z) (c := φ 0)
-      have h3 : HasFDerivAt (fun z : E => fderiv ℝ φ 0 z) (fderiv ℝ φ 0) z :=
+      have h3 : HasFDerivAt (fderiv ℝ φ 0) (fderiv ℝ φ 0) z :=
         (fderiv ℝ φ 0).hasFDerivAt
+      change fderiv ℝ (fun z : E => φ z - φ 0 - fderiv ℝ φ 0 z -
+          (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z) z = g z - g 0 - B z
       simpa [g, B] using (h1.sub h2 |>.sub h3 |>.sub hquad').fderiv
     rw [hderiv]
     simpa using hgz
-  simpa [g, B] using (bigO_of_fderiv_bound_pow
-    (f := fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-        (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z)
+  simpa using (bigO_of_fderiv_bound_pow
+    (f := taylorRemainderTwo φ)
     (x := (0 : E)) (R := R) (C := |C|) (n := 2) hR (abs_nonneg C) hdiff' hbound')
 
 /-- Symmetry of the third derivative in its last two arguments for a smooth real-valued map. -/
@@ -210,7 +259,7 @@ lemma third_deriv_symm_last {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ 
     simpa [A, B] using hsymm.eq v w
   have hg : ContDiff ℝ ⊤ (fderiv ℝ (fderiv ℝ φ)) := by
     simpa using (hφ.fderiv_right (m := ⊤) (by simp)).fderiv_right (m := ⊤) (by simp)
-  have hsecond : HasFDerivAt (fun z => fderiv ℝ (fderiv ℝ φ) z)
+  have hsecond : HasFDerivAt (fderiv ℝ (fderiv ℝ φ))
       (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0) 0 :=
     (hg.differentiable (by simp) (0 : E)).hasFDerivAt
   have hderiv (a b : E) : HasFDerivAt
@@ -233,22 +282,19 @@ lemma third_deriv_symm_last {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ 
 lemma smooth_taylor_three_isBigO
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {φ : E → ℝ} (hφ : ContDiff ℝ ⊤ φ) :
-    (fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-        (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z -
-        (1 / 6 : ℝ) • fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0 z z z)
+    (taylorRemainderThree φ)
       =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (4 : ℕ))
 := by
-  let g : E → E →L[ℝ] ℝ := fun z => fderiv ℝ φ z
+  let g : E → E →L[ℝ] ℝ := fderiv ℝ φ
   let B : E →L[ℝ] (E →L[ℝ] ℝ) := fderiv ℝ g 0
   let C : E →L[ℝ] (E →L[ℝ] (E →L[ℝ] ℝ)) := fderiv ℝ (fderiv ℝ g) 0
   have hg : ContDiff ℝ ⊤ g := by
     simpa [g] using hφ.fderiv_right (m := ⊤) (by simp)
-  have hremG : (fun z => g z - g 0 - B z - (1 / 2 : ℝ) • C z z)
-      =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (3 : ℕ)) := by
-    simpa [g, B, C] using smooth_taylor_two_isBigO hg
+  have hremG : (taylorRemainderTwo g) =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (3 : ℕ)) := by
+    simpa [g] using smooth_taylor_two_isBigO hg
   rcases isBigO_iff.mp hremG with ⟨K, hKev⟩
   have hKev' : ∀ᶠ z : E in 𝓝 0,
-      ‖g z - g 0 - B z - (1 / 2 : ℝ) • C z z‖ ≤ |K| * ‖z‖ ^ (3 : ℕ) :=
+      ‖taylorRemainderTwo g z‖ ≤ |K| * ‖z‖ ^ (3 : ℕ) :=
     hKev.mono fun z hz => by
       have hn : 0 ≤ ‖‖z‖ ^ (3 : ℕ)‖ := norm_nonneg _
       simpa [Real.norm_of_nonneg hn] using hz.trans
@@ -259,9 +305,7 @@ lemma smooth_taylor_three_isBigO
   have hsymmB : IsSymmSndFDerivAt ℝ φ (0 : E) := hφ.contDiffAt.isSymmSndFDerivAt (by simp)
   have hsymmC : IsSymmSndFDerivAt ℝ g (0 : E) := hg.contDiffAt.isSymmSndFDerivAt (by simp)
   have hdiff' : ∀ z ∈ Metric.ball (0 : E) R,
-      DifferentiableAt ℝ (fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-        (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z -
-        (1 / 6 : ℝ) • fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0 z z z) z := by
+      DifferentiableAt ℝ (taylorRemainderThree φ) z := by
     intro z hz
     have hquad_diff : DifferentiableAt ℝ (fun z : E => B z z) z :=
       (B.differentiableAt).clm_apply differentiableAt_id
@@ -271,13 +315,11 @@ lemma smooth_taylor_three_isBigO
       (fderiv ℝ φ 0).differentiableAt).sub (hquad_diff.const_smul (1 / 2 : ℝ))).sub
       (hcub_diff.const_smul (1 / 6 : ℝ))
   have hbound' : ∀ z ∈ Metric.ball (0 : E) R,
-      ‖fderiv ℝ (fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-        (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z -
-        (1 / 6 : ℝ) • fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0 z z z) z‖
+      ‖fderiv ℝ (taylorRemainderThree φ) z‖
         ≤ |K| * ‖z - 0‖ ^ (3 : ℕ) := by
     intro z hz
     have hzt : z ∈ t := hRsub (by simpa [Metric.mem_ball, dist_eq_norm] using hz)
-    have hgz : ‖g z - g 0 - B z - (1 / 2 : ℝ) • C z z‖ ≤ |K| * ‖z‖ ^ (3 : ℕ) := ht z hzt
+    have hgz : ‖taylorRemainderTwo g z‖ ≤ |K| * ‖z‖ ^ (3 : ℕ) := ht z hzt
     have hflipB : B.flip z = B z := by
       ext v
       simpa [B, g, ContinuousLinearMap.flip_apply] using (hsymmB.eq z v).symm
@@ -314,22 +356,23 @@ lemma smooth_taylor_three_isBigO
         exact h1
       simp [h1, h2]
       ring
-    have hderiv : fderiv ℝ (fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-        (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z -
-        (1 / 6 : ℝ) • fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0 z z z) z =
+    have hderiv : fderiv ℝ (taylorRemainderThree φ) z =
         g z - g 0 - B z - (1 / 2 : ℝ) • C z z := by
       have h1 : HasFDerivAt φ (g z) z := (hφ.differentiable (by simp) z).hasFDerivAt
       have h2 : HasFDerivAt (fun _ : E => φ 0) (0 : E →L[ℝ] ℝ) z :=
         hasFDerivAt_const (𝕜 := ℝ) (x := z) (c := φ 0)
-      have h3 : HasFDerivAt (fun z : E => fderiv ℝ φ 0 z) (fderiv ℝ φ 0) z :=
+      have h3 : HasFDerivAt (fderiv ℝ φ 0) (fderiv ℝ φ 0) z :=
         (fderiv ℝ φ 0).hasFDerivAt
-      simpa [g, B, C] using (h1.sub h2 |>.sub h3 |>.sub hquad' |>.sub hcub').fderiv
+      change fderiv ℝ (fun z : E => φ z - φ 0 - fderiv ℝ φ 0 z -
+          (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z -
+          (1 / 6 : ℝ) • fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0 z z z) z =
+        g z - g 0 - B z - (1 / 2 : ℝ) • C z z
+      simpa [g, B, C] using
+        (h1.sub h2 |>.sub h3 |>.sub hquad' |>.sub hcub').fderiv
     rw [hderiv]
-    simpa using hgz
-  simpa [g, B, C] using (bigO_of_fderiv_bound_pow
-    (f := fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-        (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z -
-        (1 / 6 : ℝ) • fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0 z z z)
+    simpa [taylorRemainderTwo] using hgz
+  simpa using (bigO_of_fderiv_bound_pow
+    (f := taylorRemainderThree φ)
     (x := (0 : E)) (R := R) (C := |K|) (n := 3) hR (abs_nonneg K) hdiff' hbound')
 
 /-- For `n ≤ m`, `s^m = O(s^m)` near zero implies `s^m = O(s^n)`. -/
@@ -378,11 +421,9 @@ lemma isBigO_bilinear_apply {α E F G : Type*} [NormedAddCommGroup E] [NormedSpa
   rw [isBigO_iff]
   refine ⟨|C1| * |C2| * ‖B‖, (hC1.and hC2).mono ?_⟩
   intro x hx
-  have hx1 : ‖f x‖ ≤ C1 * ‖h x‖ := hx.1
-  have hx2 : ‖g x‖ ≤ C2 * ‖k x‖ := hx.2
-  have hx1' : ‖f x‖ ≤ |C1| * ‖h x‖ := hx1.trans
+  have hx1' : ‖f x‖ ≤ |C1| * ‖h x‖ := (hx.1).trans
     (mul_le_mul_of_nonneg_right (le_abs_self C1) (norm_nonneg _))
-  have hx2' : ‖g x‖ ≤ |C2| * ‖k x‖ := hx2.trans
+  have hx2' : ‖g x‖ ≤ |C2| * ‖k x‖ := (hx.2).trans
     (mul_le_mul_of_nonneg_right (le_abs_self C2) (norm_nonneg _))
   calc
     ‖B (f x) (g x)‖ ≤ ‖B (f x)‖ * ‖g x‖ := ContinuousLinearMap.le_opNorm _ _
@@ -390,7 +431,10 @@ lemma isBigO_bilinear_apply {α E F G : Type*} [NormedAddCommGroup E] [NormedSpa
       gcongr
       exact B.le_opNorm _
     _ ≤ (‖B‖ * (|C1| * ‖h x‖)) * (|C2| * ‖k x‖) := by
-      gcongr
+      have hB : 0 ≤ ‖B‖ := norm_nonneg B
+      have hC1 : 0 ≤ |C1| * ‖h x‖ := mul_nonneg (abs_nonneg C1) (norm_nonneg (h x))
+      exact mul_le_mul (mul_le_mul_of_nonneg_left hx1' hB) hx2'
+        (norm_nonneg (g x)) (mul_nonneg hB hC1)
     _ = (|C1| * |C2| * ‖B‖) * ‖h x * k x‖ := by
       rw [norm_mul]
       ring

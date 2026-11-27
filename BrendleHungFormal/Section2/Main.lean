@@ -164,14 +164,14 @@ lemma data_u_zero (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w) :
 
 -- Differentiating the expansion assumption in the `s` variable at `s = 0`.
 lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w) :
-    HasDerivAt (fun s : ℝ => data.u x w s) (data.u1 x w) 0 := by
+    HasDerivAt (data.u x w) (data.u1 x w) 0 := by
   rcases asm.uExp with ⟨ρ, hρSmooth, hρ⟩
   have hseg : ∀ᶠ s : ℝ in 𝓝 0, s ∈ segment data.s0 := by
     refine mem_of_superset (Metric.ball_mem_nhds (0 : ℝ) asm.hs0) ?_
     intro s hs
     change |s| ≤ data.s0
     simpa [Real.dist_eq] using (le_of_lt (by simpa [Real.dist_eq] using hs))
-  have hEq : (fun s : ℝ => data.u x w s) =ᶠ[𝓝 0]
+  have hEq : (data.u x w) =ᶠ[𝓝 0]
       (fun s : ℝ => data.u0 x w + s * data.u1 x w + s ^ 2 * data.u2 x w
         + s ^ 3 * data.u3 x w + s ^ 4 * ρ ((x, w), s)) := by
     filter_upwards [hseg] with s hs
@@ -277,17 +277,17 @@ lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
     simpa [Function.comp_def] using asm.uSmooth.comp hcomp
   have hclm : HasFDerivAt (fun w : ℝ^n => fderiv ℝ (fun w' => data.u p w' 0) w (e α))
       ((ContinuousLinearMap.apply ℝ ℝ (e α)).comp
-        (fderiv ℝ (fun w : ℝ^n => fderiv ℝ (fun w' => data.u p w' 0) w) 0)) 0 := by
-    have hc : HasFDerivAt (fun w : ℝ^n => fderiv ℝ (fun w' => data.u p w' 0) w)
-        (fderiv ℝ (fun w : ℝ^n => fderiv ℝ (fun w' => data.u p w' 0) w) 0) 0 :=
+        (fderiv ℝ (fderiv ℝ (fun w' => data.u p w' 0)) 0)) 0 := by
+    have hc : HasFDerivAt (fderiv ℝ (fun w' => data.u p w' 0))
+        (fderiv ℝ (fderiv ℝ (fun w' => data.u p w' 0)) 0) 0 :=
       ((hgSmooth.fderiv_right (m := 1) (by simp)).differentiable (by simp) 0).hasFDerivAt
     have hu : HasFDerivAt (fun _ : ℝ^n => e α) (0 : ℝ^n →L[ℝ] ℝ^n) 0 :=
       (hasFDerivAt_const (e α) (0 : ℝ^n))
     simpa using hc.clm_apply hu
-  have hdiff2 : fderiv ℝ (fun w : ℝ^n => fderiv ℝ (fun w' => data.u p w' 0) w) 0
+  have hdiff2 : fderiv ℝ (fderiv ℝ (fun w' => data.u p w' 0)) 0
       = diff2 (data.u0 p) 0 := by
-    have hEq' : (fun w : ℝ^n => fderiv ℝ (fun w' => data.u p w' 0) w)
-        =ᶠ[𝓝 0] (fun w : ℝ^n => fderiv ℝ (data.u0 p) w) := by
+    have hEq' : (fderiv ℝ (fun w' => data.u p w' 0))
+        =ᶠ[𝓝 0] (fderiv ℝ (data.u0 p)) := by
       filter_upwards [hB] with w hw
       have hEqw : (fun w' : ℝ^n => data.u p w' 0) =ᶠ[𝓝 w] data.u0 p := by
         filter_upwards [B_mem_nhds hw] with w' hw'
@@ -300,7 +300,7 @@ lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
   have hL : ((ContinuousLinearMap.proj (R := ℝ) (φ := fun _ : Fin n => ℝ) α).comp
         ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap))
       = ((ContinuousLinearMap.apply ℝ ℝ (e α)).comp
-        (fderiv ℝ (fun w : ℝ^n => fderiv ℝ (fun w' => data.u p w' 0) w) 0)) := by
+        (fderiv ℝ (fderiv ℝ (fun w' => data.u p w' 0)) 0)) := by
     ext v
     simp only [ContinuousLinearMap.comp_apply, ContinuousLinearMap.proj_apply, ContinuousLinearMap.apply_apply]
     rw [hdiff2]
@@ -325,7 +325,7 @@ lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
     simp [Matrix.mulVec, dotProduct, u0WW, Matrix.of_apply, mul_comm]
   have hmain : HasFDerivAt (fun w : ℝ^n => gradW p w 0 α)
       ((ContinuousLinearMap.apply ℝ ℝ (e α)).comp
-        (fderiv ℝ (fun w : ℝ^n => fderiv ℝ (fun w' => data.u p w' 0) w) 0)) 0 := by
+        (fderiv ℝ (fderiv ℝ (fun w' => data.u p w' 0)) 0)) 0 := by
     simpa [gradW] using hclm
   simpa [hL] using hmain
 
@@ -358,10 +358,10 @@ lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
     simpa [F, Function.comp_def] using asm.uSmooth.comp hcomp
   have hF2 : ContDiff ℝ (2 : WithTop ℕ∞) F := hFsmooth.of_le le_top
   let p0 : ℝ × ℝ^n := ((0 : ℝ), (0 : ℝ^n))
-  have hfderivSmooth : Smooth (fun z => fderiv ℝ F z) :=
+  have hfderivSmooth : Smooth (fderiv ℝ F) :=
     hFsmooth.fderiv_right (m := ⊤) (by simp)
-  have hsecond : HasFDerivAt (fun z => fderiv ℝ F z)
-      (fderiv ℝ (fun z => fderiv ℝ F z) p0) p0 :=
+  have hsecond : HasFDerivAt (fderiv ℝ F)
+      (fderiv ℝ (fderiv ℝ F) p0) p0 :=
     (hfderivSmooth.differentiable (by simp) p0).hasFDerivAt
   -- partial derivative in s at (0,w) equals u1
   have hKpoint (w : ℝ^n) (hw : inBounds w) :
@@ -389,7 +389,7 @@ lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
   have hKderiv : HasFDerivAt
       (fun z : ℝ × ℝ^n => fderiv ℝ F z ((1 : ℝ), (0 : ℝ^n)))
       ((ContinuousLinearMap.apply ℝ ℝ ((1 : ℝ), (0 : ℝ^n))).comp
-        (fderiv ℝ (fun z => fderiv ℝ F z) p0)) p0 := by
+        (fderiv ℝ (fderiv ℝ F) p0)) p0 := by
     have hconst : HasFDerivAt (fun _ : ℝ × ℝ^n => ((1 : ℝ), (0 : ℝ^n))) 0 p0 :=
       hasFDerivAt_const (𝕜 := ℝ) ((1 : ℝ), (0 : ℝ^n)) p0
     simpa using hsecond.clm_apply hconst
@@ -400,20 +400,20 @@ lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
   have hK_fd : fderiv ℝ
       (fun w : ℝ^n => fderiv ℝ F ((0 : ℝ), w) ((1 : ℝ), (0 : ℝ^n))) 0 =
       ((ContinuousLinearMap.apply ℝ ℝ ((1 : ℝ), (0 : ℝ^n))).comp
-        (fderiv ℝ (fun z => fderiv ℝ F z) p0)).comp
+        (fderiv ℝ (fderiv ℝ F) p0)).comp
         (ContinuousLinearMap.inr ℝ ℝ (ℝ^n)) := hKcomp.fderiv
   have hK_fd' : fderiv ℝ
       (fun w : ℝ^n => fderiv ℝ F ((0 : ℝ), w) ((1 : ℝ), (0 : ℝ^n))) 0 =
       diff (data.u1 x) 0 := by
     rw [hK_eq.fderiv_eq]
-  have hsnd : (fderiv ℝ (fun z => fderiv ℝ F z) p0) ((0 : ℝ), e α) ((1 : ℝ), (0 : ℝ^n))
+  have hsnd : (fderiv ℝ (fderiv ℝ F) p0) ((0 : ℝ), e α) ((1 : ℝ), (0 : ℝ^n))
       = u1W x 0 (e α) := by
     have hval := congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e α)) (hK_fd.symm.trans hK_fd')
     simpa [ContinuousLinearMap.comp_apply, u1W] using hval
   have hHderiv : HasFDerivAt
       (fun z : ℝ × ℝ^n => fderiv ℝ F z ((0 : ℝ), e α))
       ((ContinuousLinearMap.apply ℝ ℝ ((0 : ℝ), e α)).comp
-        (fderiv ℝ (fun z => fderiv ℝ F z) p0)) p0 := by
+        (fderiv ℝ (fderiv ℝ F) p0)) p0 := by
     have hconst : HasFDerivAt (fun _ : ℝ × ℝ^n => ((0 : ℝ), e α)) 0 p0 :=
       hasFDerivAt_const (𝕜 := ℝ) ((0 : ℝ), e α) p0
     simpa using hsecond.clm_apply hconst
@@ -424,13 +424,13 @@ lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
       ((fun z : ℝ × ℝ^n => fderiv ℝ F z ((0 : ℝ), e α)) ∘
         (fun s : ℝ => (s, (0 : ℝ^n))))
       (((ContinuousLinearMap.apply ℝ ℝ ((0 : ℝ), e α)).comp
-        (fderiv ℝ (fun z => fderiv ℝ F z) p0)).comp
+        (fderiv ℝ (fderiv ℝ F) p0)).comp
         (ContinuousLinearMap.inl ℝ ℝ (ℝ^n))) 0 :=
     hHderiv.comp (0 : ℝ) hlineS
   have hsymm : IsSymmSndFDerivAt ℝ F p0 :=
     hF2.contDiffAt.isSymmSndFDerivAt (by simp)
   have hH_L : (((ContinuousLinearMap.apply ℝ ℝ ((0 : ℝ), e α)).comp
-        (fderiv ℝ (fun z => fderiv ℝ F z) p0)).comp
+        (fderiv ℝ (fderiv ℝ F) p0)).comp
         (ContinuousLinearMap.inl ℝ ℝ (ℝ^n)))
       = ContinuousLinearMap.toSpanSingleton ℝ (u1W x 0 (e α)) := by
     apply ContinuousLinearMap.ext
@@ -469,7 +469,7 @@ lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
 
 /-- The derivative in `s` of `gradW x 0 s` at `s = 0` is the vector with components `u1W x 0 (e α)`. -/
 lemma hasFDerivAt_gradW_s (x : ℝ^m) (hx : inBounds x) :
-    HasFDerivAt (fun s : ℝ => gradW x 0 s)
+    HasFDerivAt (gradW x 0)
       (ContinuousLinearMap.toSpanSingleton ℝ (fun α : Fin n => u1W x 0 (e α))) 0 := by
   let v : ℝ^n := fun α => u1W x 0 (e α)
   have hcomp : ∀ α : Fin n,
@@ -609,11 +609,11 @@ lemma hasDerivAt_wStarAt_s (x : ℝ^m) (hx : inBounds x) :
     have hline := hq.prodMk hw
     have hcomp := hF.comp (0 : ℝ) hline
     have ht := congrArg (fun L : ℝ →L[ℝ] ℝ^n => L t) hcomp.fderiv
-    change fderiv ℝ (fun s : ℝ => gradW x 0 s) 0 t =
+    change fderiv ℝ (gradW x 0) 0 t =
       (H ∘L ((ContinuousLinearMap.inr ℝ ℝ^m ℝ).prod (0 : ℝ →L[ℝ] ℝ^n))) t at ht
     have hgrad := congrArg (fun L : ℝ →L[ℝ] ℝ^n => L t)
       (hasFDerivAt_gradW_s x hx).fderiv
-    change fderiv ℝ (fun s : ℝ => gradW x 0 s) 0 t =
+    change fderiv ℝ (gradW x 0) 0 t =
       (ContinuousLinearMap.toSpanSingleton ℝ v1) t at hgrad
     have hright : (H ∘L ((ContinuousLinearMap.inr ℝ ℝ^m ℝ).prod (0 : ℝ →L[ℝ] ℝ^n))) t
         = (P ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ) t := by
@@ -1086,7 +1086,7 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
   have hR : R =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 2) := by
     have htmp : R =O[𝓝 (0 : ℝ)] (fun s : ℝ => ‖s‖ ^ (2 : ℕ)) :=
       hRnorm.congr_left (fun s => by
-        simp [R, hW0, hWderiv.hasFDerivAt.fderiv,
+        simp [R, taylorRemainderOne, hW0, hWderiv.hasFDerivAt.fderiv,
           ContinuousLinearMap.toSpanSingleton_apply])
     exact htmp.trans (isBigO_norm_pow_eq 2)
 
@@ -1145,12 +1145,12 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
         - (1 / 2 : ℝ) * B0 (W s) (W s)
         - (1 / 6 : ℝ) * C0 (W s) (W s) (W s))
       =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4) := by
-    simpa [B0, C0, hdu0, hu00, smul_eq_mul] using
+    simpa [taylorRemainderThree, B0, C0, hdu0, hu00, smul_eq_mul] using
       hcompose (k := 4) (smooth_taylor_three_isBigO (u0_x_smooth x))
   have h1rem : (fun s : ℝ =>
       data.u1 x (W s) - L1 (W s) - (1 / 2 : ℝ) * B1 (W s) (W s))
       =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 3) := by
-    simpa [L1, B1, hu10, smul_eq_mul] using
+    simpa [taylorRemainderTwo, L1, B1, hu10, smul_eq_mul] using
       hcompose (k := 3) (smooth_taylor_two_isBigO (u1_x_smooth x))
   have h2rem : (fun s : ℝ =>
       data.u2 x (W s) - data.u2 x 0 - L2 (W s))
