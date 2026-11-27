@@ -291,6 +291,269 @@ theorem invariance (Λ : Set ℝ^m) (hΛΩ : Λ ⊆ cca.Ω)
   rw [hV3_eq y hyΛ]
   field_simp [hΥne]
 
+namespace BrendleHung.Section2
+
+/-- The paper's positivity corollary.  The hypothesis `hrem` is the uniform
+form on `A` of the remainder bound in `expansion_of_U`. -/
+theorem positivity
+    (ρ : ℝ^m → ℝ) (hρ_nonneg : ∀ y ∈ D asm.r0, 0 ≤ ρ y)
+    (hρ_cont : ContinuousOn ρ (D asm.r0))
+    (κ : ℝ) (hκ : 0 < κ)
+    (hV2Ω : ∀ y ∈ cca.Ω, κ * Υc y 0 * ρ y ≤ V2 y)
+    (hV3Ω : ∀ y ∈ cca.Ω, ρ y = 0 → V2 y = 0 ∧ κ * Υc y 0 ≤ V3 y)
+    (A : Set ℝ^m) (hAne : A.Nonempty) (hAcompact : IsCompact A)
+    (hAD : A ⊆ D asm.r0) (hAclos : A ⊆ closure cca.Ω)
+    (hA0clos : A ∩ {y | ρ y = 0} ⊆ closure (cca.Ω ∩ {y | ρ y = 0}))
+    (C : ℝ) (hC : 0 ≤ C)
+    (hrem : ∀ y ∈ A, ∀ s ∈ Set.Ioc (0 : ℝ) asm.s0,
+      |bud.U y s - s ^ 2 * bud.U2 y - s ^ 3 * bud.U3 y| ≤ C * s ^ 4) :
+    ∃ s1 : ℝ, 0 < s1 ∧ s1 ≤ asm.s0 ∧
+      ∀ s ∈ Set.Ioc (0 : ℝ) s1, 0 < sInf ((fun y => bud.U y s) '' A)
+:= by
+  classical
+  rcases hAne with ⟨y0, hy0A⟩
+  have hzeroZ : (0 : ℝ^n) ∈ B cca.r1 := by
+    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
+  have hΩD : cca.Ω ⊆ D asm.r0 := fun y hy => B_subset_D (cca.Ω_subset_B hy)
+  have hΥpos : ∀ y ∈ cca.Ω, 0 < Υc y 0 := by
+    intro y hy
+    simpa [Υc] using cca.Υ_pos y 0 hy hzeroZ
+  have hU2_ge_Ω : ∀ y ∈ cca.Ω, κ * ρ y ≤ bud.U2 y := by
+    intro y hy
+    have hΥ := hΥpos y hy
+    have hV := hV2Ω y hy
+    rw [relation_U2_V2 y hy] at hV
+    have hV' : Υc y 0 * (κ * ρ y) ≤ Υc y 0 * bud.U2 y := by nlinarith
+    exact (mul_le_mul_iff_of_pos_left hΥ).mp hV'
+  have hU2_ge_A : ∀ y ∈ A, κ * ρ y ≤ bud.U2 y := by
+    intro y hyA
+    have hyD : inBounds y := hAD hyA
+    have hρw : ContinuousWithinAt ρ cca.Ω y :=
+      (show ContinuousWithinAt ρ (D asm.r0) y from hρ_cont y hyD).mono hΩD
+    have hκρw : ContinuousWithinAt (fun z : ℝ^m => κ * ρ z) cca.Ω y :=
+      continuousWithinAt_const.mul hρw
+    have hU2w : ContinuousWithinAt bud.U2 cca.Ω y :=
+      (bud_U2_contDiffAt y hyD).continuousAt.continuousWithinAt
+    exact ContinuousWithinAt.closure_le (hAclos hyA) hκρw hU2w hU2_ge_Ω
+  let Λ : Set ℝ^m := cca.Ω ∩ {y | ρ y = 0}
+  have hΛΩ : Λ ⊆ cca.Ω := fun y hy => hy.1
+  have hV2_data : ∀ y ∈ Λ, V2 y = 0 ∧ fderiv ℝ V2 y = 0 := by
+    intro y hyΛ
+    have hyΩ : y ∈ cca.Ω := hyΛ.1
+    have hyD : inBounds y := hΩD hyΩ
+    have hΥ : 0 < Υc y 0 := hΥpos y hyΩ
+    have hΥne : Υc y 0 ≠ 0 := ne_of_gt hΥ
+    have hV2zero : V2 y = 0 := (hV3Ω y hyΩ hyΛ.2).1
+    have hV2_nonneg : ∀ z ∈ cca.Ω, 0 ≤ V2 z := by
+      intro z hz
+      have hρz : 0 ≤ ρ z := hρ_nonneg z (hΩD hz)
+      have hΥz : 0 < Υc z 0 := hΥpos z hz
+      nlinarith [hV2Ω z hz, mul_nonneg (le_of_lt hκ) (le_of_lt hΥz),
+        mul_nonneg (mul_nonneg (le_of_lt hκ) (le_of_lt hΥz)) hρz]
+    have hU2zero : bud.U2 y = 0 := by
+      have hrel := relation_U2_V2 y hyΩ
+      rw [hV2zero] at hrel
+      exact (mul_eq_zero.mp hrel.symm).resolve_left hΥne
+    have hU2_nonneg : ∀ z ∈ cca.Ω, 0 ≤ bud.U2 z := by
+      intro z hz
+      have hrel := relation_U2_V2 z hz
+      have hzV : 0 ≤ V2 z := hV2_nonneg z hz
+      rw [hrel] at hzV
+      exact (mul_nonneg_iff_of_pos_left (hΥpos z hz)).mp hzV
+    have hlocal : IsLocalMin bud.U2 y := by
+      filter_upwards [cca.Ω_open.mem_nhds hyΩ] with z hz
+      simpa [hU2zero] using hU2_nonneg z hz
+    have hdU2 : fderiv ℝ bud.U2 y = 0 := hlocal.fderiv_eq_zero
+    have hEqEv : V2 =ᶠ[𝓝 y] fun y' : ℝ^m => Υc y' 0 * bud.U2 y' := by
+      filter_upwards [cca.Ω_open.mem_nhds hyΩ] with y' hy'
+      exact relation_U2_V2 y' hy'
+    have hfderivEq :
+        fderiv ℝ V2 y = fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y :=
+      hEqEv.fderiv_eq
+    have hΥdiff : DifferentiableAt ℝ (fun y' : ℝ^m => Υc y' 0) y :=
+      (upsilon_y0_contDiffAt y hyΩ).differentiableAt (by simp)
+    have hU2diff : DifferentiableAt ℝ bud.U2 y :=
+      (bud_U2_contDiffAt y hyD).differentiableAt (by simp)
+    have hprod :
+        fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y =
+          (Υc y 0) • fderiv ℝ bud.U2 y +
+            (bud.U2 y) • fderiv ℝ (fun y' : ℝ^m => Υc y' 0) y := by
+      exact (hΥdiff.hasFDerivAt.mul hU2diff.hasFDerivAt).fderiv
+    refine ⟨hV2zero, ?_⟩
+    calc
+      fderiv ℝ V2 y = fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y := hfderivEq
+      _ = (Υc y 0) • fderiv ℝ bud.U2 y +
+            (bud.U2 y) • fderiv ℝ (fun y' : ℝ^m => Υc y' 0) y := hprod
+      _ = 0 := by simp [hU2zero, hdU2]
+  have hV3eqΛ : ∀ y ∈ Λ, V3 y = Υc y 0 * bud.U3 y :=
+    (invariance Λ hΛΩ hV2_data).1
+  have hU3_ge_Λ : ∀ y ∈ Λ, κ ≤ bud.U3 y := by
+    intro y hyΛ
+    have hΥ : 0 < Υc y 0 := hΥpos y hyΛ.1
+    have hV := (hV3Ω y hyΛ.1 hyΛ.2).2
+    rw [hV3eqΛ y hyΛ] at hV
+    have hV' : Υc y 0 * κ ≤ Υc y 0 * bud.U3 y := by nlinarith
+    exact (mul_le_mul_iff_of_pos_left hΥ).mp hV'
+  have hU3_ge_A0 : ∀ y ∈ A ∩ {y | ρ y = 0}, κ ≤ bud.U3 y := by
+    intro y hy
+    have hyD : inBounds y := hAD hy.1
+    have hκw : ContinuousWithinAt (fun _ : ℝ^m => κ)
+        (cca.Ω ∩ {z | ρ z = 0}) y := continuousWithinAt_const
+    have hU3w : ContinuousWithinAt bud.U3 (cca.Ω ∩ {z | ρ z = 0}) y :=
+      (bud_U3_contDiffAt y hyD).continuousAt.continuousWithinAt
+    exact ContinuousWithinAt.closure_le (hA0clos hy) hκw hU3w hU3_ge_Λ
+  have hBadClosed : IsClosed ((D asm.r0) ∩ {y | bud.U3 y ≤ κ / 2}) := by
+    exact (isClosed_D asm.r0).isClosed_le bud_U3_smoothOn_D.continuousOn continuousOn_const
+  let Bad : Set ℝ^m := A ∩ ((D asm.r0) ∩ {y | bud.U3 y ≤ κ / 2})
+  have hBadCompact : IsCompact Bad := hAcompact.inter_right hBadClosed
+  have hU3_cont_A : ContinuousOn bud.U3 A :=
+    bud_U3_smoothOn_D.continuousOn.mono hAD
+  have hε : ∃ ε : ℝ, 0 < ε ∧
+      ∀ y ∈ A, ρ y ≤ ε → κ / 2 ≤ bud.U3 y := by
+    by_cases hne : Bad.Nonempty
+    · rcases hBadCompact.exists_isMinOn hne (hρ_cont.mono (by
+        intro z hz
+        exact hz.2.1)) with ⟨yb, hyb, hybmin⟩
+      have hybA : yb ∈ A := hyb.1
+      have hybD : inBounds yb := hyb.2.1
+      have hybU3 : bud.U3 yb ≤ κ / 2 := hyb.2.2
+      have hρbpos : 0 < ρ yb := by
+        have hρbnonneg : 0 ≤ ρ yb := hρ_nonneg yb hybD
+        have hρbne : ρ yb ≠ 0 := by
+          intro hρbzero
+          have hge := hU3_ge_A0 yb ⟨hybA, hρbzero⟩
+          nlinarith
+        exact lt_of_le_of_ne hρbnonneg (Ne.symm hρbne)
+      refine ⟨ρ yb / 2, by positivity, ?_⟩
+      intro y hyA hyρε
+      by_contra hnot
+      have hyU3 : bud.U3 y ≤ κ / 2 := le_of_not_ge hnot
+      have hyBad : y ∈ Bad := ⟨hyA, hAD hyA, hyU3⟩
+      have hmin : ρ yb ≤ ρ y := hybmin hyBad
+      nlinarith
+    · refine ⟨1, by norm_num, ?_⟩
+      intro y hyA _
+      by_contra hnot
+      apply hne
+      exact ⟨y, ⟨hyA, hAD hyA, le_of_not_ge hnot⟩⟩
+  rcases hε with ⟨ε, hεpos, hU3ε⟩
+  rcases hAcompact.exists_bound_of_continuousOn hU3_cont_A with ⟨M, hM⟩
+  let M0 : ℝ := max M 0
+  have hM0nonneg : 0 ≤ M0 := le_max_right M 0
+  have hU3abs : ∀ y ∈ A, |bud.U3 y| ≤ M0 := by
+    intro y hyA
+    have h := hM y hyA
+    have habs : |bud.U3 y| ≤ M := by simpa [Real.norm_eq_abs] using h
+    exact habs.trans (le_max_left M 0)
+  let K : ℝ := M0 + C
+  have hKnonneg : 0 ≤ K := add_nonneg hM0nonneg hC
+  let s1 : ℝ := min asm.s0 (min 1 (min (κ / (4 * (C + 1)))
+    (κ * ε / (2 * (K + 1)))))
+  have hden1 : 0 < 4 * (C + 1) := by positivity
+  have hden2 : 0 < 2 * (K + 1) := by positivity
+  have hs1pos : 0 < s1 := by
+    have hk1pos : 0 < κ / (4 * (C + 1)) := div_pos hκ hden1
+    have hk2pos : 0 < κ * ε / (2 * (K + 1)) := div_pos (mul_pos hκ hεpos) hden2
+    dsimp [s1]
+    exact lt_min asm.hs0 (lt_min zero_lt_one (lt_min hk1pos hk2pos))
+  have hs1le_s0 : s1 ≤ asm.s0 := by
+    dsimp [s1]
+    exact min_le_left _ _
+  have hs1le_one : s1 ≤ 1 := by
+    dsimp [s1]
+    exact (min_le_right _ _).trans (min_le_left _ _)
+  have hs1le_k1 : s1 ≤ κ / (4 * (C + 1)) := by
+    dsimp [s1]
+    exact ((min_le_right _ _).trans (min_le_right _ _)).trans (min_le_left _ _)
+  have hs1le_k2 : s1 ≤ κ * ε / (2 * (K + 1)) := by
+    dsimp [s1]
+    exact ((min_le_right _ _).trans (min_le_right _ _)).trans (min_le_right _ _)
+  refine ⟨s1, hs1pos, hs1le_s0, ?_⟩
+  intro s hs
+  have hspos : 0 < s := hs.1
+  have hss1 : s ≤ s1 := hs.2
+  have hsasm : s ∈ Set.Ioc (0 : ℝ) asm.s0 := ⟨hspos, hss1.trans hs1le_s0⟩
+  have hspow3 : 0 < s ^ 3 := pow_pos hspos 3
+  have hspow3nonneg : 0 ≤ s ^ 3 := le_of_lt hspow3
+  have hs4le3 : s ^ 4 ≤ s ^ 3 := by
+    have hsle1 : s ≤ 1 := hss1.trans hs1le_one
+    nlinarith [sq_nonneg s, mul_nonneg (sq_nonneg s) (le_of_lt hspos)]
+  have hCs_le : C * s ≤ κ / 4 := by
+    have hsle : s ≤ κ / (4 * (C + 1)) := hss1.trans hs1le_k1
+    have hmul : s * (4 * (C + 1)) ≤ κ := by
+      calc
+        s * (4 * (C + 1)) ≤ (κ / (4 * (C + 1))) * (4 * (C + 1)) :=
+          mul_le_mul_of_nonneg_right hsle (le_of_lt hden1)
+        _ = κ := by field_simp [ne_of_gt hden1]
+    have hCsmall : C * s ≤ (C + 1) * s := by nlinarith [le_of_lt hspos]
+    nlinarith
+  have hK_le : K * s ≤ κ * ε / 2 := by
+    have hsle : s ≤ κ * ε / (2 * (K + 1)) := hss1.trans hs1le_k2
+    have hmul : s * (2 * (K + 1)) ≤ κ * ε := by
+      calc
+        s * (2 * (K + 1)) ≤ (κ * ε / (2 * (K + 1))) * (2 * (K + 1)) :=
+          mul_le_mul_of_nonneg_right hsle (le_of_lt hden2)
+        _ = κ * ε := by field_simp [ne_of_gt hden2]
+    have hKsmall : K * s ≤ (K + 1) * s := by nlinarith [le_of_lt hspos]
+    nlinarith
+  have hsmall₁ : 0 < (κ / 4) * s ^ 3 := mul_pos (by positivity) hspow3
+  have hsmall₂ : 0 < (κ * ε / 2) * s ^ 2 := by positivity
+  have hlower : ∀ y ∈ A,
+      min ((κ / 4) * s ^ 3) ((κ * ε / 2) * s ^ 2) ≤ bud.U y s := by
+    intro y hyA
+    have hUy := hrem y hyA s hsasm
+    have hUlower : s ^ 2 * bud.U2 y + s ^ 3 * bud.U3 y - C * s ^ 4 ≤ bud.U y s := by
+      have hneg := (abs_le.mp hUy).1
+      linarith
+    by_cases hρε : ρ y ≤ ε
+    · have hρy : 0 ≤ ρ y := hρ_nonneg y (hAD hyA)
+      have hU2y : 0 ≤ bud.U2 y := by
+        have h := hU2_ge_A y hyA
+        nlinarith [mul_nonneg (le_of_lt hκ) hρy]
+      have hU3y : κ / 2 ≤ bud.U3 y := hU3ε y hyA hρε
+      have hU3term : s ^ 3 * (κ / 2) ≤ s ^ 3 * bud.U3 y :=
+        mul_le_mul_of_nonneg_left hU3y hspow3nonneg
+      have hCterm : C * s ^ 4 ≤ (κ / 4) * s ^ 3 := by
+        have hc := mul_le_mul_of_nonneg_right hCs_le hspow3nonneg
+        nlinarith
+      have hsmall : (κ / 4) * s ^ 3 ≤ bud.U y s := by
+        have hU2term : 0 ≤ s ^ 2 * bud.U2 y :=
+          mul_nonneg (sq_nonneg s) hU2y
+        nlinarith
+      exact (min_le_left _ _).trans hsmall
+    · have hρε' : ε < ρ y := lt_of_not_ge hρε
+      have hU2y : κ * ε ≤ bud.U2 y := by
+        have h := hU2_ge_A y hyA
+        have hmul := mul_le_mul_of_nonneg_left (le_of_lt hρε') (le_of_lt hκ)
+        exact hmul.trans h
+      have hU3y : -M0 ≤ bud.U3 y := (abs_le.mp (hU3abs y hyA)).1
+      have hU2term : s ^ 2 * (κ * ε) ≤ s ^ 2 * bud.U2 y :=
+        mul_le_mul_of_nonneg_left hU2y (sq_nonneg s)
+      have hU3term : -(M0 * s ^ 3) ≤ s ^ 3 * bud.U3 y := by
+        have h := mul_le_mul_of_nonneg_left hU3y hspow3nonneg
+        nlinarith
+      have hCterm0 : C * s ^ 4 ≤ C * s ^ 3 :=
+        mul_le_mul_of_nonneg_left hs4le3 hC
+      have hKterm : M0 * s ^ 3 + C * s ^ 3 ≤ (κ * ε / 2) * s ^ 2 := by
+        have h := mul_le_mul_of_nonneg_right hK_le (sq_nonneg s)
+        dsimp [K] at h
+        nlinarith
+      have hsmall : (κ * ε / 2) * s ^ 2 ≤ bud.U y s := by
+        nlinarith
+      exact (min_le_right _ _).trans hsmall
+  have hcpos : 0 < min ((κ / 4) * s ^ 3) ((κ * ε / 2) * s ^ 2) :=
+    lt_min hsmall₁ hsmall₂
+  have himage_nonempty : ((fun y => bud.U y s) '' A).Nonempty :=
+    ⟨bud.U y0 s, ⟨y0, hy0A, rfl⟩⟩
+  have hInfge : min ((κ / 4) * s ^ 3) ((κ * ε / 2) * s ^ 2) ≤
+      sInf ((fun y => bud.U y s) '' A) := by
+    apply le_csInf himage_nonempty
+    rintro z ⟨y, hyA, rfl⟩
+    exact hlower y hyA
+  exact lt_of_lt_of_le hcpos hInfge
+
+end BrendleHung.Section2
+
 end
 
 end Section2
