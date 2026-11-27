@@ -3337,12 +3337,6 @@ lemma barz_defining_equation (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
   rw [barz_eq_barzViaPsi y hy]
   exact barzViaPsi_defining_equation y hy α
 
-/-- The relation `J barz = barw` in coordinates. -/
-lemma barz_spec (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
-    ∑ β : Fin n, zD1 (ψc y) β α * barz y β = bud.barw y α := by
-  rw [barz_eq_barzViaPsi y hy]
-  exact barzViaPsi_spec y hy α
-
 end
 
 end Section2

@@ -356,7 +356,49 @@ lemma zD1_v2 (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
 /-- The relation between `bar w` and `bar z`: applying the `ψ` Jacobian to `bar z` gives `bar w`. -/
 lemma relation_barw_barz (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
     ∑ β : Fin n, zD1 (ψc y) β α * barz y β = bud.barw y α
-:= by exact barz_spec y hy α
+:= by
+  rw [barz_eq_barzViaPsi y hy]
+  exact barzViaPsi_spec y hy α
+
+/-- The paper's second-order coefficient after the coordinate change. -/
+abbrev V2 (y : ℝ^m) : ℝ :=
+  ccd.v2 y 0 + (1 / 2 : ℝ) * ∑ α : Fin n, zD1 (ccd.v1 y) α * barz y α
+
+/-- The paper's `relation.between.U2.and.V2`. -/
+lemma relation_U2_V2 (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    V2 y = Υc y 0 * bud.U2 y
+:= by
+  classical
+  have hsum :
+      (∑ α : Fin n, zD1 (ccd.v1 y) α * barz y α) =
+        ∑ β : Fin n, Υc y 0 * u1W y 0 (e β) * bud.barw y β := by
+    calc
+      ∑ α : Fin n, zD1 (ccd.v1 y) α * barz y α
+          = ∑ β : Fin n, Υc y 0 * u1W y 0 (e β) *
+              (∑ α : Fin n, zD1 (ψc y) α β * barz y α) := by
+            simp_rw [zD1_v1 y hy, Finset.sum_mul]
+            rw [Finset.sum_comm]
+            apply Finset.sum_congr rfl
+            intro β _
+            rw [Finset.mul_sum]
+            apply Finset.sum_congr rfl
+            intro α _
+            ring
+      _ = ∑ β : Fin n, Υc y 0 * u1W y 0 (e β) * bud.barw y β := by
+            simp_rw [relation_barw_barz y hy]
+  have hsumΥ :
+      (∑ β : Fin n, Υc y 0 * u1W y 0 (e β) * bud.barw y β) =
+        Υc y 0 * ∑ β : Fin n, u1W y 0 (e β) * bud.barw y β := by
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro β _
+    ring
+  change ccd.v2 y 0 + (1 / 2 : ℝ) * (∑ α : Fin n, zD1 (ccd.v1 y) α * barz y α) =
+    Υc y 0 *
+      (asm.u2 y 0 + (1 / 2 : ℝ) *
+        ∑ β : Fin n, u1W y 0 (e β) * bud.barw y β)
+  rw [v2_zero y hy, hsum, hsumΥ]
+  ring
 
 end
 
