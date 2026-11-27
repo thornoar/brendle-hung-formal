@@ -76,8 +76,23 @@ axiom n : ℕ
 
 notation "Smooth" => ContDiff ℝ (⊤ : WithTop ℕ∞)
 
--- A Lean-friendly `O(s^4)` hypothesis for `u(x,w,s) = u0 + s u1 + s^2 u2 + s^3 u3 + O(s^4)`.
+-- A Lean-friendly `O(s^4)` assertion for
+-- `f(p,s) = f0(p) + s f1(p) + s² f2(p) + s³ f3(p) + O(s⁴)`.
+--
+-- The remainder is required to be locally bounded in `s`, for each fixed
+-- parameter `p` in the domain.  This is the content of the asymptotic notation
+-- used in the paper.  A stronger variant with a globally smooth remainder is
+-- used as an assumption on the original function `u`; it implies this version.
 def HasExpansion3 {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E] (ball : Set E) (a : ℝ) (f0 f1 f2 f3 : E -> ℝ) (f : E -> ℝ → ℝ) : Prop :=
+  ∃ ρ : E × ℝ → ℝ,
+    (∀ p ∈ ball, ∃ C : ℝ, ∀ᶠ s : ℝ in 𝓝 0, |ρ (p, s)| ≤ C) ∧
+    ∀ p s,
+      p ∈ ball ->
+      s ∈ segment a ->
+      f p s = f0 p + s * f1 p + s ^ 2 * f2 p + s ^ 3 * f3 p + s ^ 4 * ρ (p, s)
+
+-- The stronger form of the expansion assumption used for `u` in Section 2.
+def HasSmoothExpansion3 {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E] (ball : Set E) (a : ℝ) (f0 f1 f2 f3 : E -> ℝ) (f : E -> ℝ → ℝ) : Prop :=
   ∃ ρ : E × ℝ → ℝ,
     Smooth ρ ∧
     ∀ p s,
