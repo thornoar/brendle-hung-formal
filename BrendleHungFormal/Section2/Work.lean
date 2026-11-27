@@ -4910,18 +4910,35 @@ lemma bud_U3_smoothOn_D : Smooth bud.U3 on (D asm.r0) := by
   intro x hx
   exact (bud_U3_contDiffAt x hx).contDiffWithinAt
 
+/-- The origin belongs to the coordinate ball in the `z` variables. -/
+lemma zero_mem_B_r1 : (0 : ℝ^n) ∈ B cca.r1 := by
+  simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
+
+/-- Positivity of `Υ(y,0)` for `y ∈ Ω`. -/
+lemma upsilon_y0_pos (y : ℝ^m) (hy : y ∈ cca.Ω) : 0 < Υc y 0 := by
+  simpa [Υc] using cca.Υ_pos y 0 hy zero_mem_B_r1
+
 /-- Smoothness in `y` of `Υ(y,0)` for `y ∈ Ω`. -/
 lemma upsilon_y0_contDiffAt (y : ℝ^m) (hy : y ∈ cca.Ω) :
     ContDiffAt ℝ ⊤ (fun y' : ℝ^m => Υc y' 0) y := by
   have hopen : IsOpen (cca.Ω ×ˢ (B (d := n) cca.r1)) :=
     cca.Ω_open.prod (isOpen_B (d := n) cca.r1)
-  have hmem : (y, (0 : ℝ^n)) ∈ cca.Ω ×ˢ (B (d := n) cca.r1) := by
-    refine ⟨hy, ?_⟩
-    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
+  have hmem : (y, (0 : ℝ^n)) ∈ cca.Ω ×ˢ (B (d := n) cca.r1) := ⟨hy, zero_mem_B_r1⟩
   have hΥat : ContDiffAt ℝ ⊤ cca.Υ (y, 0) :=
     cca.Υ_smooth.contDiffAt (hopen.mem_nhds hmem)
   have hslice : ContDiffAt ℝ ⊤ (fun y' : ℝ^m => (y', (0 : ℝ^n))) y := by fun_prop
   simpa [Υc, Function.comp_def] using hΥat.comp y hslice
+
+/-- The derivative of `y' ↦ Υ(y',0) * U2(y')` at an admissible parameter. -/
+lemma fderiv_upsilon0_mul_U2 (y : ℝ^m) (hy : y ∈ cca.Ω) (hyD : inBounds y) :
+    fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y =
+      (Υc y 0) • fderiv ℝ bud.U2 y +
+        (bud.U2 y) • fderiv ℝ (fun y' : ℝ^m => Υc y' 0) y := by
+  have hΥdiff : DifferentiableAt ℝ (fun y' : ℝ^m => Υc y' 0) y :=
+    (upsilon_y0_contDiffAt y hy).differentiableAt (by simp)
+  have hU2diff : DifferentiableAt ℝ bud.U2 y :=
+    (bud_U2_contDiffAt y hyD).differentiableAt (by simp)
+  exact (hΥdiff.hasFDerivAt.mul hU2diff.hasFDerivAt).fderiv
 
 end
 

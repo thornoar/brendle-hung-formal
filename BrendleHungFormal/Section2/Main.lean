@@ -69,8 +69,7 @@ theorem expansion_of_U :
 lemma v0_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : ccd.v0 y 0 = 0
 := by
   change Υc y 0 * v0B y 0 = 0
-  rw [v0B_zero y hy]
-  simp
+  simp [v0B_zero y hy]
 
 /-- The first `z`-derivative of `v0` vanishes at zero. -/
 lemma zD1_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
@@ -95,8 +94,7 @@ lemma zD2_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
 lemma v1_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : ccd.v1 y 0 = 0
 := by
   change Υc y 0 * u1B y 0 = 0
-  rw [u1B_zero y hy]
-  simp
+  simp [u1B_zero y hy]
 
 /-- The paper's second-order coefficient after the coordinate change. -/
 abbrev V2 (y : ℝ^m) : ℝ :=
@@ -106,7 +104,6 @@ abbrev V2 (y : ℝ^m) : ℝ :=
 lemma relation_U2_V2 (y : ℝ^m) (hy : y ∈ cca.Ω) :
     V2 y = Υc y 0 * bud.U2 y
 := by
-  classical
   have hsum :
       (∑ α : Fin n, zD1 (ccd.v1 y) α * barz y α) =
         ∑ β : Fin n, Υc y 0 * u1W y 0 (e β) * bud.barw y β := by
@@ -156,7 +153,6 @@ lemma relation_U3_V3 (y : ℝ^m) (hy : y ∈ cca.Ω) :
             Υc y 0 * fderiv ℝ bud.U2 y (e i : ℝ^m) *
               zD1 (φc y) γ i * barz y γ)
         + (∑ γ : Fin n, zD1 (Υc y) γ * bud.U2 y * barz y γ) := by
-  classical
   have hyD : inBounds y := B_subset_D (cca.Ω_subset_B hy)
   have h1 :
       (∑ β : Fin n, u2W y 0 (e β) * bud.barw y β) =
@@ -204,14 +200,10 @@ lemma relation_U3_V3 (y : ℝ^m) (hy : y ∈ cca.Ω) :
         = - (∑ α : Fin n, ∑ γ : Fin n,
               zD1 (Υc y) α * u1W y 0 (e γ) * barz y α * bud.barw y γ) := by
     linarith [u0WW_Upsilon_cancel y hy]
-  have hcross := U2_deriv_barz_contract y hy
-  have hUpsilon := U2_Upsilon_barz_contract y hy
   have hR :
       (∑ γ : Fin n, zD1 (Υc y) γ * asm.u2 y 0 * barz y γ) =
         ∑ γ : Fin n, asm.u2 y 0 * zD1 (Υc y) γ * barz y γ := by
-    apply Finset.sum_congr rfl
-    intro γ _
-    ring
+    ac_rfl
   have hF :
       (∑ α : Fin n, ∑ γ : Fin n,
         zD1 (Υc y) α * u1W y 0 (e γ) * barz y α * bud.barw y γ) =
@@ -225,7 +217,7 @@ lemma relation_U3_V3 (y : ℝ^m) (hy : y ∈ cca.Ω) :
     ring
   unfold V3
   rw [v3_zero y hy, v2_barz_linear y hy, v1_barz_quad y hy, v0_barz_cubic y hy]
-  rw [hBud, hcross, hUpsilon]
+  rw [hBud, U2_deriv_barz_contract y hy, U2_Upsilon_barz_contract y hy]
   rw [hAneg, hCneg]
   ring_nf
   rw [hR, hF]
@@ -240,16 +232,11 @@ theorem invariance (Λ : Set ℝ^m) (hΛΩ : Λ ⊆ cca.Ω)
       ∃ F : ℝ^m → ℝ, SmoothOn F (D asm.r0) ∧
         ∀ y ∈ Λ, (Υc y 0)⁻¹ * V3 y = F y
 := by
-  classical
-  have hzero : (0 : ℝ^n) ∈ B cca.r1 := by
-    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
   have hU2_data : ∀ y ∈ Λ, bud.U2 y = 0 ∧ fderiv ℝ bud.U2 y = 0 := by
     intro y hyΛ
     have hyΩ : y ∈ cca.Ω := hΛΩ hyΛ
     have hyD : inBounds y := B_subset_D (cca.Ω_subset_B hyΩ)
-    have hΥpos : 0 < Υc y 0 := by
-      simpa [Υc] using cca.Υ_pos y 0 hyΩ hzero
-    have hΥne : Υc y 0 ≠ 0 := ne_of_gt hΥpos
+    have hΥne : Υc y 0 ≠ 0 := ne_of_gt (upsilon_y0_pos y hyΩ)
     have hU2zero : bud.U2 y = 0 := by
       have hrel := relation_U2_V2 y hyΩ
       rw [(hV2 y hyΛ).1] at hrel
@@ -257,23 +244,12 @@ theorem invariance (Λ : Set ℝ^m) (hΛΩ : Λ ⊆ cca.Ω)
     have hEqEv : V2 =ᶠ[𝓝 y] fun y' : ℝ^m => Υc y' 0 * bud.U2 y' := by
       filter_upwards [cca.Ω_open.mem_nhds hyΩ] with y' hy'
       exact relation_U2_V2 y' hy'
-    have hfderivEq :
-        fderiv ℝ V2 y = fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y :=
-      hEqEv.fderiv_eq
-    have hΥdiff : DifferentiableAt ℝ (fun y' : ℝ^m => Υc y' 0) y :=
-      (upsilon_y0_contDiffAt y hyΩ).differentiableAt (by simp)
-    have hU2diff : DifferentiableAt ℝ bud.U2 y :=
-      (bud_U2_contDiffAt y hyD).differentiableAt (by simp)
-    have hprod :
-        fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y =
-          (Υc y 0) • fderiv ℝ bud.U2 y +
-            (bud.U2 y) • fderiv ℝ (fun y' : ℝ^m => Υc y' 0) y := by
-      exact (hΥdiff.hasFDerivAt.mul hU2diff.hasFDerivAt).fderiv
     have hprodZero :
         fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y = 0 := by
-      simpa [hfderivEq] using (hV2 y hyΛ).2
+      rw [← hEqEv.fderiv_eq]
+      exact (hV2 y hyΛ).2
     have hscale : (Υc y 0) • fderiv ℝ bud.U2 y = 0 := by
-      simpa [hprod, hU2zero] using hprodZero
+      simpa [fderiv_upsilon0_mul_U2 y hyΩ hyD, hU2zero] using hprodZero
     have hU2deriv : fderiv ℝ bud.U2 y = 0 :=
       (smul_eq_zero.mp hscale).resolve_left hΥne
     exact ⟨hU2zero, hU2deriv⟩
@@ -284,10 +260,7 @@ theorem invariance (Λ : Set ℝ^m) (hΛΩ : Λ ⊆ cca.Ω)
   refine ⟨hV3_eq, ?_⟩
   refine ⟨bud.U3, bud_U3_smoothOn_D, ?_⟩
   intro y hyΛ
-  have hyΩ : y ∈ cca.Ω := hΛΩ hyΛ
-  have hΥpos : 0 < Υc y 0 := by
-    simpa [Υc] using cca.Υ_pos y 0 hyΩ hzero
-  have hΥne : Υc y 0 ≠ 0 := ne_of_gt hΥpos
+  have hΥne : Υc y 0 ≠ 0 := ne_of_gt (upsilon_y0_pos y (hΛΩ hyΛ))
   rw [hV3_eq y hyΛ]
   field_simp [hΥne]
 
@@ -312,15 +285,10 @@ theorem positivity
 := by
   classical
   rcases hAne with ⟨y0, hy0A⟩
-  have hzeroZ : (0 : ℝ^n) ∈ B cca.r1 := by
-    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
   have hΩD : cca.Ω ⊆ D asm.r0 := fun y hy => B_subset_D (cca.Ω_subset_B hy)
-  have hΥpos : ∀ y ∈ cca.Ω, 0 < Υc y 0 := by
-    intro y hy
-    simpa [Υc] using cca.Υ_pos y 0 hy hzeroZ
   have hU2_ge_Ω : ∀ y ∈ cca.Ω, κ * ρ y ≤ bud.U2 y := by
     intro y hy
-    have hΥ := hΥpos y hy
+    have hΥ := upsilon_y0_pos y hy
     have hV := hV2Ω y hy
     rw [relation_U2_V2 y hy] at hV
     have hV' : Υc y 0 * (κ * ρ y) ≤ Υc y 0 * bud.U2 y := by nlinarith
@@ -335,31 +303,28 @@ theorem positivity
     have hU2w : ContinuousWithinAt bud.U2 cca.Ω y :=
       (bud_U2_contDiffAt y hyD).continuousAt.continuousWithinAt
     exact ContinuousWithinAt.closure_le (hAclos hyA) hκρw hU2w hU2_ge_Ω
+  have hV2_nonneg : ∀ y ∈ cca.Ω, 0 ≤ V2 y := by
+    intro y hy
+    have hρy : 0 ≤ ρ y := hρ_nonneg y (hΩD hy)
+    have hcoef : 0 ≤ κ * Υc y 0 :=
+      mul_nonneg (le_of_lt hκ) (le_of_lt (upsilon_y0_pos y hy))
+    nlinarith [hV2Ω y hy, mul_nonneg hcoef hρy]
+  have hU2_nonneg : ∀ y ∈ cca.Ω, 0 ≤ bud.U2 y := by
+    intro y hy
+    have hρy : 0 ≤ ρ y := hρ_nonneg y (hΩD hy)
+    nlinarith [hU2_ge_Ω y hy, mul_nonneg (le_of_lt hκ) hρy]
   let Λ : Set ℝ^m := cca.Ω ∩ {y | ρ y = 0}
   have hΛΩ : Λ ⊆ cca.Ω := fun y hy => hy.1
   have hV2_data : ∀ y ∈ Λ, V2 y = 0 ∧ fderiv ℝ V2 y = 0 := by
     intro y hyΛ
     have hyΩ : y ∈ cca.Ω := hyΛ.1
     have hyD : inBounds y := hΩD hyΩ
-    have hΥ : 0 < Υc y 0 := hΥpos y hyΩ
-    have hΥne : Υc y 0 ≠ 0 := ne_of_gt hΥ
+    have hΥne : Υc y 0 ≠ 0 := ne_of_gt (upsilon_y0_pos y hyΩ)
     have hV2zero : V2 y = 0 := (hV3Ω y hyΩ hyΛ.2).1
-    have hV2_nonneg : ∀ z ∈ cca.Ω, 0 ≤ V2 z := by
-      intro z hz
-      have hρz : 0 ≤ ρ z := hρ_nonneg z (hΩD hz)
-      have hΥz : 0 < Υc z 0 := hΥpos z hz
-      nlinarith [hV2Ω z hz, mul_nonneg (le_of_lt hκ) (le_of_lt hΥz),
-        mul_nonneg (mul_nonneg (le_of_lt hκ) (le_of_lt hΥz)) hρz]
     have hU2zero : bud.U2 y = 0 := by
       have hrel := relation_U2_V2 y hyΩ
       rw [hV2zero] at hrel
       exact (mul_eq_zero.mp hrel.symm).resolve_left hΥne
-    have hU2_nonneg : ∀ z ∈ cca.Ω, 0 ≤ bud.U2 z := by
-      intro z hz
-      have hrel := relation_U2_V2 z hz
-      have hzV : 0 ≤ V2 z := hV2_nonneg z hz
-      rw [hrel] at hzV
-      exact (mul_nonneg_iff_of_pos_left (hΥpos z hz)).mp hzV
     have hlocal : IsLocalMin bud.U2 y := by
       filter_upwards [cca.Ω_open.mem_nhds hyΩ] with z hz
       simpa [hU2zero] using hU2_nonneg z hz
@@ -367,29 +332,16 @@ theorem positivity
     have hEqEv : V2 =ᶠ[𝓝 y] fun y' : ℝ^m => Υc y' 0 * bud.U2 y' := by
       filter_upwards [cca.Ω_open.mem_nhds hyΩ] with y' hy'
       exact relation_U2_V2 y' hy'
-    have hfderivEq :
-        fderiv ℝ V2 y = fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y :=
-      hEqEv.fderiv_eq
-    have hΥdiff : DifferentiableAt ℝ (fun y' : ℝ^m => Υc y' 0) y :=
-      (upsilon_y0_contDiffAt y hyΩ).differentiableAt (by simp)
-    have hU2diff : DifferentiableAt ℝ bud.U2 y :=
-      (bud_U2_contDiffAt y hyD).differentiableAt (by simp)
-    have hprod :
-        fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y =
-          (Υc y 0) • fderiv ℝ bud.U2 y +
-            (bud.U2 y) • fderiv ℝ (fun y' : ℝ^m => Υc y' 0) y := by
-      exact (hΥdiff.hasFDerivAt.mul hU2diff.hasFDerivAt).fderiv
     refine ⟨hV2zero, ?_⟩
     calc
-      fderiv ℝ V2 y = fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y := hfderivEq
-      _ = (Υc y 0) • fderiv ℝ bud.U2 y +
-            (bud.U2 y) • fderiv ℝ (fun y' : ℝ^m => Υc y' 0) y := hprod
-      _ = 0 := by simp [hU2zero, hdU2]
+      fderiv ℝ V2 y = fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y := hEqEv.fderiv_eq
+      _ = 0 := by
+        simp [fderiv_upsilon0_mul_U2 y hyΩ hyD, hU2zero, hdU2]
   have hV3eqΛ : ∀ y ∈ Λ, V3 y = Υc y 0 * bud.U3 y :=
     (invariance Λ hΛΩ hV2_data).1
   have hU3_ge_Λ : ∀ y ∈ Λ, κ ≤ bud.U3 y := by
     intro y hyΛ
-    have hΥ : 0 < Υc y 0 := hΥpos y hyΛ.1
+    have hΥ : 0 < Υc y 0 := upsilon_y0_pos y hyΛ.1
     have hV := (hV3Ω y hyΛ.1 hyΛ.2).2
     rw [hV3eqΛ y hyΛ] at hV
     have hV' : Υc y 0 * κ ≤ Υc y 0 * bud.U3 y := by nlinarith
