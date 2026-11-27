@@ -164,7 +164,8 @@ lemma data_u_zero (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w) :
 
 -- Differentiating the expansion assumption in the `s` variable at `s = 0`.
 lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w) :
-    HasDerivAt (data.u x w) (data.u1 x w) 0 := by
+    HasDerivAt (data.u x w) (data.u1 x w) 0
+:= by
   rcases asm.uExp with ⟨ρ, hρSmooth, hρ⟩
   have hseg : ∀ᶠ s : ℝ in 𝓝 0, s ∈ segment data.s0 := by
     filter_upwards [Metric.ball_mem_nhds (0 : ℝ) asm.hs0] with s hs
@@ -198,7 +199,8 @@ noncomputable def gradW (p : ℝ^m) (w : ℝ^n) (s : ℝ) : ℝ^n :=
 
 /-- For fixed `p`, the map `(w,s) ↦ gradW p w s` is smooth. -/
 lemma gradW_smooth (p : ℝ^m) :
-    Smooth (fun q : ℝ^n × ℝ => gradW p q.1 q.2) := by
+    Smooth (fun q : ℝ^n × ℝ => gradW p q.1 q.2)
+:= by
   rw [contDiff_pi]
   intro α
   let f : ℝ^n × ℝ → ℝ^n → ℝ := fun q w => data.u p w q.2
@@ -236,7 +238,8 @@ lemma hatw_spec (x : ℝ^m) (hx : inBounds x) :
         - u2W x 0 (e α)
         - ∑ β : Fin n, u1WW x 0 α β * bud.barw x β
         - ((1 : ℝ) / 2) * ∑ β : Fin n, ∑ γ : Fin n,
-            u0WWW x 0 α β γ * bud.barw x β * bud.barw x γ := by
+            u0WWW x 0 α β γ * bud.barw x β * bud.barw x γ
+:= by
   have hpos : (u0WW x 0).PosDef := u0WWAtZero x hx
   have hdet : IsUnit (u0WW x 0).det :=
     (Matrix.isUnit_iff_isUnit_det (u0WW x 0)).mp hpos.isUnit
@@ -253,7 +256,8 @@ lemma hatw_spec (x : ℝ^m) (hx : inBounds x) :
 lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
     HasFDerivAt (fun w : ℝ^n => gradW p w 0 α)
       ((ContinuousLinearMap.proj (R := ℝ) (φ := fun _ : Fin n => ℝ) α).comp
-        ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap)) 0 := by
+        ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap)) 0
+:= by
   have hB : B data.r0 ∈ 𝓝 (0 : ℝ^n) := B_mem_nhds_zero asm.hr0
   have hu0Smooth : Smooth (data.u0 p) := by
     simpa [Function.comp_def, Function.uncurry_def] using
@@ -318,7 +322,8 @@ lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
 /-- The derivative in `w` of `gradW p w 0` at `w = 0` is the Hessian map `u0WW p 0`. -/
 lemma hasFDerivAt_gradW_w (p : ℝ^m) (hp : inBounds p) :
     HasFDerivAt (fun w : ℝ^n => gradW p w 0)
-      ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap) 0 := by
+      ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap) 0
+:= by
   have hcomp : ∀ α : Fin n,
       HasFDerivAt (fun w : ℝ^n => gradW p w 0 α)
         ((ContinuousLinearMap.proj (R := ℝ) (φ := fun _ : Fin n => ℝ) α).comp
@@ -337,7 +342,8 @@ lemma hasFDerivAt_gradW_w (p : ℝ^m) (hp : inBounds p) :
 
 /-- One coordinate of the derivative of `s ↦ gradW x 0 s` at `s = 0` is `u1W x 0 (e α)`. -/
 lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
-    HasDerivAt (fun s : ℝ => gradW x 0 s α) (u1W x 0 (e α)) 0 := by
+    HasDerivAt (fun s : ℝ => gradW x 0 s α) (u1W x 0 (e α)) 0
+:= by
   let F : ℝ × ℝ^n → ℝ := fun z => data.u x z.2 z.1
   have hFsmooth : Smooth F := by
     have hcomp : Smooth (fun z : ℝ × ℝ^n => (x, z.2, z.1)) := by fun_prop
@@ -456,7 +462,8 @@ lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
 /-- The derivative in `s` of `gradW x 0 s` at `s = 0` is the vector with components `u1W x 0 (e α)`. -/
 lemma hasFDerivAt_gradW_s (x : ℝ^m) (hx : inBounds x) :
     HasFDerivAt (gradW x 0)
-      (ContinuousLinearMap.toSpanSingleton ℝ (fun α : Fin n => u1W x 0 (e α))) 0 := by
+      (ContinuousLinearMap.toSpanSingleton ℝ (fun α : Fin n => u1W x 0 (e α))) 0
+:= by
   let v : ℝ^n := fun α => u1W x 0 (e α)
   have hcomp : ∀ α : Fin n,
       HasFDerivAt (fun s : ℝ => gradW x 0 s α)
@@ -477,7 +484,8 @@ lemma hasFDerivAt_gradW_s (x : ℝ^m) (hx : inBounds x) :
 
 /-- Smoothness of the parametrized gradient map `F((x,s),w) = gradW x w s`. -/
 lemma gradWParam_smooth :
-    Smooth (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) := by
+    Smooth (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
+:= by
   rw [contDiff_pi]
   intro α
   let g : (ℝ^m × ℝ) × ℝ^n → ℝ^n → ℝ := fun z w => data.u z.1.1 w z.1.2
@@ -493,7 +501,8 @@ lemma gradWParam_smooth :
 -- The derivative in the `w` variables of the gradient map is the Hessian
 -- `u0WW`, which is invertible by the quadratic lower bound on `u0`.
 lemma u0WW_toLin_isInvertible (x : ℝ^m) (hx : inBounds x) :
-    ((Matrix.toLin' (u0WW x 0)).toContinuousLinearMap).IsInvertible := by
+    ((Matrix.toLin' (u0WW x 0)).toContinuousLinearMap).IsInvertible
+:= by
   classical
   have hunit : IsUnit (u0WW x 0).det :=
     (Matrix.isUnit_iff_isUnit_det (u0WW x 0)).mp (u0WWAtZero x hx).isUnit
@@ -509,7 +518,8 @@ lemma gradWParam_partial_eq (x : ℝ^m) (hx : inBounds x) :
     (fderiv ℝ
         (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) (((x, (0 : ℝ)), (0 : ℝ^n)))
       ∘L ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n))
-      = (Matrix.toLin' (u0WW x 0)).toContinuousLinearMap := by
+      = (Matrix.toLin' (u0WW x 0)).toContinuousLinearMap
+:= by
   let F : (ℝ^m × ℝ) × ℝ^n → ℝ^n :=
     fun z => gradW z.1.1 z.2 z.1.2
   have hF : HasFDerivAt F
@@ -529,7 +539,8 @@ lemma gradWParam_partial_eq (x : ℝ^m) (hx : inBounds x) :
 lemma gradWParam_partial_isInvertible (x : ℝ^m) (hx : inBounds x) :
     ((fderiv ℝ
         (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) (((x, (0 : ℝ)), (0 : ℝ^n)))
-      ∘L ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)).IsInvertible) := by
+      ∘L ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)).IsInvertible)
+:= by
   simpa [gradWParam_partial_eq x hx] using (u0WW_toLin_isInvertible x hx)
 
 -- The implicit function supplied by the IFT, based at `((x,0),0)`.  It is a
@@ -551,7 +562,8 @@ lemma wStarAt_self (x : ℝ^m) (hx : inBounds x) : wStarAt x hx (x, 0) = 0 := by
 
 /-- Smoothness of `wStarAt x hx` at the base point `(x,0)`. -/
 lemma wStarAt_contDiffAt (x : ℝ^m) (hx : inBounds x) :
-    ContDiffAt ℝ (⊤ : WithTop ℕ∞) (wStarAt x hx) (x, 0) := by
+    ContDiffAt ℝ (⊤ : WithTop ℕ∞) (wStarAt x hx) (x, 0)
+:= by
   simpa [wStarAt] using
     (ContDiffAt.contDiffAt_implicitFunction
       (show ContDiffAt ℝ (⊤ : WithTop ℕ∞)
@@ -561,7 +573,8 @@ lemma wStarAt_contDiffAt (x : ℝ^m) (hx : inBounds x) :
 
 -- Near the base point, `wStarAt` solves the critical point equation.
 lemma wStarAt_eventually_zero (x : ℝ^m) (hx : inBounds x) :
-    ∀ᶠ q in 𝓝 (x, (0 : ℝ)), gradW q.1 (wStarAt x hx q) q.2 = 0 := by
+    ∀ᶠ q in 𝓝 (x, (0 : ℝ)), gradW q.1 (wStarAt x hx q) q.2 = 0
+:= by
   have hz : gradW x 0 0 = 0 := gradW_zero x hx
   have hev := ContDiffAt.eventually_apply_implicitFunction
       (show ContDiffAt ℝ (⊤ : WithTop ℕ∞)
@@ -574,7 +587,8 @@ lemma wStarAt_eventually_zero (x : ℝ^m) (hx : inBounds x) :
 -- Differentiating the IFT formula at the base point gives the first-order
 -- term of `w*`:  `d/ds w*(x,s)|₀ = \bar w(x)`.
 lemma hasDerivAt_wStarAt_s (x : ℝ^m) (hx : inBounds x) :
-    HasDerivAt (fun s : ℝ => wStarAt x hx (x, s)) (bud.barw x) 0 := by
+    HasDerivAt (fun s : ℝ => wStarAt x hx (x, s)) (bud.barw x) 0
+:= by
   let E₁ := ℝ^m × ℝ
   let E₂ := ℝ^n
   let F : E₁ × E₂ → E₂ := fun z => gradW z.1.1 z.2 z.1.2
@@ -687,7 +701,8 @@ lemma D_nonempty : (BrendleHung.Section2.Multivar.D (d := n) data.r0 : Set ℝ^n
 lemma exists_minimizer (x : ℝ^m) (s : ℝ) :
     ∃ w ∈ D (d := n) data.r0,
       IsMinOn (fun w : ℝ^n => data.u x w s) (D (d := n) data.r0) w ∧
-      bud.U x s = data.u x w s := by
+      bud.U x s = data.u x w s
+:= by
   have hucont : Continuous (fun w : ℝ^n => data.u x w s) := by
     have hcomp : Continuous (fun w : ℝ^n => (x, w, s)) := by fun_prop
     exact asm.uSmooth.continuous.comp hcomp
@@ -708,7 +723,8 @@ lemma exists_minimizer (x : ℝ^m) (s : ℝ) :
 -- critical point equation `gradW = 0` is equivalent to `w = wStarAt`.
 lemma wStarAt_eventually_eq_iff_critical (x : ℝ^m) (hx : inBounds x) :
     ∀ᶠ z : (ℝ^m × ℝ) × ℝ^n in 𝓝 (((x, (0 : ℝ)), (0 : ℝ^n))),
-      gradW z.1.1 z.2 z.1.2 = 0 ↔ wStarAt x hx z.1 = z.2 := by
+      gradW z.1.1 z.2 z.1.2 = 0 ↔ wStarAt x hx z.1 = z.2
+:= by
   have hev := ContDiffAt.eventually_apply_eq_iff_implicitFunction
       (show ContDiffAt ℝ (⊤ : WithTop ℕ∞)
         (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
@@ -722,7 +738,8 @@ lemma wStarAt_eventually_eq_iff_critical (x : ℝ^m) (hx : inBounds x) :
 lemma minimizer_critical (x : ℝ^m) (s : ℝ) (w : ℝ^n)
     (hwin : norm w < data.r0)
     (hwmin : IsMinOn (fun w : ℝ^n => data.u x w s) (D (d := n) data.r0) w) :
-    gradW x w s = 0 := by
+    gradW x w s = 0
+:= by
   have hBnhds : B data.r0 ∈ 𝓝 w := B_mem_nhds_of_norm_lt hwin
   have hDnhds : D (d := n) data.r0 ∈ 𝓝 w :=
     mem_of_superset hBnhds (B_subset_D (d := n) (r := data.r0))
@@ -741,7 +758,8 @@ lemma minimizer_critical (x : ℝ^m) (s : ℝ) (w : ℝ^n)
 -- sequence must converge to `0` by the quadratic lower bound for `u0`, and
 -- then the local uniqueness of critical points gives the result.
 lemma bud_U_eq_u_wStarAt_eventually (x : ℝ^m) (hx : inBounds x) :
-    ∀ᶠ s : ℝ in 𝓝 0, bud.U x s = data.u x (wStarAt x hx (x, s)) s := by
+    ∀ᶠ s : ℝ in 𝓝 0, bud.U x s = data.u x (wStarAt x hx (x, s)) s
+:= by
   classical
   have hwstar_tendsto : Tendsto (fun s : ℝ => wStarAt x hx (x, s)) (𝓝 0) (𝓝 0) := by
     have hcont : ContinuousAt (wStarAt x hx) (x, 0) := wStarAt_contDiffAt x hx |>.continuousAt
@@ -876,7 +894,8 @@ lemma bud_U_eq_u_wStarAt_eventually (x : ℝ^m) (hx : inBounds x) :
 
 -- Coordinate-sum expansions for continuous multilinear maps on `ℝ^n`.
 lemma clm_apply_eq_sum_basis (L : ℝ^n →L[ℝ] ℝ) (v : ℝ^n) :
-    L v = ∑ i : Fin n, v i * L (e i) := by
+    L v = ∑ i : Fin n, v i * L (e i)
+:= by
   have hv : v = ∑ i : Fin n, v i • e i := by
     ext j
     simp [e, Finset.sum_apply, Pi.single_apply, Finset.mem_univ]
@@ -886,7 +905,8 @@ lemma clm_apply_eq_sum_basis (L : ℝ^n →L[ℝ] ℝ) (v : ℝ^n) :
 /-- Expansion of a bilinear map in the standard basis of `ℝ^n`. -/
 lemma bilinear_apply_eq_sum_basis
     (B : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ)) (v w : ℝ^n) :
-    B v w = ∑ i : Fin n, ∑ j : Fin n, v i * w j * B (e i) (e j) := by
+    B v w = ∑ i : Fin n, ∑ j : Fin n, v i * w j * B (e i) (e j)
+:= by
   have hv : v = ∑ i : Fin n, v i • e i := by
     ext j
     simp [e, Finset.sum_apply, Pi.single_apply, Finset.mem_univ]
@@ -902,7 +922,8 @@ lemma bilinear_apply_eq_sum_basis
 lemma trilinear_apply_eq_sum_basis
     (T : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ))) (u v w : ℝ^n) :
     T u v w = ∑ i : Fin n, ∑ j : Fin n, ∑ k : Fin n,
-      u i * v j * w k * T (e i) (e j) (e k) := by
+      u i * v j * w k * T (e i) (e j) (e k)
+:= by
   have hu : u = ∑ i : Fin n, u i • e i := by
     ext j
     simp [e, Finset.sum_apply, Pi.single_apply, Finset.mem_univ]
@@ -924,7 +945,8 @@ lemma trilinear_apply_eq_sum_basis
 
 -- The Hessian action cancels the linear term in the direction of `barw`.
 lemma barw_cross_cancel (x : ℝ^m) (hx : inBounds x) (v : ℝ^n) :
-    diff2 (data.u0 x) 0 (bud.barw x) v + diff (data.u1 x) 0 v = 0 := by
+    diff2 (data.u0 x) 0 (bud.barw x) v + diff (data.u1 x) 0 v = 0
+:= by
   let B : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ) := diff2 (data.u0 x) 0
   let L : ℝ^n →L[ℝ] ℝ := diff (data.u1 x) 0
   have hsymm : IsSymmSndFDerivAt ℝ (data.u0 x) (0 : ℝ^n) := by
@@ -958,7 +980,8 @@ lemma barw_cross_cancel (x : ℝ^m) (hx : inBounds x) (v : ℝ^n) :
 
 /-- The coordinate sum defining `bud.U2` equals the derivative form used in the expansion proof. -/
 lemma bud_U2_eq (x : ℝ^m) (_ : inBounds x) :
-    bud.U2 x = data.u2 x 0 + (1 / 2 : ℝ) * diff (data.u1 x) 0 (bud.barw x) := by
+    bud.U2 x = data.u2 x 0 + (1 / 2 : ℝ) * diff (data.u1 x) 0 (bud.barw x)
+:= by
   have hsum := clm_apply_eq_sum_basis (diff (data.u1 x) 0) (bud.barw x)
   change data.u2 x 0 + ((1 : ℝ) / 2) * ∑ α : Fin n, u1W x 0 (e α) * bud.barw x α =
     data.u2 x 0 + (1 / 2 : ℝ) * diff (data.u1 x) 0 (bud.barw x)
@@ -971,7 +994,8 @@ lemma bud_U3_eq (x : ℝ^m) (_ : inBounds x) :
     bud.U3 x =
       data.u3 x 0 + diff (data.u2 x) 0 (bud.barw x)
         + (1 / 2 : ℝ) * diff2 (data.u1 x) 0 (bud.barw x) (bud.barw x)
-        + (1 / 6 : ℝ) * diff3 (data.u0 x) 0 (bud.barw x) (bud.barw x) (bud.barw x) := by
+        + (1 / 6 : ℝ) * diff3 (data.u0 x) 0 (bud.barw x) (bud.barw x) (bud.barw x)
+:= by
   have h1 := clm_apply_eq_sum_basis (diff (data.u2 x) 0) (bud.barw x)
   have h2 := bilinear_apply_eq_sum_basis (diff2 (data.u1 x) 0) (bud.barw x) (bud.barw x)
   have h3 := trilinear_apply_eq_sum_basis (diff3 (data.u0 x) 0)
@@ -1044,7 +1068,8 @@ core of the paper's Section 2 computation: all unknown second-order terms of
 lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
     (fun s : ℝ => data.u x (wStarAt x hx (x, s)) s
         - s ^ 2 * bud.U2 x - s ^ 3 * bud.U3 x)
-      =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4) := by
+      =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4)
+:= by
   classical
   rcases asm.uExp with ⟨ρ, hρSmooth, hρeq⟩
   let b : ℝ^n := bud.barw x

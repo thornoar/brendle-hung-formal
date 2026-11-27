@@ -18,26 +18,30 @@ noncomputable section
 /-- The zeroth-order Taylor remainder of `φ` at zero. -/
 abbrev taylorRemainderZero
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F :=
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F
+:=
   fun z => φ z - φ 0
 
 /-- The first-order Taylor remainder of `φ` at zero. -/
 abbrev taylorRemainderOne
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F :=
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F
+:=
   fun z => φ z - φ 0 - fderiv ℝ φ 0 z
 
 /-- The second-order Taylor remainder of `φ` at zero. -/
 abbrev taylorRemainderTwo
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F :=
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F
+:=
   fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
     (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z
 
 /-- The third-order Taylor remainder of `φ` at zero. -/
 abbrev taylorRemainderThree
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F :=
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F
+:=
   fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
     (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z -
     (1 / 6 : ℝ) • fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0 z z z
@@ -78,7 +82,8 @@ lemma bigO_of_fderiv_bound_pow
     (hR : 0 < R) (hC : 0 ≤ C)
     (hdiff : ∀ y ∈ Metric.ball x R, DifferentiableAt ℝ f y)
     (hbound : ∀ y ∈ Metric.ball x R, ‖fderiv ℝ f y‖ ≤ C * ‖y - x‖ ^ n) :
-    (fun y => f y - f x) =O[𝓝 x] (fun y => ‖y - x‖ ^ (n + 1)) := by
+    (fun y => f y - f x) =O[𝓝 x] (fun y => ‖y - x‖ ^ (n + 1))
+:= by
   rw [isBigO_iff]
   refine ⟨C, ?_⟩
   filter_upwards [Metric.ball_mem_nhds x hR] with y hy
@@ -113,7 +118,8 @@ lemma taylor_one_isBigO_of_contDiffAt
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
     {φ : E → F} (hφ : ContDiffAt ℝ ⊤ φ (0 : E)) :
-    (taylorRemainderOne φ) =O[𝓝 (0 : E)] (‖·‖ ^ (2 : ℕ)) := by
+    (taylorRemainderOne φ) =O[𝓝 (0 : E)] (‖·‖ ^ (2 : ℕ))
+:= by
   let g : E → E →L[ℝ] F := fderiv ℝ φ
   have hgcont : ContDiffAt ℝ 1 g (0 : E) := by
     simpa [g] using hφ.fderiv_right (m := (1 : WithTop ℕ∞)) (by simp)
@@ -169,7 +175,8 @@ lemma smooth_taylor_zero_isBigO
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
     {φ : E → F} (hφ : ContDiff ℝ ⊤ φ) :
-    (taylorRemainderZero φ) =O[𝓝 (0 : E)] (fun z => ‖z‖) := by
+    (taylorRemainderZero φ) =O[𝓝 (0 : E)] (fun z => ‖z‖)
+:= by
   have h := (hφ.differentiable (by simp) (0 : E)).hasFDerivAt.isBigO_sub
   simpa only [sub_zero] using h.norm_right
 
@@ -178,7 +185,8 @@ lemma smooth_taylor_one_isBigO
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
     {φ : E → F} (hφ : ContDiff ℝ ⊤ φ) :
-    (taylorRemainderOne φ) =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (2 : ℕ)) := by
+    (taylorRemainderOne φ) =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (2 : ℕ))
+:= by
   exact taylor_one_isBigO_of_contDiffAt (hφ.contDiffAt)
 
 /-- Second-order Taylor estimate with `O(‖z‖³)` remainder for a smooth map. -/
@@ -377,7 +385,8 @@ lemma smooth_taylor_three_isBigO
 
 /-- For `n ≤ m`, `s^m = O(s^m)` near zero implies `s^m = O(s^n)`. -/
 lemma isBigO_pow_of_le_nhds_zero {m n : ℕ} (hnm : n ≤ m) :
-    (fun s : ℝ => s ^ m) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ n) := by
+    (fun s : ℝ => s ^ m) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ n)
+:= by
   rw [isBigO_iff]
   refine ⟨1, ?_⟩
   filter_upwards [Metric.ball_mem_nhds (0 : ℝ) zero_lt_one] with s hs
@@ -388,7 +397,8 @@ lemma isBigO_pow_of_le_nhds_zero {m n : ℕ} (hnm : n ≤ m) :
 
 /-- Near zero, `‖s‖^k = O(s^k)`. -/
 lemma isBigO_norm_pow_eq (k : ℕ) :
-    (fun s : ℝ => ‖s‖ ^ k) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ k) := by
+    (fun s : ℝ => ‖s‖ ^ k) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ k)
+:= by
   refine IsBigO.of_bound 1 ?_
   filter_upwards [] with s
   simp [norm_pow]
@@ -397,7 +407,8 @@ lemma isBigO_norm_pow_eq (k : ℕ) :
 lemma isBigO_clm_apply {α E F G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
     {l : Filter α} (L : F →L[ℝ] G) {f : α → F} {g : α → ℝ}
-    (hf : f =O[l] g) : (fun x => L (f x)) =O[l] g := by
+    (hf : f =O[l] g) : (fun x => L (f x)) =O[l] g
+:= by
   rcases isBigO_iff.mp hf with ⟨C, hC⟩
   rw [isBigO_iff]
   refine ⟨|C| * ‖L‖, hC.mono ?_⟩
@@ -415,7 +426,8 @@ lemma isBigO_bilinear_apply {α E F G : Type*} [NormedAddCommGroup E] [NormedSpa
     [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
     {l : Filter α} (B : E →L[ℝ] F →L[ℝ] G) {f : α → E} {g : α → F} {h k : α → ℝ}
     (hf : f =O[l] h) (hg : g =O[l] k) :
-    (fun x => B (f x) (g x)) =O[l] (fun x => h x * k x) := by
+    (fun x => B (f x) (g x)) =O[l] (fun x => h x * k x)
+:= by
   rcases isBigO_iff.mp hf with ⟨C1, hC1⟩
   rcases isBigO_iff.mp hg with ⟨C2, hC2⟩
   rw [isBigO_iff]
@@ -448,7 +460,8 @@ lemma isBigO_trilinear_apply {α E F G H : Type*}
     {l : Filter α} (T : E →L[ℝ] F →L[ℝ] G →L[ℝ] H)
     {f : α → E} {g : α → F} {h : α → G} {h₁ h₂ h₃ : α → ℝ}
     (hf : f =O[l] h₁) (hg : g =O[l] h₂) (hh : h =O[l] h₃) :
-    (fun x => T (f x) (g x) (h x)) =O[l] (fun x => h₁ x * h₂ x * h₃ x) := by
+    (fun x => T (f x) (g x) (h x)) =O[l] (fun x => h₁ x * h₂ x * h₃ x)
+:= by
   have hfg := isBigO_bilinear_apply (B := T) hf hg
   exact isBigO_bilinear_apply
     (B := ContinuousLinearMap.flip (ContinuousLinearMap.apply ℝ H)) hfg hh
@@ -456,7 +469,8 @@ lemma isBigO_trilinear_apply {α E F G H : Type*}
 /-- Multiplying `f = O(s^m)` by `s^k` gives `s^k * f = O(s^(k+m))`. -/
 lemma isBigO_mul_pow_of_isBigO_pow {f : ℝ → ℝ} {m : ℕ}
     (hf : f =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ m)) (k : ℕ) :
-    (fun s => s ^ k * f s) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ (k + m)) := by
+    (fun s => s ^ k * f s) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ (k + m))
+:= by
   have hpow : (fun s : ℝ => s ^ k) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ k) := isBigO_refl _ _
   simpa [pow_add] using hpow.mul hf
 
@@ -467,7 +481,8 @@ lemma bilinear_leading_isBigO
     (B : E →L[ℝ] E →L[ℝ] ℝ) (b : E) {R : ℝ → E}
     (hR : R =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 2)) :
     (fun s => B (s • b + R s) (s • b + R s) - s ^ 2 * B b b)
-      =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 3) := by
+      =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 3)
+:= by
   have hbR : (fun s : ℝ => B b (R s)) =O[𝓝 0] (fun s : ℝ => s ^ 2) :=
     isBigO_clm_apply (α := ℝ) (E := E) (F := E) (G := ℝ) (l := 𝓝 (0 : ℝ)) (B b) hR
   have hRb : (fun s : ℝ => B (R s) b) =O[𝓝 0] (fun s : ℝ => s ^ 2) := by
@@ -497,7 +512,8 @@ lemma trilinear_leading_isBigO
     (hR : R =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 2)) :
     (fun s => T (s • b + R s) (s • b + R s) (s • b + R s) -
         s ^ 3 * T b b b)
-      =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4) := by
+      =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4)
+:= by
   let Tthird : E →L[ℝ] (E →L[ℝ] ℝ) :=
     ((ContinuousLinearMap.apply ℝ (E →L[ℝ] ℝ) b).comp
       (↑(ContinuousLinearMap.flipₗᵢ ℝ E E ℝ) :
@@ -551,7 +567,8 @@ lemma trilinear_leading_isBigO
 /-- A continuous real-valued function is locally `O(1)`. -/
 lemma isBigO_one_of_continuousAt {α : Type*} [TopologicalSpace α]
     {f : α → ℝ} {x : α} (hf : ContinuousAt f x) :
-    f =O[𝓝 x] (fun _ : α => (1 : ℝ)) := by
+    f =O[𝓝 x] (fun _ : α => (1 : ℝ))
+:= by
   have htend : Tendsto f (𝓝 x) (𝓝 (f x)) := hf.tendsto
   have hevent : ∀ᶠ y in 𝓝 x, dist (f y) (f x) < 1 :=
     (Metric.tendsto_nhds.mp htend) 1 zero_lt_one
