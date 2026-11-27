@@ -167,10 +167,8 @@ lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w)
     HasDerivAt (data.u x w) (data.u1 x w) 0
 := by
   rcases asm.uExp with ⟨ρ, hρSmooth, hρ⟩
-  have hseg : ∀ᶠ s : ℝ in 𝓝 0, s ∈ segment data.s0 := by
-    filter_upwards [Metric.ball_mem_nhds (0 : ℝ) asm.hs0] with s hs
-    change |s| ≤ data.s0
-    simpa [Real.dist_eq] using (le_of_lt (by simpa [Real.dist_eq] using hs))
+  have hseg : ∀ᶠ s : ℝ in 𝓝 0, s ∈ segment data.s0 :=
+    segment_mem_nhds_zero asm.hs0
   have hEq : (data.u x w) =ᶠ[𝓝 0]
       (fun s : ℝ => data.u0 x w + s * data.u1 x w + s ^ 2 * data.u2 x w
         + s ^ 3 * data.u3 x w + s ^ 4 * ρ ((x, w), s)) := by
@@ -537,11 +535,9 @@ lemma gradWParam_partial_eq (x : ℝ^m) (hx : inBounds x) :
 
 /-- The partial derivative of `F` in the `w` variables at the base point is invertible. -/
 lemma gradWParam_partial_isInvertible (x : ℝ^m) (hx : inBounds x) :
-    ((fderiv ℝ
-        (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) (((x, (0 : ℝ)), (0 : ℝ^n)))
+    ((fderiv ℝ (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) ((x, (0 : ℝ)), (0 : ℝ^n))
       ∘L ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)).IsInvertible)
-:= by
-  simpa [gradWParam_partial_eq x hx] using (u0WW_toLin_isInvertible x hx)
+:= by simpa [gradWParam_partial_eq x hx] using (u0WW_toLin_isInvertible x hx)
 
 -- The implicit function supplied by the IFT, based at `((x,0),0)`.  It is a
 -- local smooth function of `(x,s)` near the base point.
@@ -563,26 +559,12 @@ lemma wStarAt_self (x : ℝ^m) (hx : inBounds x) : wStarAt x hx (x, 0) = 0 := by
 /-- Smoothness of `wStarAt x hx` at the base point `(x,0)`. -/
 lemma wStarAt_contDiffAt (x : ℝ^m) (hx : inBounds x) :
     ContDiffAt ℝ (⊤ : WithTop ℕ∞) (wStarAt x hx) (x, 0)
-:= by
-  simpa [wStarAt] using
-    (ContDiffAt.contDiffAt_implicitFunction
-      (show ContDiffAt ℝ (⊤ : WithTop ℕ∞)
-        (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
-        (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt)
-      (by simp) (gradWParam_partial_isInvertible x hx))
-
--- Near the base point, `wStarAt` solves the critical point equation.
-lemma wStarAt_eventually_zero (x : ℝ^m) (hx : inBounds x) :
-    ∀ᶠ q in 𝓝 (x, (0 : ℝ)), gradW q.1 (wStarAt x hx q) q.2 = 0
-:= by
-  have hz : gradW x 0 0 = 0 := gradW_zero x hx
-  have hev := ContDiffAt.eventually_apply_implicitFunction
-      (show ContDiffAt ℝ (⊤ : WithTop ℕ∞)
-        (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
-        (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt)
-      (by simp) (gradWParam_partial_isInvertible x hx)
-  filter_upwards [hev] with q hq
-  simpa [wStarAt, hz] using hq
+:= by simpa [wStarAt] using
+  (ContDiffAt.contDiffAt_implicitFunction
+    (show ContDiffAt ℝ (⊤ : WithTop ℕ∞)
+      (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
+      (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt)
+    (by simp) (gradWParam_partial_isInvertible x hx))
 
 -- Differentiating the IFT formula at the base point gives the first-order
 -- term of `w*`:  `d/ds w*(x,s)|₀ = \bar w(x)`.
@@ -1081,6 +1063,9 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
   let B1 : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ) := diff2 (data.u1 x) 0
   let L2 : ℝ^n →L[ℝ] ℝ := diff (data.u2 x) 0
 
+  have hWR : ∀ s : ℝ, W s = s • b + R s := by
+    intro s
+    simp [R]
   have hW0 : W 0 = 0 := by simp [W, wStarAt_self x hx]
   have hWderiv : HasDerivAt W b 0 := by
     simpa [W, b] using hasDerivAt_wStarAt_s x hx
@@ -1108,20 +1093,10 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
     exact (hf.comp_tendsto hWtendsto).trans (hWbig.norm_left.pow k)
 
   have hWmem : ∀ᶠ s : ℝ in 𝓝 0, W s ∈ D (d := n) data.r0 := by
-    have hnorm0 : norm (0 : ℝ^n) = 0 := by
-      simp [BrendleHung.Section2.Multivar.norm]
-    have hnorm : Tendsto (fun s : ℝ => norm (W s)) (𝓝 0) (𝓝 0) := by
-      have ht := (normCont n).continuousAt.tendsto.comp hWtendsto
-      simpa [Function.comp_def, hnorm0] using ht
-    have hopen : {v : ℝ | v < data.r0} ∈ 𝓝 (0 : ℝ) :=
-      IsOpen.mem_nhds (isOpen_lt continuous_id continuous_const) asm.hr0
-    filter_upwards [hnorm.eventually hopen] with s hs
+    filter_upwards [hWtendsto.eventually (B_mem_nhds_zero asm.hr0)] with s hs
     exact le_of_lt hs
-  have hseg : ∀ᶠ s : ℝ in 𝓝 0, s ∈ segment data.s0 := by
-    refine mem_of_superset (Metric.ball_mem_nhds (0 : ℝ) asm.hs0) ?_
-    intro s hs
-    change |s| ≤ data.s0
-    simpa [Real.dist_eq] using (le_of_lt (by simpa [Real.dist_eq] using hs))
+  have hseg : ∀ᶠ s : ℝ in 𝓝 0, s ∈ segment data.s0 :=
+    segment_mem_nhds_zero asm.hs0
   have hExpEq : (fun s : ℝ => data.u x (W s) s) =ᶠ[𝓝 (0 : ℝ)]
       (fun s : ℝ => data.u0 x (W s) + s * data.u1 x (W s)
         + s ^ 2 * data.u2 x (W s) + s ^ 3 * data.u3 x (W s)
@@ -1131,24 +1106,23 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
 
   have hρline : Tendsto (fun s : ℝ => ((x, W s), s)) (𝓝 (0 : ℝ))
       (𝓝 ((x, W 0), (0 : ℝ))) := by
-    have hp : Tendsto (fun s : ℝ => (x, W s)) (𝓝 (0 : ℝ)) (𝓝 (x, W 0)) :=
-      tendsto_const_nhds.prodMk_nhds (by simpa [hW0] using hWtendsto)
-    exact hp.prodMk_nhds tendsto_id
+    simpa [hW0] using
+      ((tendsto_const_nhds.prodMk_nhds hWtendsto).prodMk_nhds tendsto_id)
   have hρcont : ContinuousAt (fun s : ℝ => ρ ((x, W s), s)) 0 := by
     exact hρSmooth.continuous.continuousAt.tendsto.comp hρline
   have hρO : (fun s : ℝ => ρ ((x, W s), s)) =O[𝓝 (0 : ℝ)]
       (fun _ : ℝ => (1 : ℝ)) := isBigO_one_of_continuousAt hρcont
   have hρ4 : (fun s : ℝ => s ^ 4 * ρ ((x, W s), s)) =O[𝓝 (0 : ℝ)]
       (fun s : ℝ => s ^ 4) := by
-    have hρO0 : (fun s : ℝ => ρ ((x, W s), s)) =O[𝓝 (0 : ℝ)]
-        (fun s : ℝ => s ^ 0) := by
-      simpa using hρO
-    simpa using isBigO_mul_pow_of_isBigO_pow hρO0 4
+    refine (hρO.mul (Asymptotics.isBigO_refl (fun s : ℝ => s ^ 4) (𝓝 (0 : ℝ)))).congr ?_ ?_
+    · intro s
+      ring
+    · intro s
+      ring
 
   have hdu0 : diff (data.u0 x) 0 = 0 := by
     ext v
-    have h := congrArg (fun f : ℝ^n → ℝ => f v) (u0WAtZero x hx)
-    simpa [u0W] using h
+    simpa [u0W] using congrFun (u0WAtZero x hx) v
   have hu00 : data.u0 x 0 = 0 := asm.u0AtZero x hx
   have hu10 : data.u1 x 0 = 0 := asm.u1AtZero x hx
   have h0rem : (fun s : ℝ =>
@@ -1211,7 +1185,6 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
         - s ^ 2 * (1 / 2 : ℝ) * L1 b) =
       (fun s : ℝ => (1 / 2 : ℝ) * B0 (R s) (R s)) := by
     funext s
-    have hWR : W s = s • b + R s := by simp [R]
     have hsymmRs : B0 (R s) b = B0 b (R s) := hB0symm (R s) b
     have hcross : B0 b (R s) + L1 (R s) = 0 := by
       simpa [b, B0, L1] using barw_cross_cancel x hx (R s)
@@ -1221,7 +1194,7 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
           = s ^ 2 * ((1 / 2 : ℝ) * B0 b b + (1 / 2 : ℝ) * L1 b)
               + s * (B0 b (R s) + L1 (R s))
               + (1 / 2 : ℝ) * B0 (R s) (R s) := by
-            rw [hWR]
+            rw [hWR s]
             simp [map_add, map_smul, smul_eq_mul, hsymmRs]
             ring
       _ = (1 / 2 : ℝ) * B0 (R s) (R s) := by
@@ -1238,10 +1211,7 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
       C0 (W s) (W s) (W s) - s ^ 3 * C0 b b b)
       =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4) := by
     exact (trilinear_leading_isBigO C0 b hR).congr_left (fun s => by
-      have hWR : W s = s • b + R s := by
-        dsimp [R]
-        abel
-      rw [← hWR])
+      rw [← hWR s])
   have hA1 : (fun s : ℝ =>
       (1 / 6 : ℝ) * (C0 (W s) (W s) (W s) - s ^ 3 * C0 b b b))
       =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4) :=
@@ -1251,32 +1221,23 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
       B1 (W s) (W s) - s ^ 2 * B1 b b)
       =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 3) := by
     exact (bilinear_leading_isBigO B1 b hR).congr_left (fun s => by
-      have hWR : W s = s • b + R s := by
-        dsimp [R]
-        abel
-      rw [← hWR])
-  have hA2raw : (fun s : ℝ =>
-      (1 / 2 : ℝ) * (B1 (W s) (W s) - s ^ 2 * B1 b b))
-      =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 3) :=
-    hB1diff.const_mul_left (1 / 2 : ℝ)
-  have hA2s4 : (fun s : ℝ =>
-      s ^ 1 * ((1 / 2 : ℝ) * (B1 (W s) (W s) - s ^ 2 * B1 b b)))
-      =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4) := by
-    simpa using isBigO_mul_pow_of_isBigO_pow hA2raw 1
+      rw [← hWR s])
   have hA2 : (fun s : ℝ =>
       (s / 2) * (B1 (W s) (W s) - s ^ 2 * B1 b b))
-      =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4) :=
-    hA2s4.congr_left (fun s => by ring)
+      =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4) := by
+    have hraw := hB1diff.const_mul_left (1 / 2 : ℝ)
+    refine (isBigO_mul_pow_of_isBigO_pow hraw 1).congr_left ?_
+    intro s
+    ring
 
-  have hL2R : (fun s : ℝ => L2 (R s)) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 2) :=
-    isBigO_clm_apply (α := ℝ) (E := ℝ^n) (F := ℝ^n) (G := ℝ)
-      (l := 𝓝 (0 : ℝ)) L2 hR
   have hL2diff : (fun s : ℝ => L2 (W s) - s * L2 b)
       =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 2) := by
+    have hL2R : (fun s : ℝ => L2 (R s)) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 2) :=
+      isBigO_clm_apply (α := ℝ) (E := ℝ^n) (F := ℝ^n) (G := ℝ)
+        (l := 𝓝 (0 : ℝ)) L2 hR
     refine hL2R.congr_left ?_
     intro s
-    have hWR : W s = s • b + R s := by simp [R]
-    rw [hWR]
+    rw [hWR s]
     simp [map_add, map_smul, smul_eq_mul]
   have hA3 : (fun s : ℝ => s ^ 2 * (L2 (W s) - s * L2 b))
       =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4) := by

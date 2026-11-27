@@ -108,6 +108,14 @@ lemma zero_mem_D {d : ℕ} {r : ℝ} (hr : 0 ≤ r) : (0 : ℝ^d) ∈ D (d := d)
 def segment (a : ℝ) : Set ℝ
 := {x | |x| ≤ a}
 
+/-- The segment `[-a,a]` is a neighborhood of zero when `a > 0`. -/
+lemma segment_mem_nhds_zero {a : ℝ} (ha : 0 < a) : segment a ∈ 𝓝 (0 : ℝ)
+:= by
+  refine mem_of_superset (Metric.ball_mem_nhds (0 : ℝ) ha) ?_
+  intro s hs
+  change |s| ≤ a
+  simpa [Real.dist_eq] using (le_of_lt (by simpa [Real.dist_eq] using hs))
+
 /-- Fixed dimension of the parameter space `ℝ^m`. -/
 axiom m : ℕ
 /-- Fixed dimension of the variable space `ℝ^n`. -/
