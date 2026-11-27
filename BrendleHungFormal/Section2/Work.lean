@@ -4851,6 +4851,154 @@ lemma v3_zero (y : ℝ^m) (hy : y ∈ cca.Ω) :
   change Υc y 0 * asm.u3 (cca.φ (y, 0)) (cca.ψ (y, 0)) = Υc y 0 * asm.u3 y 0
   rw [cca.φ_y_0 y hy, cca.ψ_y_0 y hy]
 
+-- Smoothness facts used to extract the invariant restriction in the final
+-- proposition.  These are intentionally local in the parameter: the reduced
+-- direction `barw` is proved smooth wherever the Hessian is invertible.
+
+/-- Smoothness of the full second derivative of `u1Prod`. -/
+lemma u1D2_smooth : SmoothGlobal u1D2 := by
+  simpa [u1D2, u1D1] using u1D1_smooth.fderiv_right (m := ⊤) (by simp)
+
+/-- Smoothness of the full first derivative of `u2Prod`. -/
+lemma u2D1_smooth : SmoothGlobal u2D1 := by
+  simpa [u2D1] using u2Prod_smooth.fderiv_right (m := ⊤) (by simp)
+
+/-- Smoothness in `x` of `u2(x,0)`. -/
+lemma u2_at_zero_smooth : SmoothGlobal (fun x : ℝ^m => asm.u2 x 0) := by
+  have h : SmoothGlobal (fun x : ℝ^m => (x, (0 : ℝ^n))) := by fun_prop
+  simpa [Function.comp_def, Function.uncurry_def] using asm.u2Smooth.comp h
+
+/-- Smoothness in `x` of `u3(x,0)`. -/
+lemma u3_at_zero_smooth : SmoothGlobal (fun x : ℝ^m => asm.u3 x 0) := by
+  have h : SmoothGlobal (fun x : ℝ^m => (x, (0 : ℝ^n))) := by fun_prop
+  simpa [Function.comp_def, Function.uncurry_def] using asm.u3Smooth.comp h
+
+/-- Smoothness in `x` of one component of the gradient of `u2(x, ·)` at zero. -/
+lemma u2W_smooth_apply (α : Fin n) : SmoothGlobal (fun x : ℝ^m => u2W x 0 (e α)) := by
+  have hα : SmoothGlobal (fun q : ℝ^m × ℝ^n => u2D1 q (iw α)) := by
+    simpa using u2D1_smooth.clm_apply
+      (contDiff_const : SmoothGlobal (fun _ : ℝ^m × ℝ^n => iw α))
+  have hcomp := hα.comp (by fun_prop : SmoothGlobal (fun x : ℝ^m => (x, (0 : ℝ^n))))
+  simpa [Function.comp_def, u2D1_snd, u2W, iw] using hcomp
+
+/-- Smoothness in `x` of one Hessian component of `u1(x, ·)` at zero. -/
+lemma u1WW_smooth_apply (α β : Fin n) : SmoothGlobal (fun x : ℝ^m => u1WW x 0 α β) := by
+  have hα : SmoothGlobal (fun q : ℝ^m × ℝ^n => u1D2 q (iw α)) := by
+    simpa using u1D2_smooth.clm_apply
+      (contDiff_const : SmoothGlobal (fun _ : ℝ^m × ℝ^n => iw α))
+  have hαβ : SmoothGlobal (fun q : ℝ^m × ℝ^n => u1D2 q (iw α) (iw β)) := by
+    simpa using hα.clm_apply
+      (contDiff_const : SmoothGlobal (fun _ : ℝ^m × ℝ^n => iw β))
+  have hcomp := hαβ.comp (by fun_prop : SmoothGlobal (fun x : ℝ^m => (x, (0 : ℝ^n))))
+  simpa [Function.comp_def, u1D2_ww] using hcomp
+
+/-- Smoothness in `x` of one third-derivative component of `u0(x, ·)` at zero. -/
+lemma u0WWW_smooth_apply (α β γ : Fin n) :
+    SmoothGlobal (fun x : ℝ^m => u0WWW x 0 α β γ) := by
+  have hβ : SmoothGlobal (fun q : ℝ^m × ℝ^n => u0D2 q (iw β)) := by
+    simpa using u0D2_smooth.clm_apply
+      (contDiff_const : SmoothGlobal (fun _ : ℝ^m × ℝ^n => iw β))
+  have hβγ : SmoothGlobal (fun q : ℝ^m × ℝ^n => u0D2 q (iw β) (iw γ)) := by
+    simpa using hβ.clm_apply
+      (contDiff_const : SmoothGlobal (fun _ : ℝ^m × ℝ^n => iw γ))
+  have hfd : SmoothGlobal (fun q : ℝ^m × ℝ^n =>
+      fderiv ℝ (fun r : ℝ^m × ℝ^n => u0D2 r (iw β) (iw γ)) q) := by
+    simpa using hβγ.fderiv_right (m := ⊤) (by simp)
+  have hfdα : SmoothGlobal (fun q : ℝ^m × ℝ^n =>
+      fderiv ℝ (fun r : ℝ^m × ℝ^n => u0D2 r (iw β) (iw γ)) q (iw α)) := by
+    simpa using hfd.clm_apply
+      (contDiff_const : SmoothGlobal (fun _ : ℝ^m × ℝ^n => iw α))
+  have hcomp := hfdα.comp (by fun_prop : SmoothGlobal (fun x : ℝ^m => (x, (0 : ℝ^n))))
+  have hEq : (fun q : ℝ^m × ℝ^n =>
+      fderiv ℝ (fun r : ℝ^m × ℝ^n => u0D2 r (iw β) (iw γ)) q (iw α)) =
+      (fun q : ℝ^m × ℝ^n => u0D3 q (iw α) (iw β) (iw γ)) := by
+    funext q
+    exact u0D3_apply q (iw α) (iw β) (iw γ)
+  simpa [Function.comp_def, hEq, u0D3_www] using hcomp
+
+/-- Smoothness in `y` of one coordinate of the reduced direction `barw`. -/
+lemma barw_coord_contDiffAt (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
+    ContDiffAt ℝ ⊤ (fun y : ℝ^m => bud.barw y α) x := by
+  simpa [Function.comp_def] using
+    (contDiffAt_apply (𝕜 := ℝ) (E := ℝ) (n := ⊤) α (bud.barw x)).comp x
+      (barw_contDiffAt x hx)
+
+/-- Smoothness of the reduced second coefficient `U2` at an admissible point. -/
+lemma bud_U2_contDiffAt (x : ℝ^m) (hx : inBounds x) : ContDiffAt ℝ ⊤ bud.U2 x := by
+  change ContDiffAt ℝ ⊤
+    (fun x : ℝ^m => asm.u2 x 0 + (1 / 2 : ℝ) *
+      ∑ α : Fin n, u1W x 0 (e α) * bud.barw x α) x
+  have hu2 : ContDiffAt ℝ ⊤ (fun x : ℝ^m => asm.u2 x 0) x :=
+    u2_at_zero_smooth.contDiffAt
+  have hsum : ContDiffAt ℝ ⊤ (fun x : ℝ^m =>
+      ∑ α : Fin n, u1W x 0 (e α) * bud.barw x α) x := by
+    exact ContDiffAt.sum (s := Finset.univ) (fun α _ =>
+      (u1W_smooth_apply α).contDiffAt.mul (barw_coord_contDiffAt x hx α))
+  have hhalf : ContDiffAt ℝ ⊤ (fun _ : ℝ^m => (1 / 2 : ℝ)) x := contDiffAt_const
+  simpa using hu2.add (hhalf.mul hsum)
+
+/-- Smoothness of the reduced third coefficient `U3` at an admissible point. -/
+lemma bud_U3_contDiffAt (x : ℝ^m) (hx : inBounds x) : ContDiffAt ℝ ⊤ bud.U3 x := by
+  change ContDiffAt ℝ ⊤
+    (fun x : ℝ^m =>
+      asm.u3 x 0
+        + ∑ α : Fin n, u2W x 0 (e α) * bud.barw x α
+        + (1 / 2 : ℝ) * ∑ α : Fin n, ∑ β : Fin n,
+            u1WW x 0 α β * bud.barw x α * bud.barw x β
+        + (1 / 6 : ℝ) * ∑ α : Fin n, ∑ β : Fin n, ∑ γ : Fin n,
+            u0WWW x 0 α β γ * bud.barw x α * bud.barw x β * bud.barw x γ) x
+  have hu3 : ContDiffAt ℝ ⊤ (fun x : ℝ^m => asm.u3 x 0) x :=
+    u3_at_zero_smooth.contDiffAt
+  have hlinear : ContDiffAt ℝ ⊤ (fun x : ℝ^m =>
+      ∑ α : Fin n, u2W x 0 (e α) * bud.barw x α) x := by
+    exact ContDiffAt.sum (s := Finset.univ) (fun α _ =>
+      (u2W_smooth_apply α).contDiffAt.mul (barw_coord_contDiffAt x hx α))
+  have hquadInner (α : Fin n) : ContDiffAt ℝ ⊤ (fun x : ℝ^m =>
+      ∑ β : Fin n, u1WW x 0 α β * bud.barw x α * bud.barw x β) x := by
+    exact ContDiffAt.sum (s := Finset.univ) (fun β _ =>
+      ((u1WW_smooth_apply α β).contDiffAt.mul
+        (barw_coord_contDiffAt x hx α)).mul (barw_coord_contDiffAt x hx β))
+  have hquad : ContDiffAt ℝ ⊤ (fun x : ℝ^m =>
+      ∑ α : Fin n, ∑ β : Fin n,
+        u1WW x 0 α β * bud.barw x α * bud.barw x β) x := by
+    exact ContDiffAt.sum (s := Finset.univ) (fun α _ => hquadInner α)
+  have hcubicInner (α β : Fin n) : ContDiffAt ℝ ⊤ (fun x : ℝ^m =>
+      ∑ γ : Fin n,
+        u0WWW x 0 α β γ * bud.barw x α * bud.barw x β * bud.barw x γ) x := by
+    exact ContDiffAt.sum (s := Finset.univ) (fun γ _ =>
+      (((u0WWW_smooth_apply α β γ).contDiffAt.mul
+        (barw_coord_contDiffAt x hx α)).mul
+        (barw_coord_contDiffAt x hx β)).mul (barw_coord_contDiffAt x hx γ))
+  have hcubicMid (α : Fin n) : ContDiffAt ℝ ⊤ (fun x : ℝ^m =>
+      ∑ β : Fin n, ∑ γ : Fin n,
+        u0WWW x 0 α β γ * bud.barw x α * bud.barw x β * bud.barw x γ) x := by
+    exact ContDiffAt.sum (s := Finset.univ) (fun β _ => hcubicInner α β)
+  have hcubic : ContDiffAt ℝ ⊤ (fun x : ℝ^m =>
+      ∑ α : Fin n, ∑ β : Fin n, ∑ γ : Fin n,
+        u0WWW x 0 α β γ * bud.barw x α * bud.barw x β * bud.barw x γ) x := by
+    exact ContDiffAt.sum (s := Finset.univ) (fun α _ => hcubicMid α)
+  have hhalf : ContDiffAt ℝ ⊤ (fun _ : ℝ^m => (1 / 2 : ℝ)) x := contDiffAt_const
+  have hsixth : ContDiffAt ℝ ⊤ (fun _ : ℝ^m => (1 / 6 : ℝ)) x := contDiffAt_const
+  simpa using (((hu3.add hlinear).add (hhalf.mul hquad)).add (hsixth.mul hcubic))
+
+/-- The reduced third coefficient is smooth on the closed parameter ball. -/
+lemma bud_U3_smoothOn_D : Smooth bud.U3 on (D asm.r0) := by
+  intro x hx
+  exact (bud_U3_contDiffAt x hx).contDiffWithinAt
+
+/-- Smoothness in `y` of `Υ(y,0)` for `y ∈ Ω`. -/
+lemma upsilon_y0_contDiffAt (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    ContDiffAt ℝ ⊤ (fun y' : ℝ^m => Υc y' 0) y := by
+  have hopen : IsOpen (cca.Ω ×ˢ (B (d := n) cca.r1)) :=
+    cca.Ω_open.prod (isOpen_B (d := n) cca.r1)
+  have hmem : (y, (0 : ℝ^n)) ∈ cca.Ω ×ˢ (B (d := n) cca.r1) := by
+    refine ⟨hy, ?_⟩
+    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
+  have hΥat : ContDiffAt ℝ ⊤ cca.Υ (y, 0) :=
+    cca.Υ_smooth.contDiffAt (hopen.mem_nhds hmem)
+  have hslice : ContDiffAt ℝ ⊤ (fun y' : ℝ^m => (y', (0 : ℝ^n))) y := by fun_prop
+  simpa [Υc, Function.comp_def] using hΥat.comp y hslice
+
 end
 
 end Section2

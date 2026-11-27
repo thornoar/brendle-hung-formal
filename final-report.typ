@@ -34,7 +34,12 @@ The paper is divided into the following logical parts:
     f(s) = min_(y in A) min_(w in overline(B^n_(r_0))) u(y, w, s)
   $
   is positive for sufficiently small $s$, where $A$ is a suitable compact subset of $overline(B^m_(r_0))$.
-+ A generalization of this result to the case of a compact Riemannian manifold $cal(N)$ and smooth function $u : cal(N) times [-s_0, s_0] -> RR$. The main statement is Theorem 2.12 which states that under certain extensive conditions, the minimum $min_(p in cal(N)) u(p, s)$ is strictly positive for small $s$.
++ A generalization of these results to the case of a compact Riemannian manifold $cal(N)$ and smooth function $u : cal(N) times [-s_0, s_0] -> RR$. The main statement is Theorem 2.12 which states that under certain extensive conditions, the minimum $min_(p in cal(N)) u(p, s)$ is strictly positive for small $s$.
 + An explicit calculation of the Cheeger-Müter metric on $M$, constructed from the standard product metric using the diagonal action of $S O (3)$ on $SS^2 times SS^2$.
 + A set of abstract tools for manipulating second-order perturbations of the Cheeger-Müter metric $g$. These tools rely on the abstract Euclidean framework constructed in part 1.
-+ A concrete second order perturbation $g_s = g + s h^((1)) + s^2 h^((2))$ of the metric $g$
++ A concrete second order perturbation $g_s = g + s h^((1)) + s^2 h^((2))$ of the metric $g$.
++ Considering the properties of the functions $v$, $v^((i))$, and $V^((i))$ that are defined based on the metric $g_s$. The main result is Proposition 5.3 which states that the function $u : cal(N) times [-s_0, s_0] -> RR$ defined by
+  $
+    u("span"{xi, eta}, s) = (R_(g_s)(xi,eta,xi,eta))/(g(xi,xi)g(eta,eta) - g(xi,eta)^2)
+  $
+  extends to a smooth function on a certain 2-dimensional torus $Sigma subset M$. This result levies the abstract preparations made in 

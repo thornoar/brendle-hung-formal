@@ -231,6 +231,65 @@ lemma relation_U3_V3 (y : ℝ^m) (hy : y ∈ cca.Ω) :
   rw [hR, hF]
   abel
 
+/-- The paper's invariance proposition.  On the zero set of `V2` and `dV2`,
+the third-order coefficient agrees with `Υ(y,0) * U3(y)`, and the reciprocal
+rescaling is the restriction of the smooth function `U3` on `D r0`. -/
+theorem invariance (Λ : Set ℝ^m) (hΛΩ : Λ ⊆ cca.Ω)
+    (hV2 : ∀ y ∈ Λ, V2 y = 0 ∧ fderiv ℝ V2 y = 0) :
+    (∀ y ∈ Λ, V3 y = Υc y 0 * bud.U3 y) ∧
+      ∃ F : ℝ^m → ℝ, SmoothOn F (D asm.r0) ∧
+        ∀ y ∈ Λ, (Υc y 0)⁻¹ * V3 y = F y
+:= by
+  classical
+  have hzero : (0 : ℝ^n) ∈ B cca.r1 := by
+    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
+  have hV3_eq : ∀ y ∈ Λ, V3 y = Υc y 0 * bud.U3 y := by
+    intro y hyΛ
+    have hyΩ : y ∈ cca.Ω := hΛΩ hyΛ
+    have hyD : inBounds y := B_subset_D (cca.Ω_subset_B hyΩ)
+    have hΥpos : 0 < Υc y 0 := by
+      simpa [Υc] using cca.Υ_pos y 0 hyΩ hzero
+    have hΥne : Υc y 0 ≠ 0 := ne_of_gt hΥpos
+    have hU2zero : bud.U2 y = 0 := by
+      have hrel := relation_U2_V2 y hyΩ
+      rw [(hV2 y hyΛ).1] at hrel
+      exact (mul_eq_zero.mp hrel.symm).resolve_left hΥne
+    have hEqEv : V2 =ᶠ[𝓝 y] fun y' : ℝ^m => Υc y' 0 * bud.U2 y' := by
+      filter_upwards [cca.Ω_open.mem_nhds hyΩ] with y' hy'
+      exact relation_U2_V2 y' hy'
+    have hfderivEq :
+        fderiv ℝ V2 y = fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y :=
+      hEqEv.fderiv_eq
+    have hΥdiff : DifferentiableAt ℝ (fun y' : ℝ^m => Υc y' 0) y :=
+      (upsilon_y0_contDiffAt y hyΩ).differentiableAt (by simp)
+    have hU2diff : DifferentiableAt ℝ bud.U2 y :=
+      (bud_U2_contDiffAt y hyD).differentiableAt (by simp)
+    have hprod :
+        fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y =
+          (Υc y 0) • fderiv ℝ bud.U2 y +
+            (bud.U2 y) • fderiv ℝ (fun y' : ℝ^m => Υc y' 0) y := by
+      exact (hΥdiff.hasFDerivAt.mul hU2diff.hasFDerivAt).fderiv
+    have hprodZero :
+        fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y = 0 := by
+      rw [← hfderivEq]
+      exact (hV2 y hyΛ).2
+    have hscale : (Υc y 0) • fderiv ℝ bud.U2 y = 0 := by
+      rw [hprod, hU2zero] at hprodZero
+      simpa using hprodZero
+    have hU2deriv : fderiv ℝ bud.U2 y = 0 := by
+      exact (smul_eq_zero.mp hscale).resolve_left hΥne
+    rw [relation_U3_V3 y hyΩ]
+    simp [hU2zero, hU2deriv]
+  refine ⟨hV3_eq, ?_⟩
+  refine ⟨bud.U3, bud_U3_smoothOn_D, ?_⟩
+  intro y hyΛ
+  have hyΩ : y ∈ cca.Ω := hΛΩ hyΛ
+  have hΥpos : 0 < Υc y 0 := by
+    simpa [Υc] using cca.Υ_pos y 0 hyΩ hzero
+  have hΥne : Υc y 0 ≠ 0 := ne_of_gt hΥpos
+  rw [hV3_eq y hyΛ]
+  field_simp [hΥne]
+
 end
 
 end Section2
