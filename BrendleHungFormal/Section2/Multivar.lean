@@ -150,7 +150,7 @@ def HasExpansion3 {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E] (ball : 
 -- The stronger form of the expansion assumption used for `u` in Section 2.
 def HasSmoothExpansion3 {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E] (ball : Set E) (a : ℝ) (f0 f1 f2 f3 : E -> ℝ) (f : E -> ℝ → ℝ) : Prop :=
   ∃ ρ : E × ℝ → ℝ,
-    SmoothGlobal ρ ∧
+    Smooth ρ on (Set.univ : Set (E × ℝ)) ∧
     ∀ p s,
       p ∈ ball ->
       s ∈ segment a ->

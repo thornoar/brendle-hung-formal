@@ -170,7 +170,8 @@ lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w)
     exact hρ (x, w) s ⟨hx, hw⟩ hs
   have hρdiff : HasDerivAt (fun s : ℝ => ρ ((x, w), s))
       (deriv (fun s : ℝ => ρ ((x, w), s)) 0) 0 := by
-    exact ((hρSmooth.differentiable (by simp) ((x, w), 0)).comp 0 (by fun_prop)).hasDerivAt
+    exact ((contDiffOn_univ.mp hρSmooth).differentiable (by simp) ((x, w), 0)).comp
+      0 (by fun_prop) |>.hasDerivAt
   have hpoly : HasDerivAt
       (fun s : ℝ => asm.u0 x w + s * asm.u1 x w + s ^ 2 * asm.u2 x w
         + s ^ 3 * asm.u3 x w + s ^ 4 * ρ ((x, w), s)) (asm.u1 x w) 0 := by
@@ -1103,7 +1104,7 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
     simpa [hW0] using
       ((tendsto_const_nhds.prodMk_nhds hWtendsto).prodMk_nhds tendsto_id)
   have hρcont : ContinuousAt (fun s : ℝ => ρ ((x, W s), s)) 0 := by
-    exact hρSmooth.continuous.continuousAt.tendsto.comp hρline
+    exact (contDiffOn_univ.mp hρSmooth).continuous.continuousAt.tendsto.comp hρline
   have hρO : (fun s : ℝ => ρ ((x, W s), s)) =O[𝓝 (0 : ℝ)]
       (fun _ : ℝ => (1 : ℝ)) := isBigO_one_of_continuousAt hρcont
   have hρ4 : (fun s : ℝ => s ^ 4 * ρ ((x, W s), s)) =O[𝓝 (0 : ℝ)]
@@ -1690,8 +1691,9 @@ lemma CoordChangeAssumptions.psi_z_smoothAt
     simpa [B, BrendleHung.Section2.Multivar.norm] using c.r1_pos
   have hψat : ContDiffAt ℝ ⊤ c.ψ (y, 0) :=
     c.ψ_smooth.contDiffAt (hopen.mem_nhds hmem)
-  have hslice : SmoothGlobal (fun z : ℝ^n => (y, z)) := by fun_prop
-  exact hψat.comp 0 hslice.contDiffAt
+  have hslice : Smooth (fun z : ℝ^n => (y, z)) on (Set.univ : Set ℝ^n) :=
+    (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) y).contDiffOn
+  exact hψat.comp 0 (hslice.contDiffAt (by simp))
 
 /-- An arbitrary choice of the Section 2 coordinate-change assumptions. -/
 axiom cca : CoordChangeAssumptions
