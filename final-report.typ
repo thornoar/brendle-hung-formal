@@ -50,4 +50,16 @@ The paper is divided into the following logical parts:
 
 Despite having clear substance, Brendle and Hung's paper is notoriously hard to understand, and their calculations convolute the mind like nothing else.
 Some of them were even made using Wolfram Mathematica, in order to speed up the calculation process and to verify the results.
+However, the Mathematica notebook only covers a part of the paper's content, and most proofs are not formally verified.
+At the same time, the paper is very constructive, in the sense that most proofs either state properties of existing objects, or construct new objects with certain properties.
+This makes it very suitable for the process of formal verification.
 
+For this project, I have decided to write a formal verification of part 1 (Section 2) of Brendle and Hung's paper, in the Lean 4 proof assistant.
+Ideally, the entire paper should be formalized.
+
+This has multiple benefits:
+- A formally verified proof is a computer program that represents the entire line of reasoning all the way down to the axioms of mathematics. It is therefore of the highest rigor.
+- Lean 4 is a programming language that allows extensive manipulation and analysis of mathematical objects, propositions, and proofs. Stating the results of the paper in this language allows us to inspect them programmatically and potentially simplify them.
+- Formalization means, in particular, that all assumptions made to prove a result are explicitly stated. We may then reduce these assumptions by removing redundancies, and try to generalize the arguments made in the paper.
+
+We will begin with an overview of how dependent types and proof assistants work.
