@@ -46,7 +46,7 @@ lemma norm_square {d : ℕ} (w : ℝ^d) : norm w ^ 2 = ∑ i : Fin d, w i ^ 2 :=
 lemma norm_mul_sq {d : ℕ} (t : ℝ) (w : ℝ^d) : norm (t • w) ^ 2 = t ^ 2 * norm w ^ 2
 := by
   rewrite [norm_square, norm_square]
-  change (∑ i : Fin d, (t * w i) ^ 2) = t ^ 2 * ∑ i : Fin d, w i ^ 2
+  change (∑ i : Fin d, (t * w i) ^ 2) = _
   rw [Finset.mul_sum]
   apply Finset.sum_congr rfl
   intro i hi
@@ -83,13 +83,11 @@ lemma B_mem_nhds_zero {d : ℕ} {r : ℝ} (hr : 0 < r) : B (d := d) r ∈ 𝓝 (
   simpa [B, norm] using hr
 
 /-- The open ball `B r` is a neighborhood of each of its points. -/
-lemma B_mem_nhds {d : ℕ} {r : ℝ} {x : ℝ^d} (hx : x ∈ B (d := d) r) :
-    B (d := d) r ∈ 𝓝 x :=
+lemma B_mem_nhds {d : ℕ} {r : ℝ} {x : ℝ^d} (hx : x ∈ B (d := d) r) : B (d := d) r ∈ 𝓝 x :=
   IsOpen.mem_nhds (isOpen_B r) hx
 
 /-- `B r` is a neighborhood of `x` when `norm x < r`. -/
-lemma B_mem_nhds_of_norm_lt {d : ℕ} {r : ℝ} {x : ℝ^d} (hx : norm x < r) :
-    B (d := d) r ∈ 𝓝 x :=
+lemma B_mem_nhds_of_norm_lt {d : ℕ} {r : ℝ} {x : ℝ^d} (hx : norm x < r) : B (d := d) r ∈ 𝓝 x :=
   B_mem_nhds (by simpa [B] using hx)
 
 /-- The open ball `B r` is contained in the closed ball `D r`. -/

@@ -114,14 +114,6 @@ lemma taylor_one_isBigO_of_contDiffAt
     (f := fun z => φ z - φ 0 - fderiv ℝ φ 0 z)
     (x := (0 : E)) (R := R) (C := |C|) (n := 1) hR (abs_nonneg C) hdiff' hbound')
 
-/-- First-order Taylor estimate with `O(‖z‖²)` remainder for a globally smooth map. -/
-lemma smooth_taylor_one_isBigO
-    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    [NormedAddCommGroup F] [NormedSpace ℝ F]
-    {φ : E → F} (hφ : ContDiff ℝ ⊤ φ) :
-    (fun z => φ z - φ 0 - fderiv ℝ φ 0 z) =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (2 : ℕ)) := by
-  exact taylor_one_isBigO_of_contDiffAt (hφ.contDiffAt)
-
 /-- Zeroth-order Taylor estimate `φ z - φ 0 = O(‖z‖)` for a smooth map. -/
 lemma smooth_taylor_zero_isBigO
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
@@ -130,6 +122,14 @@ lemma smooth_taylor_zero_isBigO
     (fun z => φ z - φ 0) =O[𝓝 (0 : E)] (fun z => ‖z‖) := by
   have h := (hφ.differentiable (by simp) (0 : E)).hasFDerivAt.isBigO_sub
   simpa only [sub_zero] using h.norm_right
+
+/-- First-order Taylor estimate with `O(‖z‖²)` remainder for a globally smooth map. -/
+lemma smooth_taylor_one_isBigO
+    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [NormedAddCommGroup F] [NormedSpace ℝ F]
+    {φ : E → F} (hφ : ContDiff ℝ ⊤ φ) :
+    (fun z => φ z - φ 0 - fderiv ℝ φ 0 z) =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (2 : ℕ)) := by
+  exact taylor_one_isBigO_of_contDiffAt (hφ.contDiffAt)
 
 /-- Second-order Taylor estimate with `O(‖z‖³)` remainder for a smooth map. -/
 lemma smooth_taylor_two_isBigO
@@ -198,9 +198,10 @@ lemma smooth_taylor_two_isBigO
 
 /-- Symmetry of the third derivative in its last two arguments for a smooth real-valued map. -/
 lemma third_deriv_symm_last {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    {φ : E → ℝ} (hφ : ContDiff ℝ ⊤ φ) (u v w : E) :
+  {φ : E → ℝ} (hφ : ContDiff ℝ ⊤ φ) (u v w : E) :
     (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) (0 : E) u v) w =
-      (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) (0 : E) u w) v := by
+    (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) (0 : E) u w) v
+:= by
   let A : E → ℝ := fun z => (fderiv ℝ (fderiv ℝ φ) z v) w
   let Bf : E → ℝ := fun z => (fderiv ℝ (fderiv ℝ φ) z w) v
   have hg : ContDiff ℝ ⊤ (fderiv ℝ φ) := hφ.fderiv_right (m := ⊤) (by simp)
