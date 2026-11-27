@@ -146,6 +146,50 @@ lemma data_u_zero (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w) :
   have hp : (x, w) ∈ D data.r0 ×ˢ D data.r0 := ⟨hx, hw⟩
   simpa using hρ (x, w) 0 hp hseg0
 
+-- Differentiating the expansion assumption in the `s` variable at `s = 0`.
+lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w) :
+    HasDerivAt (fun s : ℝ => data.u x w s) (data.u1 x w) 0 := by
+  rcases asm.uExp with ⟨ρ, hρSmooth, hρ⟩
+  have hseg : ∀ᶠ s : ℝ in 𝓝 0, s ∈ segment data.s0 := by
+    refine mem_of_superset (Metric.ball_mem_nhds (0 : ℝ) asm.hs0) ?_
+    intro s hs
+    change |s| ≤ data.s0
+    simpa [Real.dist_eq] using (le_of_lt (by simpa [Real.dist_eq] using hs))
+  have hEq : (fun s : ℝ => data.u x w s) =ᶠ[𝓝 0]
+      (fun s : ℝ => data.u0 x w + s * data.u1 x w + s ^ 2 * data.u2 x w
+        + s ^ 3 * data.u3 x w + s ^ 4 * ρ ((x, w), s)) := by
+    filter_upwards [hseg] with s hs
+    exact hρ (x, w) s ⟨hx, hw⟩ hs
+  have hρdiff : HasDerivAt (fun s : ℝ => ρ ((x, w), s))
+      (deriv (fun s : ℝ => ρ ((x, w), s)) 0) 0 := by
+    have hρat : DifferentiableAt ℝ ρ ((x, w), 0) := hρSmooth.differentiable (by simp) ((x, w), 0)
+    have hline : DifferentiableAt ℝ (fun s : ℝ => ((x, w), s)) 0 := by fun_prop
+    exact (hρat.comp 0 hline).hasDerivAt
+  have hpow2 : HasDerivAt (fun s : ℝ => s ^ 2) 0 0 := by
+    simpa using (hasDerivAt_pow 2 (0 : ℝ))
+  have hpow3 : HasDerivAt (fun s : ℝ => s ^ 3) 0 0 := by
+    simpa using (hasDerivAt_pow 3 (0 : ℝ))
+  have hpow4 : HasDerivAt (fun s : ℝ => s ^ 4) 0 0 := by
+    simpa using (hasDerivAt_pow 4 (0 : ℝ))
+  have h1 : HasDerivAt (fun s : ℝ => s * data.u1 x w) (data.u1 x w) 0 := by
+    simpa using (hasDerivAt_id (0 : ℝ)).mul_const (data.u1 x w)
+  have h2 : HasDerivAt (fun s : ℝ => s ^ 2 * data.u2 x w) 0 0 := by
+    simpa using hpow2.mul_const (data.u2 x w)
+  have h3 : HasDerivAt (fun s : ℝ => s ^ 3 * data.u3 x w) 0 0 := by
+    simpa using hpow3.mul_const (data.u3 x w)
+  have h4 : HasDerivAt (fun s : ℝ => s ^ 4 * ρ ((x, w), s)) 0 0 := by
+    simpa using hpow4.mul hρdiff
+  have hpoly : HasDerivAt
+      (fun s : ℝ => data.u0 x w + s * data.u1 x w + s ^ 2 * data.u2 x w
+        + s ^ 3 * data.u3 x w + s ^ 4 * ρ ((x, w), s)) (data.u1 x w) 0 := by
+    convert ((hasDerivAt_const (0 : ℝ) (data.u0 x w)).add
+      (h1.add (h2.add (h3.add h4)))) using 1
+    · ext s
+      simp
+      ring
+    · ring
+  exact hpoly.congr_of_eventuallyEq hEq
+
 -- Gradient of `u` in the `w` variables, represented in the standard basis.
 noncomputable def gradW (p : ℝ^m) (w : ℝ^n) (s : ℝ) : ℝ^n :=
   fun α => fderiv ℝ (fun w' : ℝ^n => data.u p w' s) w (e α)
@@ -296,6 +340,149 @@ lemma hasFDerivAt_gradW_w (p : ℝ^m) (hp : inBounds p) :
     simp
   simpa [hL] using hpi
 
+lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
+    HasDerivAt (fun s : ℝ => gradW x 0 s α) (u1W x 0 (e α)) 0 := by
+  let F : ℝ × ℝ^n → ℝ := fun z => data.u x z.2 z.1
+  have hFsmooth : Smooth F := by
+    have hcomp : Smooth (fun z : ℝ × ℝ^n => (x, z.2, z.1)) := by fun_prop
+    simpa [F, Function.comp_def] using asm.uSmooth.comp hcomp
+  have hF2 : ContDiff ℝ (2 : WithTop ℕ∞) F := hFsmooth.of_le le_top
+  let p0 : ℝ × ℝ^n := ((0 : ℝ), (0 : ℝ^n))
+  have hfderivSmooth : Smooth (fun z => fderiv ℝ F z) :=
+    hFsmooth.fderiv_right (m := ⊤) (by simp)
+  have hsecond : HasFDerivAt (fun z => fderiv ℝ F z)
+      (fderiv ℝ (fun z => fderiv ℝ F z) p0) p0 :=
+    (hfderivSmooth.differentiable (by simp) p0).hasFDerivAt
+  -- partial derivative in s at (0,w) equals u1
+  have hKpoint (w : ℝ^n) (hw : inBounds w) :
+      fderiv ℝ F ((0 : ℝ), w) ((1 : ℝ), (0 : ℝ^n)) = data.u1 x w := by
+    have hFderiv : HasFDerivAt F (fderiv ℝ F ((0 : ℝ), w)) ((0 : ℝ), w) :=
+      (hFsmooth.differentiable (by simp) ((0 : ℝ), w)).hasFDerivAt
+    have hline : HasFDerivAt (fun s : ℝ => (s, w))
+        (ContinuousLinearMap.inl ℝ ℝ (ℝ^n)) 0 :=
+      hasFDerivAt_prodMk_left (e₀ := (0 : ℝ)) (f₀ := w)
+    have hcomp := hFderiv.comp 0 hline
+    have hfd : fderiv ℝ (fun s : ℝ => F (s, w)) 0 =
+        (fderiv ℝ F ((0 : ℝ), w)) ∘L ContinuousLinearMap.inl ℝ ℝ (ℝ^n) := hcomp.fderiv
+    have hval := congrArg (fun L : ℝ →L[ℝ] ℝ => L 1) hfd
+    have hder : HasDerivAt (fun s : ℝ => F (s, w)) (data.u1 x w) 0 := by
+      simpa [F] using hasDerivAt_u_s x hx w hw
+    have hval2 : fderiv ℝ (fun s : ℝ => F (s, w)) 0 1 = data.u1 x w := by
+      simpa [ContinuousLinearMap.toSpanSingleton_apply] using
+        congrArg (fun L : ℝ →L[ℝ] ℝ => L 1) hder.hasFDerivAt.fderiv
+    exact hval.symm.trans hval2
+  have hB : B data.r0 ∈ 𝓝 (0 : ℝ^n) := by
+    refine IsOpen.mem_nhds ?_ ?_
+    · simpa [B] using (isOpen_lt (normCont n) continuous_const)
+    · simpa [B, BrendleHung.Section2.Multivar.norm] using asm.hr0
+  have hK_eq : (fun w : ℝ^n => fderiv ℝ F ((0 : ℝ), w) ((1 : ℝ), (0 : ℝ^n)))
+      =ᶠ[𝓝 (0 : ℝ^n)] data.u1 x := by
+    filter_upwards [hB] with w hw
+    exact hKpoint w (by
+      change norm w ≤ data.r0
+      exact le_of_lt (by simpa [B] using hw))
+  have hKderiv : HasFDerivAt
+      (fun z : ℝ × ℝ^n => fderiv ℝ F z ((1 : ℝ), (0 : ℝ^n)))
+      ((ContinuousLinearMap.apply ℝ ℝ ((1 : ℝ), (0 : ℝ^n))).comp
+        (fderiv ℝ (fun z => fderiv ℝ F z) p0)) p0 := by
+    have hconst : HasFDerivAt (fun _ : ℝ × ℝ^n => ((1 : ℝ), (0 : ℝ^n))) 0 p0 :=
+      hasFDerivAt_const (𝕜 := ℝ) ((1 : ℝ), (0 : ℝ^n)) p0
+    simpa using hsecond.clm_apply hconst
+  have hlineW : HasFDerivAt (fun w : ℝ^n => ((0 : ℝ), w))
+      (ContinuousLinearMap.inr ℝ ℝ (ℝ^n)) 0 :=
+    hasFDerivAt_prodMk_right (e₀ := (0 : ℝ)) (f₀ := (0 : ℝ^n))
+  have hKcomp := hKderiv.comp 0 hlineW
+  have hK_fd : fderiv ℝ
+      (fun w : ℝ^n => fderiv ℝ F ((0 : ℝ), w) ((1 : ℝ), (0 : ℝ^n))) 0 =
+      ((ContinuousLinearMap.apply ℝ ℝ ((1 : ℝ), (0 : ℝ^n))).comp
+        (fderiv ℝ (fun z => fderiv ℝ F z) p0)).comp
+        (ContinuousLinearMap.inr ℝ ℝ (ℝ^n)) := hKcomp.fderiv
+  have hK_fd' : fderiv ℝ
+      (fun w : ℝ^n => fderiv ℝ F ((0 : ℝ), w) ((1 : ℝ), (0 : ℝ^n))) 0 =
+      diff (data.u1 x) 0 := by
+    rw [hK_eq.fderiv_eq]
+  have hsnd : (fderiv ℝ (fun z => fderiv ℝ F z) p0) ((0 : ℝ), e α) ((1 : ℝ), (0 : ℝ^n))
+      = u1W x 0 (e α) := by
+    have hval := congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e α)) (hK_fd.symm.trans hK_fd')
+    simpa [ContinuousLinearMap.comp_apply, u1W] using hval
+  have hHderiv : HasFDerivAt
+      (fun z : ℝ × ℝ^n => fderiv ℝ F z ((0 : ℝ), e α))
+      ((ContinuousLinearMap.apply ℝ ℝ ((0 : ℝ), e α)).comp
+        (fderiv ℝ (fun z => fderiv ℝ F z) p0)) p0 := by
+    have hconst : HasFDerivAt (fun _ : ℝ × ℝ^n => ((0 : ℝ), e α)) 0 p0 :=
+      hasFDerivAt_const (𝕜 := ℝ) ((0 : ℝ), e α) p0
+    simpa using hsecond.clm_apply hconst
+  have hlineS : HasFDerivAt (fun s : ℝ => (s, (0 : ℝ^n)))
+      (ContinuousLinearMap.inl ℝ ℝ (ℝ^n)) 0 :=
+    hasFDerivAt_prodMk_left (e₀ := (0 : ℝ)) (f₀ := (0 : ℝ^n))
+  have hHcomp : HasFDerivAt
+      ((fun z : ℝ × ℝ^n => fderiv ℝ F z ((0 : ℝ), e α)) ∘
+        (fun s : ℝ => (s, (0 : ℝ^n))))
+      (((ContinuousLinearMap.apply ℝ ℝ ((0 : ℝ), e α)).comp
+        (fderiv ℝ (fun z => fderiv ℝ F z) p0)).comp
+        (ContinuousLinearMap.inl ℝ ℝ (ℝ^n))) 0 :=
+    hHderiv.comp (0 : ℝ) hlineS
+  have hsymm : IsSymmSndFDerivAt ℝ F p0 :=
+    hF2.contDiffAt.isSymmSndFDerivAt (by simp)
+  have hH_L : (((ContinuousLinearMap.apply ℝ ℝ ((0 : ℝ), e α)).comp
+        (fderiv ℝ (fun z => fderiv ℝ F z) p0)).comp
+        (ContinuousLinearMap.inl ℝ ℝ (ℝ^n)))
+      = ContinuousLinearMap.toSpanSingleton ℝ (u1W x 0 (e α)) := by
+    apply ContinuousLinearMap.ext
+    intro t
+    simp only [ContinuousLinearMap.comp_apply, ContinuousLinearMap.apply_apply,
+      ContinuousLinearMap.inl_apply, ContinuousLinearMap.toSpanSingleton_apply]
+    rw [show ((t, (0 : ℝ^n)) : ℝ × ℝ^n) = t • ((1 : ℝ), (0 : ℝ^n)) by ext <;> simp]
+    rw [map_smul]
+    simp only [ContinuousLinearMap.smul_apply]
+    rw [hsymm.eq ((1 : ℝ), (0 : ℝ^n)) ((0 : ℝ), e α)]
+    rw [hsnd]
+  have hHcomp' : HasDerivAt
+      (fun s : ℝ => fderiv ℝ F (s, (0 : ℝ^n)) ((0 : ℝ), e α))
+      (u1W x 0 (e α)) 0 := by
+    have htmp : HasFDerivAt
+        (fun s : ℝ => fderiv ℝ F (s, (0 : ℝ^n)) ((0 : ℝ), e α))
+        (ContinuousLinearMap.toSpanSingleton ℝ (u1W x 0 (e α))) 0 := by
+      simpa [hH_L] using hHcomp
+    simpa using htmp.hasDerivAt
+  have hgrad_eq (s : ℝ) : gradW x 0 s α = fderiv ℝ F (s, (0 : ℝ^n)) ((0 : ℝ), e α) := by
+    have hFderiv : HasFDerivAt F (fderiv ℝ F (s, (0 : ℝ^n))) (s, (0 : ℝ^n)) :=
+      (hFsmooth.differentiable (by simp) (s, (0 : ℝ^n))).hasFDerivAt
+    have hline : HasFDerivAt (fun w : ℝ^n => (s, w))
+        (ContinuousLinearMap.inr ℝ ℝ (ℝ^n)) 0 :=
+      hasFDerivAt_prodMk_right s 0
+    have hcomp := hFderiv.comp 0 hline
+    have hfd := congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e α)) hcomp.fderiv
+    simpa [F, gradW, Function.comp_def] using hfd
+  have hfun_eq : (fun s : ℝ => gradW x 0 s α) =
+      (fun s : ℝ => fderiv ℝ F (s, (0 : ℝ^n)) ((0 : ℝ), e α)) := by
+    funext s
+    exact hgrad_eq s
+  rw [hfun_eq]
+  exact hHcomp'
+
+
+lemma hasFDerivAt_gradW_s (x : ℝ^m) (hx : inBounds x) :
+    HasFDerivAt (fun s : ℝ => gradW x 0 s)
+      (ContinuousLinearMap.toSpanSingleton ℝ (fun α : Fin n => u1W x 0 (e α))) 0 := by
+  let v : ℝ^n := fun α => u1W x 0 (e α)
+  have hcomp : ∀ α : Fin n,
+      HasFDerivAt (fun s : ℝ => gradW x 0 s α)
+        ((ContinuousLinearMap.proj (R := ℝ) (φ := fun _ : Fin n => ℝ) α).comp
+          (ContinuousLinearMap.toSpanSingleton ℝ v)) 0 := by
+    intro α
+    have h := hasDerivAt_gradW_s_comp x hx α
+    simpa [v] using h.hasFDerivAt
+  have hpi := hasFDerivAt_pi.mpr hcomp
+  have hL : ContinuousLinearMap.pi
+      (fun α : Fin n =>
+        (ContinuousLinearMap.proj (R := ℝ) (φ := fun _ : Fin n => ℝ) α).comp
+          (ContinuousLinearMap.toSpanSingleton ℝ v))
+      = ContinuousLinearMap.toSpanSingleton ℝ v := by
+    ext s α
+    simp
+  simpa [hL, v] using hpi
+
 lemma gradWParam_smooth :
     Smooth (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) := by
   rw [contDiff_pi]
@@ -310,11 +497,166 @@ lemma gradWParam_smooth :
       (k := fun _ : (ℝ^m × ℝ) × ℝ^n => e α)
       (by fun_prop) (by fun_prop) (by simp))
 
+-- The derivative in the `w` variables of the gradient map is the Hessian
+-- `u0WW`, which is invertible by the quadratic lower bound on `u0`.
+lemma u0WW_toLin_isInvertible (x : ℝ^m) (hx : inBounds x) :
+    ((Matrix.toLin' (u0WW x 0)).toContinuousLinearMap).IsInvertible := by
+  classical
+  have hunit : IsUnit (u0WW x 0).det :=
+    (Matrix.isUnit_iff_isUnit_det (u0WW x 0)).mp (u0WWAtZero x hx).isUnit
+  let eLin : (ℝ^n) ≃ₗ[ℝ] (ℝ^n) :=
+    (u0WW x 0).toLinearEquiv (Pi.basisFun ℝ (Fin n)) hunit
+  refine ⟨eLin.toContinuousLinearEquiv, ?_⟩
+  ext v i
+  simp [eLin, Matrix.toLin_eq_toLin', Matrix.toLin'_apply]
+
+-- The partial derivative of `F(q,w) = gradW q.1.1 w q.1.2` with respect to
+-- `w` at `(x,0),0` is exactly the map induced by `u0WW x 0`.
+lemma gradWParam_partial_eq (x : ℝ^m) (hx : inBounds x) :
+    (fderiv ℝ
+        (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) (((x, (0 : ℝ)), (0 : ℝ^n)))
+      ∘L ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n))
+      = (Matrix.toLin' (u0WW x 0)).toContinuousLinearMap := by
+  let F : (ℝ^m × ℝ) × ℝ^n → ℝ^n :=
+    fun z => gradW z.1.1 z.2 z.1.2
+  have hF : HasFDerivAt F
+      (fderiv ℝ F (((x, (0 : ℝ)), (0 : ℝ^n)))) (((x, (0 : ℝ)), (0 : ℝ^n))) :=
+    ((gradWParam_smooth.differentiable (by simp) (((x, (0 : ℝ)), (0 : ℝ^n)))).hasFDerivAt)
+  have hline : HasFDerivAt
+      (fun w : ℝ^n => (((x, (0 : ℝ)), w) : (ℝ^m × ℝ) × ℝ^n))
+      (ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)) (0 : ℝ^n) :=
+    hasFDerivAt_prodMk_right (((x, (0 : ℝ)) : ℝ^m × ℝ)) (0 : ℝ^n)
+  have hcomp : HasFDerivAt (fun w : ℝ^n => gradW x w 0)
+      ((fderiv ℝ F (((x, (0 : ℝ)), (0 : ℝ^n))))
+        ∘L ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)) (0 : ℝ^n) := by
+    simpa [F, Function.comp_def] using hF.comp (0 : ℝ^n) hline
+  exact hcomp.unique (hasFDerivAt_gradW_w x hx)
+
+lemma gradWParam_partial_isInvertible (x : ℝ^m) (hx : inBounds x) :
+    ((fderiv ℝ
+        (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) (((x, (0 : ℝ)), (0 : ℝ^n)))
+      ∘L ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)).IsInvertible) := by
+  simpa [gradWParam_partial_eq x hx] using (u0WW_toLin_isInvertible x hx)
+
+-- The implicit function supplied by the IFT, based at `((x,0),0)`.  It is a
+-- local smooth function of `(x,s)` near the base point.
+noncomputable def wStarAt (x : ℝ^m) (hx : inBounds x) : ℝ^m × ℝ → ℝ^n :=
+  (show ContDiffAt ℝ (⊤ : WithTop ℕ∞)
+      (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
+      (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt).implicitFunction
+    (by simp) (gradWParam_partial_isInvertible x hx)
+
+lemma wStarAt_self (x : ℝ^m) (hx : inBounds x) : wStarAt x hx (x, 0) = 0 := by
+  simpa [wStarAt] using
+    (ContDiffAt.implicitFunction_apply_self
+      (show ContDiffAt ℝ (⊤ : WithTop ℕ∞)
+        (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
+        (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt)
+      (by simp) (gradWParam_partial_isInvertible x hx))
+
+lemma wStarAt_contDiffAt (x : ℝ^m) (hx : inBounds x) :
+    ContDiffAt ℝ (⊤ : WithTop ℕ∞) (wStarAt x hx) (x, 0) := by
+  simpa [wStarAt] using
+    (ContDiffAt.contDiffAt_implicitFunction
+      (show ContDiffAt ℝ (⊤ : WithTop ℕ∞)
+        (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
+        (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt)
+      (by simp) (gradWParam_partial_isInvertible x hx))
+
+-- Near the base point, `wStarAt` solves the critical point equation.
+lemma wStarAt_eventually_zero (x : ℝ^m) (hx : inBounds x) :
+    ∀ᶠ q in 𝓝 (x, (0 : ℝ)), gradW q.1 (wStarAt x hx q) q.2 = 0 := by
+  have hz : gradW x 0 0 = 0 := gradW_zero x hx
+  have hev := ContDiffAt.eventually_apply_implicitFunction
+      (show ContDiffAt ℝ (⊤ : WithTop ℕ∞)
+        (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
+        (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt)
+      (by simp) (gradWParam_partial_isInvertible x hx)
+  filter_upwards [hev] with q hq
+  simpa [wStarAt, hz] using hq
+
+-- Differentiating the IFT formula at the base point gives the first-order
+-- term of `w*`:  `d/ds w*(x,s)|₀ = \bar w(x)`.
+lemma hasDerivAt_wStarAt_s (x : ℝ^m) (hx : inBounds x) :
+    HasDerivAt (fun s : ℝ => wStarAt x hx (x, s)) (bud.barw x) 0 := by
+  let E₁ := ℝ^m × ℝ
+  let E₂ := ℝ^n
+  let F : E₁ × E₂ → E₂ := fun z => gradW z.1.1 z.2 z.1.2
+  let u : E₁ × E₂ := ((x, (0 : ℝ)), (0 : ℝ^n))
+  let H : E₁ × E₂ →L[ℝ] E₂ := fderiv ℝ F u
+  let P : E₁ →L[ℝ] E₂ := H ∘L ContinuousLinearMap.inl ℝ E₁ E₂
+  let Q : E₂ →L[ℝ] E₂ := H ∘L ContinuousLinearMap.inr ℝ E₁ E₂
+  let v1 : E₂ := fun α => u1W x 0 (e α)
+  have hP_eq : P ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ =
+      ContinuousLinearMap.toSpanSingleton ℝ v1 := by
+    apply ContinuousLinearMap.ext
+    intro t
+    have hF : HasFDerivAt F H u := (gradWParam_smooth.differentiable (by simp) u).hasFDerivAt
+    have hq : HasFDerivAt (fun s : ℝ => (x, s)) (ContinuousLinearMap.inr ℝ ℝ^m ℝ) 0 :=
+      hasFDerivAt_prodMk_right (e₀ := x) (f₀ := (0 : ℝ))
+    have hw : HasFDerivAt (fun _ : ℝ => (0 : ℝ^n)) 0 0 :=
+      hasFDerivAt_const (𝕜 := ℝ) (0 : ℝ^n) 0
+    have hline := hq.prodMk hw
+    have hcomp := hF.comp (0 : ℝ) hline
+    have ht := congrArg (fun L : ℝ →L[ℝ] ℝ^n => L t) hcomp.fderiv
+    change fderiv ℝ (fun s : ℝ => gradW x 0 s) 0 t =
+      (H ∘L ((ContinuousLinearMap.inr ℝ ℝ^m ℝ).prod (0 : ℝ →L[ℝ] ℝ^n))) t at ht
+    have hgrad := congrArg (fun L : ℝ →L[ℝ] ℝ^n => L t)
+      (hasFDerivAt_gradW_s x hx).fderiv
+    change fderiv ℝ (fun s : ℝ => gradW x 0 s) 0 t =
+      (ContinuousLinearMap.toSpanSingleton ℝ v1) t at hgrad
+    have hright : (H ∘L ((ContinuousLinearMap.inr ℝ ℝ^m ℝ).prod (0 : ℝ →L[ℝ] ℝ^n))) t
+        = (P ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ) t := by
+      simp [P, H, E₁, E₂]
+    rw [hright] at ht
+    exact ht.symm.trans hgrad
+  have hInvQ : ((Matrix.toLin' (u0WW x 0)).toContinuousLinearMap).IsInvertible :=
+    u0WW_toLin_isInvertible x hx
+  have hQeq : Q = (Matrix.toLin' (u0WW x 0)).toContinuousLinearMap := by
+    simpa [Q, H, F, u, E₁, E₂] using gradWParam_partial_eq x hx
+  have hInvQ' : Q.IsInvertible := by
+    simpa [hQeq] using hInvQ
+  have hQbar : Q (bud.barw x) = -v1 := by
+    rw [hQeq]
+    ext α
+    simpa [v1, Matrix.toLin'_apply] using congrFun (barw_spec x hx) α
+  have hinv_v1 : Q.inverse v1 = - bud.barw x := by
+    apply hInvQ'.inverse_apply_eq.mpr
+    rw [map_neg, hQbar, neg_neg]
+  let cdf : ContDiffAt ℝ (⊤ : WithTop ℕ∞) F u := gradWParam_smooth.contDiffAt
+  have hIFT : HasFDerivAt (wStarAt x hx) (-(Q.inverse) ∘L P) u.1 := by
+    have hraw := (ContDiffAt.hasStrictFDerivAt_implicitFunction cdf (by simp)
+      (gradWParam_partial_isInvertible x hx)).hasFDerivAt
+    simpa [wStarAt, F, u, P, Q, H, E₁, E₂, cdf] using hraw
+  have hline : HasFDerivAt (fun s : ℝ => (x, s))
+      (ContinuousLinearMap.inr ℝ ℝ^m ℝ) 0 :=
+    hasFDerivAt_prodMk_right (e₀ := x) (f₀ := (0 : ℝ))
+  have hcomp := hIFT.comp (0 : ℝ) hline
+  have hL : (-(Q.inverse) ∘L P).comp
+      (ContinuousLinearMap.inr ℝ ℝ^m ℝ)
+      = ContinuousLinearMap.toSpanSingleton ℝ (bud.barw x) := by
+    apply ContinuousLinearMap.ext
+    intro t
+    have hP_t : (P ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ) t = t • v1 := by
+      simpa [ContinuousLinearMap.comp_apply] using
+        congrArg (fun L : ℝ →L[ℝ] ℝ^n => L t) hP_eq
+    change -(Q.inverse (P (ContinuousLinearMap.inr ℝ ℝ^m ℝ t))) =
+      (ContinuousLinearMap.toSpanSingleton ℝ (bud.barw x)) t
+    have hdir : P (ContinuousLinearMap.inr ℝ ℝ^m ℝ t) =
+        (P ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ) t := rfl
+    rw [hdir, hP_t, map_smul, hinv_v1]
+    rw [smul_neg, neg_neg]
+    simp [ContinuousLinearMap.toSpanSingleton_apply]
+  have htmp : HasFDerivAt (fun s : ℝ => wStarAt x hx (x, s))
+      (ContinuousLinearMap.toSpanSingleton ℝ (bud.barw x)) 0 := by
+    simpa [hL, u, E₁, E₂, Function.comp_def] using hcomp
+  simpa using htmp.hasDerivAt
+
 theorem expansion_of_U :
   ∃ s0 : ℝ, s0 > 0 ∧
   HasExpansion3 (B data.r0) s0 0 0 bud.U2 bud.U3 bud.U
 := by
   -- First prove the existence and properties of `w^*`
-  _
+  sorry
 
 end Section2
