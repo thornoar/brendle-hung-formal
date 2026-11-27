@@ -1403,12 +1403,6 @@ lemma pi_sum_basis {d : ℕ} (v : ℝ^d) : v = ∑ i : Fin d, v i • e i := by
   ext j
   simp [e, Pi.single_apply]
 
-/-- The first derivative of `u0Prod` splits into pure `x` and `w` parts. -/
-lemma u0D1_split (q : ℝ^m × ℝ^n) (v : ℝ^m × ℝ^n) :
-    u0D1 q v = u0D1 q (v.1, 0) + u0D1 q (0, v.2) := by
-  conv_lhs => rw [← prod_vec_split v]
-  rw [map_add]
-
 /-- The first derivative of `u0Prod` vanishes at `(y,0)` for `y ∈ Ω`. -/
 lemma u0D1_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : u0D1 (y, 0) = 0 := by
   apply ContinuousLinearMap.ext
@@ -1421,7 +1415,8 @@ lemma u0D1_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : u0D1 (y, 0) = 0 := by
   have hw : diff (asm.u0 y) 0 = 0 := by
     ext w
     simpa [u0W] using congrFun (u0WAtZero y (B_subset_D (cca.Ω_subset_B hy))) w
-  rw [u0D1_split, u0D1_fst, u0D1_snd]
+  conv_lhs => rw [← prod_vec_split v]
+  rw [map_add, u0D1_fst, u0D1_snd]
   simp [hx, hw]
 
 /-- Second derivative of `u0Prod` in two pure `w` directions. -/
@@ -1993,12 +1988,6 @@ lemma u1D1_fst (x v : ℝ^m) (w : ℝ^n) :
   rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hEq).symm
 
-/-- The first derivative of `u1Prod` splits into pure `x` and `w` parts. -/
-lemma u1D1_split (q : ℝ^m × ℝ^n) (v : ℝ^m × ℝ^n) :
-    u1D1 q v = u1D1 q (v.1, 0) + u1D1 q (0, v.2) := by
-  conv_lhs => rw [← prod_vec_split v]
-  rw [map_add]
-
 /-- The pure `x` derivative of `u1Prod` vanishes at `(y,0)` for `y ∈ Ω`. -/
 lemma u1D1_fst_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v : ℝ^m) :
     u1D1 (y, 0) (v, 0) = 0 := by
@@ -2013,7 +2002,8 @@ lemma u1D1_fst_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v : ℝ^m) :
 /-- The first derivative of `u1Prod` at `(y,0)` only has a `w` contribution. -/
 lemma u1D1_at_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v : ℝ^m × ℝ^n) :
     u1D1 (y, 0) v = ∑ α : Fin n, u1W y 0 (e α) * v.2 α := by
-  rw [u1D1_split, u1D1_fst_zero y hy, u1D1_snd]
+  conv_lhs => rw [← prod_vec_split v]
+  rw [map_add, u1D1_fst_zero y hy, u1D1_snd]
   have h := clm_apply_eq_sum_basis (diff (asm.u1 y) 0) v.2
   simpa [u1W, mul_comm] using h
 
@@ -3006,20 +2996,15 @@ lemma u2D1_fst (x v : ℝ^m) (w : ℝ^n) :
   rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hEq).symm
 
-/-- The first derivative of `u2Prod` splits into pure `x` and `w` parts. -/
-lemma u2D1_split (q : ℝ^m × ℝ^n) (v : ℝ^m × ℝ^n) :
-    u2D1 q v = u2D1 q (v.1, 0) + u2D1 q (0, v.2) := by
-  conv_lhs => rw [← prod_vec_split v]
-  rw [map_add]
-
 /-- The first derivative of `u2Prod` at `(y,0)` has an `x` and a `w` contribution. -/
 lemma u2D1_at_zero (y : ℝ^m) (v : ℝ^m × ℝ^n) :
     u2D1 (y, 0) v =
       (∑ β : Fin n, u2W y 0 (e β) * v.2 β) +
         fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) y v.1 := by
   calc
-    u2D1 (y, 0) v = u2D1 (y, 0) (v.1, 0) + u2D1 (y, 0) (0, v.2) :=
-      u2D1_split (y, 0) v
+    u2D1 (y, 0) v = u2D1 (y, 0) (v.1, 0) + u2D1 (y, 0) (0, v.2) := by
+      conv_lhs => rw [← prod_vec_split v]
+      rw [map_add]
     _ = fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) y v.1
           + diff (asm.u2 y) 0 v.2 := by rw [u2D1_fst, u2D1_snd]
     _ = (∑ β : Fin n, u2W y 0 (e β) * v.2 β) +
@@ -3107,27 +3092,6 @@ lemma zD2_v0_expanded (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
   rw [zD2_v0_prod y hy α β, zD2_v0B_expanded y hy α β]
   simp [Finset.mul_sum, mul_assoc, mul_comm, mul_left_comm]
 
-/-- Smoothness in `y` of one entry of the `z`-Jacobian of `ψ` at `z=0`. -/
-lemma psi_z_entry_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) (β α : Fin n) :
-    ContDiffAt ℝ ⊤ (fun y' : ℝ^m => zJacobian cca.ψ y' β α) y := by
-  have hopen : IsOpen (cca.Ω ×ˢ (B (d := n) cca.r1)) :=
-    cca.Ω_open.prod (isOpen_B (d := n) cca.r1)
-  have hmem : (y, (0 : ℝ^n)) ∈ cca.Ω ×ˢ (B (d := n) cca.r1) := by
-    refine ⟨hy, ?_⟩
-    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
-  have hψat : ContDiffAt ℝ ⊤ cca.ψ (y, 0) :=
-    cca.ψ_smooth.contDiffAt (hopen.mem_nhds hmem)
-  have hcoord : ContDiffAt ℝ ⊤ (fun q : ℝ^m × ℝ^n => cca.ψ q β) (y, 0) :=
-    (contDiffAt_apply (𝕜 := ℝ) (E := ℝ) (n := ⊤) β (cca.ψ (y, 0))).comp (y, 0) hψat
-  have hcurried : ContDiffAt ℝ ⊤
-      (Function.uncurry (fun y' : ℝ^m => fun z : ℝ^n => cca.ψ (y', z) β)) (y, 0) := by
-    simpa [Function.uncurry_def] using hcoord
-  have hfd : ContDiffAt ℝ ⊤
-      (fun y' : ℝ^m => fderiv ℝ (fun z : ℝ^n => cca.ψ (y', z) β) (0 : ℝ^n)) y := by
-    exact ContDiffAt.fderiv (f := fun y' : ℝ^m => fun z : ℝ^n => cca.ψ (y', z) β)
-      hcurried (g := fun _ : ℝ^m => (0 : ℝ^n)) contDiffAt_const (by simp)
-  simpa [zJacobian] using hfd.clm_apply (contDiffAt_const (c := e α))
-
 /-- The `z`-Jacobian entry of `ψ` agrees with the coordinate of its `zD1`. -/
 lemma zJacobian_psi_apply (y : ℝ^m) (hy : y ∈ cca.Ω) (β α : Fin n) :
     zJacobian cca.ψ y β α = zD1 (ψc y) α β := by
@@ -3147,25 +3111,6 @@ lemma zJacobian_psi_apply (y : ℝ^m) (hy : y ∈ cca.Ω) (β α : Fin n) :
 noncomputable abbrev psiJacLin (y : ℝ^m) : ℝ^n →L[ℝ] ℝ^n :=
   (Matrix.toLin' (zJacobian cca.ψ y)).toContinuousLinearMap
 
-/-- Smoothness in `y` of the `z`-Jacobian of `ψ` at `z=0`. -/
-lemma psiJacLin_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) :
-    ContDiffAt ℝ ⊤ psiJacLin y := by
-  have hOn : ContDiffOn ℝ ⊤ psiJacLin cca.Ω := by
-    rw [contDiffOn_clm_apply]
-    intro z y' hy'
-    have hentry (β α : Fin n) : ContDiffWithinAt ℝ ⊤
-        (fun y'' : ℝ^m => zJacobian cca.ψ y'' β α) cca.Ω y' :=
-      (psi_z_entry_smoothAt y' hy' β α).contDiffWithinAt
-    have hsum : ContDiffWithinAt ℝ ⊤
-        (fun y'' : ℝ^m => fun β : Fin n =>
-          ∑ α : Fin n, zJacobian cca.ψ y'' β α * z α) cca.Ω y' := by
-      rw [contDiffWithinAt_pi]
-      intro β
-      exact ContDiffWithinAt.sum (s := Finset.univ) (fun α _ =>
-        (hentry β α).mul contDiffWithinAt_const)
-    simpa [psiJacLin, Matrix.toLin'_apply, Matrix.mulVec, dotProduct] using hsum
-  exact hOn.contDiffAt (cca.Ω_open.mem_nhds hy)
-
 /-- The `z`-Jacobian of `ψ` is invertible on `Ω`. -/
 lemma psiJac_isInvertible (y : ℝ^m) (hy : y ∈ cca.Ω) :
     (psiJacLin y).IsInvertible := by
@@ -3181,14 +3126,6 @@ lemma psiJac_isInvertible (y : ℝ^m) (hy : y ∈ cca.Ω) :
 
 /-- The Jacobian characterization of `bar z`, used as an intermediate result. -/
 noncomputable def barzViaPsi (y : ℝ^m) : ℝ^n := (psiJacLin y).inverse (bud.barw y)
-
-/-- Smoothness of the Jacobian characterization of `bar z` on `Ω`. -/
-lemma barzViaPsi_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) : ContDiffAt ℝ ⊤ barzViaPsi y := by
-  have hInv : ContDiffAt ℝ ⊤ (fun y' : ℝ^m => (psiJacLin y').inverse) y :=
-    (psiJac_isInvertible y hy).contDiffAt_map_inverse.comp y (psiJacLin_smoothAt y hy)
-  have hVec : ContDiffAt ℝ ⊤ (fun y' : ℝ^m => bud.barw y') y :=
-    barw_contDiffAt y (B_subset_D (cca.Ω_subset_B hy))
-  simpa [barzViaPsi] using hInv.clm_apply hVec
 
 /-- The Jacobian relation for the intermediate vector. -/
 lemma barzViaPsi_spec (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
@@ -3479,19 +3416,6 @@ lemma barz_eq_barzViaPsi (y : ℝ^m) (hy : y ∈ cca.Ω) : barz y = barzViaPsi y
     simpa [v0HessianLin, v1GradVec, v0Hessian, Matrix.toLin'_apply,
       Matrix.mulVec, dotProduct] using barzViaPsi_defining_equation y hy α
   simpa [barz] using hinv.inverse_apply_eq.mpr hvec.symm
-
-/-- Smoothness of the paper's `bar z` on `Ω`. -/
-lemma barz_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) : ContDiffAt ℝ ⊤ barz y := by
-  have hEq : barz =ᶠ[𝓝 y] barzViaPsi := by
-    filter_upwards [cca.Ω_open.mem_nhds hy] with y' hy'
-    exact barz_eq_barzViaPsi y' hy'
-  exact (barzViaPsi_smoothAt y hy).congr_of_eventuallyEq hEq
-
-/-- The defining equation for the paper's `bar z`. -/
-lemma barz_defining_equation (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
-    ∑ β : Fin n, zD2 (ccd.v0 y) α β * barz y β = - zD1 (ccd.v1 y) α := by
-  rw [barz_eq_barzViaPsi y hy]
-  exact barzViaPsi_defining_equation y hy α
 
 /-- The paper's `derivative.of.U2`: the coordinate derivative of `U^(2)` is the
 coordinate derivative of `u^(2)` plus the two critical-point correction terms. -/

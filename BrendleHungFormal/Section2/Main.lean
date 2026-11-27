@@ -243,7 +243,7 @@ theorem invariance (Λ : Set ℝ^m) (hΛΩ : Λ ⊆ cca.Ω)
   classical
   have hzero : (0 : ℝ^n) ∈ B cca.r1 := by
     simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
-  have hV3_eq : ∀ y ∈ Λ, V3 y = Υc y 0 * bud.U3 y := by
+  have hU2_data : ∀ y ∈ Λ, bud.U2 y = 0 ∧ fderiv ℝ bud.U2 y = 0 := by
     intro y hyΛ
     have hyΩ : y ∈ cca.Ω := hΛΩ hyΛ
     have hyD : inBounds y := B_subset_D (cca.Ω_subset_B hyΩ)
@@ -271,15 +271,16 @@ theorem invariance (Λ : Set ℝ^m) (hΛΩ : Λ ⊆ cca.Ω)
       exact (hΥdiff.hasFDerivAt.mul hU2diff.hasFDerivAt).fderiv
     have hprodZero :
         fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y = 0 := by
-      rw [← hfderivEq]
-      exact (hV2 y hyΛ).2
+      simpa [hfderivEq] using (hV2 y hyΛ).2
     have hscale : (Υc y 0) • fderiv ℝ bud.U2 y = 0 := by
-      rw [hprod, hU2zero] at hprodZero
-      simpa using hprodZero
-    have hU2deriv : fderiv ℝ bud.U2 y = 0 := by
-      exact (smul_eq_zero.mp hscale).resolve_left hΥne
-    rw [relation_U3_V3 y hyΩ]
-    simp [hU2zero, hU2deriv]
+      simpa [hprod, hU2zero] using hprodZero
+    have hU2deriv : fderiv ℝ bud.U2 y = 0 :=
+      (smul_eq_zero.mp hscale).resolve_left hΥne
+    exact ⟨hU2zero, hU2deriv⟩
+  have hV3_eq : ∀ y ∈ Λ, V3 y = Υc y 0 * bud.U3 y := by
+    intro y hyΛ
+    have hU2 := hU2_data y hyΛ
+    simpa [hU2.1, hU2.2] using relation_U3_V3 y (hΛΩ hyΛ)
   refine ⟨hV3_eq, ?_⟩
   refine ⟨bud.U3, bud_U3_smoothOn_D, ?_⟩
   intro y hyΛ
