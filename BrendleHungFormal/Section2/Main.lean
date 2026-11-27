@@ -1672,31 +1672,31 @@ structure CoordChangeAssumptions where
 
   ψ_jacobian_inv : ∀ y, y ∈ Ω → IsUnit (zJacobian ψ y)
 
+/-- An arbitrary choice of the Section 2 coordinate-change assumptions. -/
+axiom cca : CoordChangeAssumptions
+
 /-- The Jacobian determinant is nonzero wherever the coordinate change is
 assumed to be invertible. -/
 lemma CoordChangeAssumptions.psi_jacobian_det_ne_zero
-    (c : CoordChangeAssumptions) (y : ℝ^m) (hy : y ∈ c.Ω) :
-    (zJacobian c.ψ y).det ≠ 0
-:= by exact ((Matrix.isUnit_iff_isUnit_det (zJacobian c.ψ y)).mp (c.ψ_jacobian_inv y hy)).ne_zero
+    (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    (zJacobian cca.ψ y).det ≠ 0
+:= by exact ((Matrix.isUnit_iff_isUnit_det (zJacobian cca.ψ y)).mp (cca.ψ_jacobian_inv y hy)).ne_zero
 
 /-- For `y ∈ Ω`, the `z`-slice of `ψ` is globally smooth near `z = 0`. -/
 lemma CoordChangeAssumptions.psi_z_smoothAt
-    (c : CoordChangeAssumptions) (y : ℝ^m) (hy : y ∈ c.Ω) :
-    ContDiffAt ℝ ⊤ (fun z : ℝ^n => c.ψ (y, z)) 0
+    (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    ContDiffAt ℝ ⊤ (fun z : ℝ^n => cca.ψ (y, z)) 0
 := by
-  have hopen : IsOpen (c.Ω ×ˢ (B (d := n) c.r1)) :=
-    c.Ω_open.prod (isOpen_B (d := n) c.r1)
-  have hmem : (y, (0 : ℝ^n)) ∈ c.Ω ×ˢ (B (d := n) c.r1) := by
+  have hopen : IsOpen (cca.Ω ×ˢ (B (d := n) cca.r1)) :=
+    cca.Ω_open.prod (isOpen_B (d := n) cca.r1)
+  have hmem : (y, (0 : ℝ^n)) ∈ cca.Ω ×ˢ (B (d := n) cca.r1) := by
     refine ⟨hy, ?_⟩
-    simpa [B, BrendleHung.Section2.Multivar.norm] using c.r1_pos
-  have hψat : ContDiffAt ℝ ⊤ c.ψ (y, 0) :=
-    c.ψ_smooth.contDiffAt (hopen.mem_nhds hmem)
+    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
+  have hψat : ContDiffAt ℝ ⊤ cca.ψ (y, 0) :=
+    cca.ψ_smooth.contDiffAt (hopen.mem_nhds hmem)
   have hslice : Smooth (fun z : ℝ^n => (y, z)) on (Set.univ : Set ℝ^n) :=
     (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) y).contDiffOn
   exact hψat.comp 0 (hslice.contDiffAt (by simp))
-
-/-- An arbitrary choice of the Section 2 coordinate-change assumptions. -/
-axiom cca : CoordChangeAssumptions
 
 /-- The four rescaled functions `v^(0)`, `v^(1)`, `v^(2)`, and `v^(3)`
 introduced in Section 2 after the coordinate change. -/
@@ -1713,5 +1713,7 @@ noncomputable def ccd : CoordChangeDefinitions where
   v1 := fun y z => cca.Υ (y, z) * asm.u1 (cca.φ (y, z)) (cca.ψ (y, z))
   v2 := fun y z => cca.Υ (y, z) * asm.u2 (cca.φ (y, z)) (cca.ψ (y, z))
   v3 := fun y z => cca.Υ (y, z) * asm.u3 (cca.φ (y, z)) (cca.ψ (y, z))
+
+
 
 end Section2
