@@ -37,3 +37,4 @@ The paper is divided into the following logical parts:
 + A generalization of this result to the case of a compact Riemannian manifold $cal(N)$ and smooth function $u : cal(N) times [-s_0, s_0] -> RR$. The main statement is Theorem 2.12 which states that under certain extensive conditions, the minimum $min_(p in cal(N)) u(p, s)$ is strictly positive for small $s$.
 + An explicit calculation of the Cheeger-Müter metric on $M$, constructed from the standard product metric using the diagonal action of $S O (3)$ on $SS^2 times SS^2$.
 + A set of abstract tools for manipulating second-order perturbations $g_s = g + s h^((1)) + s^2 h^((2))$ of the Cheeger-Müter metric $g$.
++ 

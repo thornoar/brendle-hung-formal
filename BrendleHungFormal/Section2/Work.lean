@@ -1208,6 +1208,12 @@ lemma u0WW_symm (x : ℝ^m) (α β : Fin n) : u0WW x 0 α β = u0WW x 0 β α
     (u0_x_smooth x).contDiffAt.isSymmSndFDerivAt (by simp)
   simpa [u0WW, diff2, diff] using hsymm.eq (e α) (e β)
 
+/-- The defining equation for `barw`, with the Hessian index contracted in the first slot. -/
+lemma barw_spec_symm (x : ℝ^m) (hx : inBounds x) (β : Fin n) :
+    ∑ α : Fin n, u0WW x 0 α β * bud.barw x α = - u1W x 0 (e β) := by
+  have h := congrFun (barw_spec x hx) β
+  simpa [Matrix.mulVec, dotProduct, u0WW_symm x] using h
+
 /-- Smoothness in `x` of one component of the gradient of `u1(x, ·)` at zero. -/
 lemma u1W_smooth_apply (α : Fin n) : SmoothGlobal (fun x : ℝ^m => u1W x 0 (e α))
 := by
@@ -3242,6 +3248,156 @@ lemma sum_swap₃ (f : Fin n → Fin n → Fin n → ℝ) :
   apply Finset.sum_congr rfl
   intro γ _
   rw [Finset.sum_comm]
+
+/-- Move the last two summations of a quadruple finite sum to the front. -/
+lemma sum_reorder₄ (f : Fin n → Fin n → Fin n → Fin n → ℝ) :
+    (∑ a : Fin n, ∑ b : Fin n, ∑ c : Fin n, ∑ d : Fin n, f a b c d) =
+      ∑ c : Fin n, ∑ d : Fin n, ∑ a : Fin n, ∑ b : Fin n, f a b c d := by
+  calc
+    (∑ a : Fin n, ∑ b : Fin n, ∑ c : Fin n, ∑ d : Fin n, f a b c d)
+        = ∑ a : Fin n, ∑ c : Fin n, ∑ b : Fin n, ∑ d : Fin n, f a b c d := by
+          apply Finset.sum_congr rfl
+          intro a _
+          rw [Finset.sum_comm]
+    _ = ∑ c : Fin n, ∑ a : Fin n, ∑ b : Fin n, ∑ d : Fin n, f a b c d := by
+          rw [Finset.sum_comm]
+    _ = ∑ c : Fin n, ∑ b : Fin n, ∑ a : Fin n, ∑ d : Fin n, f a b c d := by
+          apply Finset.sum_congr rfl
+          intro c _
+          rw [Finset.sum_comm]
+    _ = ∑ c : Fin n, ∑ b : Fin n, ∑ d : Fin n, ∑ a : Fin n, f a b c d := by
+          apply Finset.sum_congr rfl
+          intro c _
+          apply Finset.sum_congr rfl
+          intro b _
+          rw [Finset.sum_comm]
+    _ = ∑ c : Fin n, ∑ d : Fin n, ∑ b : Fin n, ∑ a : Fin n, f a b c d := by
+          apply Finset.sum_congr rfl
+          intro c _
+          rw [Finset.sum_comm]
+    _ = ∑ c : Fin n, ∑ d : Fin n, ∑ a : Fin n, ∑ b : Fin n, f a b c d := by
+          apply Finset.sum_congr rfl
+          intro c _
+          apply Finset.sum_congr rfl
+          intro d _
+          rw [Finset.sum_comm]
+
+/-- Move the last three summations of a sextuple finite sum to the front. -/
+lemma sum_reorder₆ (f : Fin n → Fin n → Fin n → Fin n → Fin n → Fin n → ℝ) :
+    (∑ a : Fin n, ∑ b : Fin n, ∑ c : Fin n,
+      ∑ d : Fin n, ∑ e : Fin n, ∑ g : Fin n, f a b c d e g) =
+      ∑ d : Fin n, ∑ e : Fin n, ∑ g : Fin n,
+        ∑ a : Fin n, ∑ b : Fin n, ∑ c : Fin n, f a b c d e g := by
+  calc
+    (∑ a : Fin n, ∑ b : Fin n, ∑ c : Fin n,
+      ∑ d : Fin n, ∑ e : Fin n, ∑ g : Fin n, f a b c d e g)
+        = ∑ a : Fin n, ∑ b : Fin n, ∑ d : Fin n,
+            ∑ c : Fin n, ∑ e : Fin n, ∑ g : Fin n, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro a _
+          apply Finset.sum_congr rfl
+          intro b _
+          rw [Finset.sum_comm]
+    _ = ∑ a : Fin n, ∑ d : Fin n, ∑ b : Fin n,
+          ∑ c : Fin n, ∑ e : Fin n, ∑ g : Fin n, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro a _
+          rw [Finset.sum_comm]
+    _ = ∑ d : Fin n, ∑ a : Fin n, ∑ b : Fin n,
+          ∑ c : Fin n, ∑ e : Fin n, ∑ g : Fin n, f a b c d e g := by
+          rw [Finset.sum_comm]
+    _ = ∑ d : Fin n, ∑ a : Fin n, ∑ b : Fin n,
+          ∑ e : Fin n, ∑ c : Fin n, ∑ g : Fin n, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro d _
+          apply Finset.sum_congr rfl
+          intro a _
+          apply Finset.sum_congr rfl
+          intro b _
+          rw [Finset.sum_comm]
+    _ = ∑ d : Fin n, ∑ a : Fin n, ∑ e : Fin n,
+          ∑ b : Fin n, ∑ c : Fin n, ∑ g : Fin n, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro d _
+          apply Finset.sum_congr rfl
+          intro a _
+          rw [Finset.sum_comm]
+    _ = ∑ d : Fin n, ∑ e : Fin n, ∑ a : Fin n,
+          ∑ b : Fin n, ∑ c : Fin n, ∑ g : Fin n, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro d _
+          rw [Finset.sum_comm]
+    _ = ∑ d : Fin n, ∑ e : Fin n, ∑ a : Fin n,
+          ∑ b : Fin n, ∑ g : Fin n, ∑ c : Fin n, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro d _
+          apply Finset.sum_congr rfl
+          intro e _
+          apply Finset.sum_congr rfl
+          intro a _
+          apply Finset.sum_congr rfl
+          intro b _
+          rw [Finset.sum_comm]
+    _ = ∑ d : Fin n, ∑ e : Fin n, ∑ a : Fin n,
+          ∑ g : Fin n, ∑ b : Fin n, ∑ c : Fin n, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro d _
+          apply Finset.sum_congr rfl
+          intro e _
+          apply Finset.sum_congr rfl
+          intro a _
+          rw [Finset.sum_comm]
+    _ = ∑ d : Fin n, ∑ e : Fin n, ∑ g : Fin n,
+          ∑ a : Fin n, ∑ b : Fin n, ∑ c : Fin n, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro d _
+          apply Finset.sum_congr rfl
+          intro e _
+          rw [Finset.sum_comm]
+
+/-- Reorder `∑ a b c d` as `∑ c a d b` for mixed finite index types. -/
+lemma sum_reorder₄_mixed {ι κ : Type*} [Fintype ι] [Fintype κ]
+    (f : ι → ι → κ → ι → ℝ) :
+    (∑ a : ι, ∑ b : ι, ∑ c : κ, ∑ d : ι, f a b c d) =
+      ∑ c : κ, ∑ a : ι, ∑ d : ι, ∑ b : ι, f a b c d := by
+  calc
+    (∑ a : ι, ∑ b : ι, ∑ c : κ, ∑ d : ι, f a b c d)
+        = ∑ a : ι, ∑ c : κ, ∑ b : ι, ∑ d : ι, f a b c d := by
+          apply Finset.sum_congr rfl
+          intro a _
+          rw [Finset.sum_comm]
+    _ = ∑ c : κ, ∑ a : ι, ∑ b : ι, ∑ d : ι, f a b c d := by
+          rw [Finset.sum_comm]
+    _ = ∑ c : κ, ∑ a : ι, ∑ d : ι, ∑ b : ι, f a b c d := by
+          apply Finset.sum_congr rfl
+          intro c _
+          apply Finset.sum_congr rfl
+          intro a _
+          rw [Finset.sum_comm]
+
+/-- Reorder `∑ a b c d e g` as `∑ c d a b e g` for mixed finite index types. -/
+lemma sum_reorder₆_mixed {ι κ : Type*} [Fintype ι] [Fintype κ]
+    (f : ι → ι → ι → κ → ι → ι → ℝ) :
+    (∑ a : ι, ∑ b : ι, ∑ c : ι, ∑ d : κ, ∑ e : ι, ∑ g : ι, f a b c d e g) =
+      ∑ c : ι, ∑ d : κ, ∑ a : ι, ∑ b : ι, ∑ e : ι, ∑ g : ι, f a b c d e g := by
+  calc
+    (∑ a : ι, ∑ b : ι, ∑ c : ι, ∑ d : κ, ∑ e : ι, ∑ g : ι, f a b c d e g)
+        = ∑ a : ι, ∑ c : ι, ∑ b : ι, ∑ d : κ, ∑ e : ι, ∑ g : ι, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro a _
+          rw [Finset.sum_comm]
+    _ = ∑ c : ι, ∑ a : ι, ∑ b : ι, ∑ d : κ, ∑ e : ι, ∑ g : ι, f a b c d e g := by
+          rw [Finset.sum_comm]
+    _ = ∑ c : ι, ∑ a : ι, ∑ d : κ, ∑ b : ι, ∑ e : ι, ∑ g : ι, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro c _
+          apply Finset.sum_congr rfl
+          intro a _
+          rw [Finset.sum_comm]
+    _ = ∑ c : ι, ∑ d : κ, ∑ a : ι, ∑ b : ι, ∑ e : ι, ∑ g : ι, f a b c d e g := by
+          apply Finset.sum_congr rfl
+          intro c _
+          rw [Finset.sum_comm]
 
 /-- The defining equation for the Jacobian characterization of `bar z`. -/
 lemma barzViaPsi_defining_equation (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
