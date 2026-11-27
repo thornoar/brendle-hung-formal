@@ -150,7 +150,7 @@ def HasSmoothExpansion3 {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E] (b
 noncomputable section
 
 /-- The `i`-th standard basis vector of `ℝ^n`. -/
-def e (i : Fin n) : ℝ^n := Pi.single i 1
+def e {d} (i : Fin d) : ℝ^d := Pi.single i 1
 
 /-- First derivative of a function on `ℝ^n`, as a continuous linear map. -/
 abbrev diff (f : ℝ^n → ℝ) : ℝ^n -> ℝ^n →L[ℝ] ℝ

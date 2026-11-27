@@ -1335,5 +1335,406 @@ theorem expansion_of_U :
       field_simp [hs4_ne]
       ring
 
+/-- Hessian of `u0(x, ·)` at zero as a continuous linear map. -/
+noncomputable abbrev u0WWLin (x : ℝ^m) : ℝ^n →L[ℝ] ℝ^n
+:= (Matrix.toLin' (u0WW x 0)).toContinuousLinearMap
+
+/-- Gradient of `u1(x, ·)` at zero as a vector in the standard basis. -/
+noncomputable abbrev u1WVec (x : ℝ^m) : ℝ^n
+:= fun α : Fin n => u1W x 0 (e α)
+
+/-- Smoothness in `x` of one Hessian component of `u0(x, ·)` at zero. -/
+lemma u0WW_smooth_apply (α β : Fin n) : Smooth (fun x : ℝ^m => u0WW x 0 α β)
+:= by
+  let f : ((ℝ^m × ℝ^n) × ℝ^n) → ℝ^n → ℝ :=
+    fun z w => data.u0 z.1.1 w
+  have hf : Smooth (uncurry f) := by
+    have hcomp : Smooth (fun z : (((ℝ^m × ℝ^n) × ℝ^n) × ℝ^n) =>
+        (z.1.1.1, z.2)) := by fun_prop
+    simpa [f, Function.uncurry_def] using asm.u0Smooth.comp hcomp
+  have hD : Smooth (fun z : (ℝ^m × ℝ^n) × ℝ^n =>
+      fderiv ℝ (fun w : ℝ^n => data.u0 z.1.1 w) z.2) := by
+    simpa [f] using hf.fderiv
+      (g := fun z : (ℝ^m × ℝ^n) × ℝ^n => z.2)
+      (by fun_prop) (by simp)
+  have hDapp : Smooth (fun z : (ℝ^m × ℝ^n) × ℝ^n =>
+      fderiv ℝ (fun w : ℝ^n => data.u0 z.1.1 w) z.2 (e β)) := by
+    simpa using hD.clm_apply
+      (contDiff_const : Smooth (fun _ : (ℝ^m × ℝ^n) × ℝ^n => e β))
+  let f2 : (ℝ^m × ℝ^n) → ℝ^n → ℝ :=
+    fun q w => fderiv ℝ (fun v : ℝ^n => data.u0 q.1 v) w (e β)
+  have hf2 : Smooth (uncurry f2) := by
+    simpa [f2] using hDapp
+  have h2prod : Smooth (fun q : ℝ^m × ℝ^n =>
+      fderiv ℝ (fun w : ℝ^n => fderiv ℝ (fun v : ℝ^n => data.u0 q.1 v) w (e β))
+        q.2 (e α)) := by
+    simpa [f2] using hf2.fderiv_apply
+      (g := fun q : ℝ^m × ℝ^n => q.2)
+      (k := fun _ : ℝ^m × ℝ^n => e α)
+      (by fun_prop) (by fun_prop) (by simp)
+  have hincl : Smooth (fun x : ℝ^m => (x, (0 : ℝ^n))) := by fun_prop
+  have h2 : Smooth (fun x : ℝ^m =>
+      fderiv ℝ (fun w : ℝ^n => fderiv ℝ (fun v : ℝ^n => data.u0 x v) w (e β))
+        0 (e α)) := by
+    simpa using h2prod.comp hincl
+  have hEq : (fun x : ℝ^m => u0WW x 0 α β) =
+      (fun x : ℝ^m =>
+        fderiv ℝ (fun w : ℝ^n => fderiv ℝ (fun v : ℝ^n => data.u0 x v) w (e β))
+          0 (e α)) := by
+    funext x
+    have hc : DifferentiableAt ℝ (fun w : ℝ^n => fderiv ℝ (data.u0 x) w) 0 := by
+      exact ((u0_x_smooth x).fderiv_right (m := ⊤) (by simp)).differentiable (by simp) 0
+    rw [fderiv_clm_apply hc (differentiableAt_const (c := e β))]
+    simp [u0WW, diff2, diff]
+  rw [hEq]
+  exact h2
+
+/-- The Hessian matrix of `u0(x, ·)` at zero is symmetric. -/
+lemma u0WW_symm (x : ℝ^m) (α β : Fin n) : u0WW x 0 α β = u0WW x 0 β α
+:= by
+  have hsymm : IsSymmSndFDerivAt ℝ (data.u0 x) (0 : ℝ^n) :=
+    (u0_x_smooth x).contDiffAt.isSymmSndFDerivAt (by simp)
+  simpa [u0WW, diff2, diff] using hsymm.eq (e α) (e β)
+
+/-- Smoothness in `x` of one component of the gradient of `u1(x, ·)` at zero. -/
+lemma u1W_smooth_apply (α : Fin n) : Smooth (fun x : ℝ^m => u1W x 0 (e α))
+:= by
+  let f : ℝ^m → ℝ^n → ℝ := fun x w => data.u1 x w
+  have hf : Smooth (uncurry f) := by
+    simpa [f, Function.uncurry_def] using asm.u1Smooth
+  simpa [f, u1W] using hf.fderiv_apply
+    (g := fun x : ℝ^m => (0 : ℝ^n)) (k := fun _ : ℝ^m => e α)
+    (by fun_prop) (by fun_prop) (by simp)
+
+/-- Smoothness of the Hessian of `u0(x, ·)` at zero as a linear map. -/
+lemma u0WWLin_smooth : Smooth u0WWLin
+:= by
+  rw [contDiff_clm_apply_iff]
+  intro z
+  rw [contDiff_pi]
+  intro α
+  have hsum : Smooth (fun x : ℝ^m => ∑ β : Fin n, u0WW x 0 α β * z β) := by
+    exact ContDiff.sum (s := Finset.univ) (fun β _ =>
+      (u0WW_smooth_apply α β).mul contDiff_const)
+  simpa [u0WWLin, Matrix.toLin'_apply, Matrix.mulVec, dotProduct] using hsum
+
+/-- Smoothness of the gradient vector of `u1(x, ·)` at zero. -/
+lemma u1WVec_smooth : Smooth u1WVec
+:= by
+  rw [contDiff_pi]
+  intro α
+  simpa [u1WVec] using u1W_smooth_apply α
+
+/-- The defining equation for `barw` holds wherever the Hessian determinant is nonzero. -/
+lemma barw_spec_of_det_ne_zero (x : ℝ^m) (hdet : (u0WW x 0).det ≠ 0) :
+    u0WW x 0 *ᵥ bud.barw x = - u1WVec x
+:= by
+  classical
+  have hunitDet : IsUnit (u0WW x 0).det := isUnit_iff_ne_zero.mpr hdet
+  have hmul : u0WW x 0 *ᵥ ((u0WW x 0)⁻¹ *ᵥ (-u1WVec x)) = -u1WVec x := by
+    rw [Matrix.mulVec_mulVec, Matrix.mul_nonsing_inv _ hunitDet, Matrix.one_mulVec]
+  ext α
+  simpa [bud, u1WVec] using congrFun hmul α
+
+/-- The reduced direction `barw` is smooth at an admissible point. -/
+lemma barw_contDiffAt (x : ℝ^m) (hx : inBounds x) : ContDiffAt ℝ ⊤ bud.barw x
+:= by
+  have hA : ContDiffAt ℝ ⊤ u0WWLin x := u0WWLin_smooth.contDiffAt
+  have hInv : ContDiffAt ℝ ⊤ (fun y => (u0WWLin y).inverse) x := by
+    exact (u0WW_toLin_isInvertible x hx).contDiffAt_map_inverse.comp x hA
+  have hVec : ContDiffAt ℝ ⊤ (fun y => -u1WVec y) x :=
+    u1WVec_smooth.contDiffAt.neg
+  have hExpr : ContDiffAt ℝ ⊤ (fun y => (u0WWLin y).inverse (-u1WVec y)) x :=
+    hInv.clm_apply hVec
+  have hdetx : (u0WW x 0).det ≠ 0 := by
+    have hunitDet : IsUnit (u0WW x 0).det :=
+      (Matrix.isUnit_iff_isUnit_det (u0WW x 0)).mp (u0WWAtZero x hx).isUnit
+    exact hunitDet.ne_zero
+  have hMat : Continuous (fun y : ℝ^m => u0WW y 0) :=
+    continuous_matrix (fun α β => (u0WW_smooth_apply α β).continuous)
+  have hdetCont : ContinuousAt (fun y : ℝ^m => (u0WW y 0).det) x :=
+    hMat.matrix_det.continuousAt
+  have hdetEv : ∀ᶠ y : ℝ^m in 𝓝 x, (u0WW y 0).det ≠ 0 :=
+    hdetCont.eventually_ne hdetx
+  have hEqEv : (fun y : ℝ^m => (u0WWLin y).inverse (-u1WVec y)) =ᶠ[𝓝 x] bud.barw := by
+    filter_upwards [hdetEv] with y hydet
+    have hunitDet : IsUnit (u0WW y 0).det := isUnit_iff_ne_zero.mpr hydet
+    have hyinv : (u0WWLin y).IsInvertible := by
+      classical
+      let eLin : (ℝ^n) ≃ₗ[ℝ] (ℝ^n) :=
+        (u0WW y 0).toLinearEquiv (Pi.basisFun ℝ (Fin n)) hunitDet
+      refine ⟨eLin.toContinuousLinearEquiv, ?_⟩
+      ext v i
+      simp [u0WWLin, eLin, Matrix.toLin_eq_toLin', Matrix.toLin'_apply]
+    exact hyinv.inverse_apply_eq.mpr (barw_spec_of_det_ne_zero y hydet).symm
+  exact hExpr.congr_of_eventuallyEq hEqEv.symm
+
+/-- The paper's `derivative.of.U2`: the coordinate derivative of `U^(2)` is the
+coordinate derivative of `u^(2)` plus the two critical-point correction terms. -/
+lemma derivative_U2 (x : ℝ^m) (hx : inBounds x) (i : Fin m) :
+    fderiv ℝ bud.U2 x (e i : ℝ^m)
+      = fderiv ℝ (fun y : ℝ^m => data.u2 y 0) x (Pi.single i 1 : ℝ^m)
+        + ∑ α : Fin n,
+            (fderiv ℝ (fun y : ℝ^m => u1W y 0 (e α)) x (Pi.single i 1 : ℝ^m)) * bud.barw x α
+        + (1 / 2 : ℝ) * ∑ α : Fin n, ∑ β : Fin n,
+            (fderiv ℝ (fun y : ℝ^m => u0WW y 0 α β) x (Pi.single i 1 : ℝ^m))
+              * bud.barw x α * bud.barw x β
+:= by
+  classical
+  let line : ℝ → ℝ^m := fun t => x + t • (Pi.single i 1 : ℝ^m)
+  let A : Fin n → ℝ := fun α => u1W x 0 (e α)
+  let A' : Fin n → ℝ := fun α =>
+    fderiv ℝ (fun y : ℝ^m => u1W y 0 (e α)) x (Pi.single i 1 : ℝ^m)
+  let B : Fin n → ℝ := bud.barw x
+  let B' : Fin n → ℝ := fun β =>
+    fderiv ℝ (fun y : ℝ^m => bud.barw y β) x (Pi.single i 1 : ℝ^m)
+  let C : Matrix (Fin n) (Fin n) ℝ := u0WW x 0
+  let C' : Matrix (Fin n) (Fin n) ℝ := fun α β =>
+    fderiv ℝ (fun y : ℝ^m => u0WW y 0 α β) x (Pi.single i 1 : ℝ^m)
+
+  have hline : HasDerivAt line (Pi.single i 1 : ℝ^m) 0 := by
+    simpa [line] using
+      ((hasDerivAt_id (x := (0 : ℝ))).smul_const (Pi.single i 1 : ℝ^m)).const_add x
+  have hline0 : line 0 = x := by simp [line]
+
+  have hu2SmoothX : Smooth (fun y : ℝ^m => data.u2 y 0) := by
+    have hcomp : Smooth (fun y : ℝ^m => (y, (0 : ℝ^n))) := by fun_prop
+    simpa [Function.comp_def, Function.uncurry_def] using asm.u2Smooth.comp hcomp
+
+  have hAline (α : Fin n) :
+      HasDerivAt (fun t : ℝ => u1W (line t) 0 (e α)) (A' α) 0 := by
+    have hdiff : DifferentiableAt ℝ (fun y : ℝ^m => u1W y 0 (e α)) x :=
+      (u1W_smooth_apply α).differentiable (by simp) x
+    have hdiff' : DifferentiableAt ℝ (fun y : ℝ^m => u1W y 0 (e α)) (line 0) := by
+      simpa [hline0] using hdiff
+    simpa [A', hline0] using hdiff'.hasFDerivAt.comp_hasDerivAt 0 hline
+
+  have hCline (α β : Fin n) :
+      HasDerivAt (fun t : ℝ => u0WW (line t) 0 α β) (C' α β) 0 := by
+    have hdiff : DifferentiableAt ℝ (fun y : ℝ^m => u0WW y 0 α β) x :=
+      (u0WW_smooth_apply α β).differentiable (by simp) x
+    have hdiff' : DifferentiableAt ℝ (fun y : ℝ^m => u0WW y 0 α β) (line 0) := by
+      simpa [hline0] using hdiff
+    simpa [C', hline0] using hdiff'.hasFDerivAt.comp_hasDerivAt 0 hline
+
+  have hBdiff : DifferentiableAt ℝ bud.barw x :=
+    (barw_contDiffAt x hx).differentiableAt (by simp)
+  have hBline (β : Fin n) :
+      HasDerivAt (fun t : ℝ => bud.barw (line t) β) (B' β) 0 := by
+    have hproj : DifferentiableAt ℝ (fun v : ℝ^n => v β) (bud.barw x) := by
+      fun_prop
+    have hdiff : DifferentiableAt ℝ (fun y : ℝ^m => bud.barw y β) x :=
+      hproj.comp x hBdiff
+    have hdiff' : DifferentiableAt ℝ (fun y : ℝ^m => bud.barw y β) (line 0) := by
+      simpa [hline0] using hdiff
+    simpa [B', hline0] using hdiff'.hasFDerivAt.comp_hasDerivAt 0 hline
+
+  have hBcont (β : Fin n) : ContDiffAt ℝ ⊤ (fun y : ℝ^m => bud.barw y β) x := by
+    have hproj : ContDiffAt ℝ ⊤ (fun v : ℝ^n => v β) (bud.barw x) := by
+      fun_prop
+    exact hproj.comp x (barw_contDiffAt x hx)
+
+  have hU2cont : ContDiffAt ℝ ⊤ bud.U2 x := by
+    have hprod (α : Fin n) :
+        ContDiffAt ℝ ⊤ (fun y : ℝ^m => u1W y 0 (e α) * bud.barw y α) x :=
+      (u1W_smooth_apply α).contDiffAt.mul (hBcont α)
+    have hsum : ContDiffAt ℝ ⊤
+        (fun y : ℝ^m => ∑ α : Fin n, u1W y 0 (e α) * bud.barw y α) x :=
+      ContDiffAt.sum (s := Finset.univ) (fun α _ => hprod α)
+    have hhalf : ContDiffAt ℝ ⊤
+        (fun y : ℝ^m => (1 / 2 : ℝ) *
+          ∑ α : Fin n, u1W y 0 (e α) * bud.barw y α) x :=
+      (contDiffAt_const : ContDiffAt ℝ ⊤ (fun _ : ℝ^m => (1 / 2 : ℝ)) x).mul hsum
+    have hmain : ContDiffAt ℝ ⊤
+        (fun y : ℝ^m => data.u2 y 0 + (1 / 2 : ℝ) *
+          ∑ α : Fin n, u1W y 0 (e α) * bud.barw y α) x :=
+      hu2SmoothX.contDiffAt.add hhalf
+    simpa [bud] using hmain
+
+  have hU2diff : DifferentiableAt ℝ bud.U2 x := hU2cont.differentiableAt (by simp)
+
+  have hdetx : (u0WW x 0).det ≠ 0 := by
+    have hunitDet : IsUnit (u0WW x 0).det :=
+      (Matrix.isUnit_iff_isUnit_det (u0WW x 0)).mp (u0WWAtZero x hx).isUnit
+    exact hunitDet.ne_zero
+  have hMat : Continuous (fun y : ℝ^m => u0WW y 0) :=
+    continuous_matrix (fun α β => (u0WW_smooth_apply α β).continuous)
+  have hdetEv : ∀ᶠ y : ℝ^m in 𝓝 x, (u0WW y 0).det ≠ 0 :=
+    hMat.matrix_det.continuousAt.eventually_ne hdetx
+  have hdetLine : ∀ᶠ t : ℝ in 𝓝 0, (u0WW (line t) 0).det ≠ 0 := by
+    have ht : Tendsto line (𝓝 0) (𝓝 x) := by
+      simpa [hline0] using hline.continuousAt.tendsto
+    exact ht.eventually hdetEv
+
+  have hrowD (α : Fin n) :
+      ∑ β : Fin n, (C' α β * B β + C α β * B' β) = -A' α := by
+    have hsumline : HasDerivAt
+        (fun t : ℝ => ∑ β : Fin n,
+          u0WW (line t) 0 α β * bud.barw (line t) β)
+        (∑ β : Fin n, (C' α β * B β + C α β * B' β)) 0 := by
+      simpa [Finset.sum_fn, line, hline0, C', C, B, B'] using
+        (HasDerivAt.sum (u := Finset.univ) (fun β hβ =>
+          by simpa [Pi.mul_apply, line, hline0, C', C, B, B'] using
+            (hCline α β).mul (hBline β)))
+    have hEline : HasDerivAt
+        (fun t : ℝ => ∑ β : Fin n,
+            u0WW (line t) 0 α β * bud.barw (line t) β
+          + u1W (line t) 0 (e α))
+        ((∑ β : Fin n, (C' α β * B β + C α β * B' β)) + A' α) 0 := by
+      simpa [A'] using hsumline.add (hAline α)
+    have hEqLine :
+        (fun t : ℝ => ∑ β : Fin n,
+            u0WW (line t) 0 α β * bud.barw (line t) β
+          + u1W (line t) 0 (e α)) =ᶠ[𝓝 0] (fun _ : ℝ => 0) := by
+      filter_upwards [hdetLine] with t ht
+      have hspec := congrFun (barw_spec_of_det_ne_zero (line t) ht) α
+      have hspec' : ∑ β : Fin n,
+          u0WW (line t) 0 α β * bud.barw (line t) β
+            = -u1W (line t) 0 (e α) := by
+        simpa [Matrix.mulVec, dotProduct, u1WVec] using hspec
+      rw [hspec']
+      ring
+    have hzero : HasDerivAt (fun _ : ℝ => (0 : ℝ)) 0 0 := by
+      simpa using (hasDerivAt_const (x := (0 : ℝ)) (0 : ℝ))
+    have hsumzero :
+        (∑ β : Fin n, (C' α β * B β + C α β * B' β)) + A' α = 0 :=
+      (hEline.congr_of_eventuallyEq hEqLine.symm).unique hzero
+    linarith
+
+  have hU2der : HasDerivAt (fun t : ℝ => bud.U2 (line t))
+      (fderiv ℝ (fun y : ℝ^m => data.u2 y 0) x (Pi.single i 1 : ℝ^m)
+        + (1 / 2 : ℝ) * ∑ α : Fin n, (A' α * B α + A α * B' α)) 0 := by
+    have hu2line : HasDerivAt (fun t : ℝ => data.u2 (line t) 0)
+        (fderiv ℝ (fun y : ℝ^m => data.u2 y 0) x (Pi.single i 1 : ℝ^m)) 0 := by
+      have hdiff : DifferentiableAt ℝ (fun y : ℝ^m => data.u2 y 0) x :=
+        hu2SmoothX.differentiable (by simp) x
+      have hdiff' : DifferentiableAt ℝ (fun y : ℝ^m => data.u2 y 0) (line 0) := by
+        simpa [hline0] using hdiff
+      simpa [hline0] using hdiff'.hasFDerivAt.comp_hasDerivAt 0 hline
+    have hsumline : HasDerivAt
+        (fun t : ℝ => ∑ α : Fin n,
+          u1W (line t) 0 (e α) * bud.barw (line t) α)
+        (∑ α : Fin n, (A' α * B α + A α * B' α)) 0 := by
+      simpa [Finset.sum_fn, line, hline0, A', A, B, B'] using
+        (HasDerivAt.sum (u := Finset.univ) (fun α hα =>
+          by simpa [Pi.mul_apply, line, hline0, A', A, B, B'] using
+            (hAline α).mul (hBline α)))
+    have hhalf : HasDerivAt
+        (fun t : ℝ => (1 / 2 : ℝ) * ∑ α : Fin n,
+          u1W (line t) 0 (e α) * bud.barw (line t) α)
+        ((1 / 2 : ℝ) * ∑ α : Fin n, (A' α * B α + A α * B' α)) 0 :=
+      HasDerivAt.const_mul (1 / 2 : ℝ) hsumline
+    have h := hu2line.add hhalf
+    simpa [bud, A, A', B, B'] using h
+
+  have hU2_fd_line : HasDerivAt (fun t : ℝ => bud.U2 (line t))
+      (fderiv ℝ bud.U2 x (Pi.single i 1 : ℝ^m)) 0 := by
+    have hdiff' : DifferentiableAt ℝ bud.U2 (line 0) := by
+      simpa [hline0] using hU2diff
+    simpa [hline0] using hdiff'.hasFDerivAt.comp_hasDerivAt 0 hline
+
+  have hcoeff : fderiv ℝ bud.U2 x (Pi.single i 1 : ℝ^m)
+      = fderiv ℝ (fun y : ℝ^m => data.u2 y 0) x (Pi.single i 1 : ℝ^m)
+        + (1 / 2 : ℝ) * ∑ α : Fin n, (A' α * B α + A α * B' α) :=
+    hU2_fd_line.unique hU2der
+
+  have hCB (α : Fin n) : ∑ β : Fin n, C α β * B β = -A α := by
+    have h := congrFun (barw_spec x hx) α
+    simpa [C, B, A, Matrix.mulVec, dotProduct] using h
+  have hAeq (α : Fin n) : A α = -∑ β : Fin n, C α β * B β := by
+    have h := hCB α
+    linarith
+  have hC_symm (α β : Fin n) : C α β = C β α := by
+    simpa [C] using u0WW_symm x α β
+  have hC'_symm (α β : Fin n) : C' α β = C' β α := by
+    have hfun : (fun y : ℝ^m => u0WW y 0 α β)
+        = (fun y : ℝ^m => u0WW y 0 β α) := by
+      funext y
+      exact u0WW_symm y α β
+    simpa [C'] using congrArg (fun f : ℝ^m → ℝ =>
+      fderiv ℝ f x (Pi.single i 1 : ℝ^m)) hfun
+
+  have hS : ∑ α : Fin n, A α * B' α
+      = ∑ α : Fin n, A' α * B α
+        + ∑ α : Fin n, ∑ β : Fin n, C' α β * B α * B β := by
+    have hstep1 : ∑ α : Fin n, A α * B' α
+        = -∑ α : Fin n, ∑ β : Fin n, C α β * B β * B' α := by
+      calc
+        ∑ α : Fin n, A α * B' α
+            = ∑ α : Fin n, (-(∑ β : Fin n, C α β * B β)) * B' α := by
+              apply Finset.sum_congr rfl
+              intro α hα
+              rw [hAeq α]
+        _ = ∑ α : Fin n, -((∑ β : Fin n, C α β * B β) * B' α) := by
+              apply Finset.sum_congr rfl
+              intro α hα
+              ring
+        _ = -∑ α : Fin n, (∑ β : Fin n, C α β * B β) * B' α := by
+              rw [Finset.sum_neg_distrib]
+        _ = -∑ α : Fin n, ∑ β : Fin n, C α β * B β * B' α := by
+              congr 1
+              apply Finset.sum_congr rfl
+              intro α hα
+              rw [Finset.sum_mul]
+    have hstep2 : -∑ α : Fin n, ∑ β : Fin n, C α β * B β * B' α
+        = -∑ β : Fin n, B β * (∑ α : Fin n, C β α * B' α) := by
+      congr 1
+      rw [Finset.sum_comm]
+      apply Finset.sum_congr rfl
+      intro β hβ
+      rw [Finset.mul_sum]
+      apply Finset.sum_congr rfl
+      intro α hα
+      rw [hC_symm α β]
+      ring
+    have hstep3 : -∑ β : Fin n, B β * (∑ α : Fin n, C β α * B' α)
+        = -∑ β : Fin n, B β * (-A' β - ∑ α : Fin n, C' β α * B α) := by
+      congr 1
+      apply Finset.sum_congr rfl
+      intro β hβ
+      have hsplit : (∑ γ : Fin n, C' β γ * B γ)
+          + (∑ γ : Fin n, C β γ * B' γ) = -A' β := by
+        simpa [Finset.sum_add_distrib] using hrowD β
+      have hrow : ∑ α : Fin n, C β α * B' α
+          = -A' β - ∑ α : Fin n, C' β α * B α := by
+        linarith
+      rw [hrow]
+    have hstep4 : -∑ β : Fin n, B β * (-A' β - ∑ α : Fin n, C' β α * B α)
+        = ∑ β : Fin n, (B β * A' β + ∑ α : Fin n, B β * (C' β α * B α)) := by
+      rw [← Finset.sum_neg_distrib]
+      apply Finset.sum_congr rfl
+      intro β hβ
+      calc
+        -(B β * (-A' β - ∑ α : Fin n, C' β α * B α))
+            = B β * A' β + B β * (∑ α : Fin n, C' β α * B α) := by
+              ring
+        _ = B β * A' β + ∑ α : Fin n, B β * (C' β α * B α) := by
+              rw [Finset.mul_sum]
+    have hstep5 : ∑ β : Fin n,
+          (B β * A' β + ∑ α : Fin n, B β * (C' β α * B α))
+        = ∑ α : Fin n, A' α * B α
+          + ∑ α : Fin n, ∑ β : Fin n, C' α β * B α * B β := by
+      rw [Finset.sum_add_distrib]
+      congr 1
+      · apply Finset.sum_congr rfl
+        intro α hα
+        ring
+      · rw [Finset.sum_comm]
+        apply Finset.sum_congr rfl
+        intro α hα
+        apply Finset.sum_congr rfl
+        intro β hβ
+        rw [hC'_symm β α]
+        ring
+    exact hstep1.trans (hstep2.trans (hstep3.trans (hstep4.trans hstep5)))
+
+  have hfinal : fderiv ℝ bud.U2 x (Pi.single i 1 : ℝ^m)
+      = fderiv ℝ (fun y : ℝ^m => data.u2 y 0) x (Pi.single i 1 : ℝ^m)
+        + ∑ α : Fin n, A' α * B α
+        + (1 / 2 : ℝ) * ∑ α : Fin n, ∑ β : Fin n, C' α β * B α * B β := by
+    rw [hcoeff, Finset.sum_add_distrib, hS]
+    ring
+  simpa [A, A', B, C'] using hfinal
+
 
 end Section2
