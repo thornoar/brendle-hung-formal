@@ -27,3 +27,6 @@ In 2-manifolds, the above coincides with the Gauss curvature.
 The round sphere $SS^2$ has a constant Gauss curvature of 1, and one can easily see that the sectional curvature of $M = SS^2 times SS^2$, under the standard product metric, is non-negative for any 2-plane $pi subset T_p M$.
 However, it vanishes for tangent planes that combine vectors from the tangent spaces of both $SS^2$ factors.
 A natural question (posed by Hopf) is whether a metric exists on $SS^2 times SS^2$ whose sectional curvature is strictly positive for all tangent 2-planes. Brendle and Hung (2026) have answered this question in the positive.
+
+The paper is structured as follows:
+/ Section 2: 

@@ -246,25 +246,27 @@ lemma derivative_U2 (x : ℝ^m) (hx : inBounds x) (i : Fin m) :
 /-- The cyclic error term in the third `z`-derivative formula for `v0`. -/
 abbrev v0T (y : ℝ^m) (α β γ : Fin n) : ℝ :=
   (∑ δ : Fin n, ∑ ζ : Fin n,
-    upsilonZ y 0 * u0WW y 0 δ ζ * zD1 (psiZ y) γ δ * zD2 (psiZ y) α β ζ) +
+    Υc y 0 * u0WW y 0 δ ζ * zD1 (ψc y) γ δ * zD2 (ψc y) α β ζ) +
   (∑ i : Fin m, ∑ δ : Fin n, ∑ ζ : Fin n,
-    upsilonZ y 0 * u0XWW y i δ ζ * zD1 (phiZ y) γ i *
-      zD1 (psiZ y) α δ * zD1 (psiZ y) β ζ) +
+    Υc y 0 * u0XWW y i δ ζ * zD1 (φc y) γ i *
+      zD1 (ψc y) α δ * zD1 (ψc y) β ζ) +
   (∑ δ : Fin n, ∑ ζ : Fin n,
-    zD1 (upsilonZ y) γ * u0WW y 0 δ ζ *
-      zD1 (psiZ y) α δ * zD1 (psiZ y) β ζ)
+    zD1 (Υc y) γ * u0WW y 0 δ ζ *
+      zD1 (ψc y) α δ * zD1 (ψc y) β ζ)
 
 /-- The function `v0` vanishes at `z=0`. -/
-lemma v0_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : ccd.v0 y 0 = 0 := by
-  change upsilonZ y 0 * v0B y 0 = 0
+lemma v0_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : ccd.v0 y 0 = 0
+:= by
+  change Υc y 0 * v0B y 0 = 0
   rw [v0B_zero y hy]
   simp
 
 /-- The first `z`-derivative of `v0` vanishes at zero. -/
 lemma zD1_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
-    zD1 (ccd.v0 y) α = 0 := by
-  change zD1 (fun z : ℝ^n => upsilonZ y z * v0B y z) α = 0
-  have h := zD1_mul_at (upsilonZ y) (v0B y) 0
+    zD1 (ccd.v0 y) α = 0
+:= by
+  change zD1 (fun z : ℝ^n => Υc y z * v0B y z) α = 0
+  have h := zD1_mul_at (Υc y) (v0B y) 0
     (upsilon_z_smoothAt y hy) (v0B_smoothAt y hy) α
   simpa [zD1, v0B_zero y hy, zD1_v0B y hy α] using h
 
@@ -272,8 +274,9 @@ lemma zD1_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
 lemma zD2_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
     zD2 (ccd.v0 y) α β =
       ∑ γ : Fin n, ∑ δ : Fin n,
-        upsilonZ y 0 * u0WW y 0 γ δ *
-          zD1 (psiZ y) α γ * zD1 (psiZ y) β δ := by
+        Υc y 0 * u0WW y 0 γ δ *
+          zD1 (ψc y) α γ * zD1 (ψc y) β δ
+:= by
   rw [zD2_v0_prod y hy α β, zD2_v0B_expanded y hy α β]
   simp [Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
 
@@ -281,9 +284,10 @@ lemma zD2_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
 lemma zD3_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α β γ : Fin n) :
     zD3 (ccd.v0 y) α β γ =
       (∑ δ : Fin n, ∑ ζ : Fin n, ∑ η : Fin n,
-        upsilonZ y 0 * u0WWW y 0 δ ζ η *
-          zD1 (psiZ y) α δ * zD1 (psiZ y) β ζ * zD1 (psiZ y) γ η) +
-      v0T y α β γ + v0T y β γ α + v0T y γ α β := by
+        Υc y 0 * u0WWW y 0 δ ζ η *
+          zD1 (ψc y) α δ * zD1 (ψc y) β ζ * zD1 (ψc y) γ η) +
+      v0T y α β γ + v0T y β γ α + v0T y γ α β
+:= by
   rw [zD3_v0_prod y hy α β γ, zD3_v0B_expanded y hy α β γ]
   rw [zD2_symm (v0B y) (v0B_smoothAt y hy) α γ]
   rw [zD2_v0B_expanded y hy β γ, zD2_v0B_expanded y hy γ α,
@@ -295,14 +299,15 @@ lemma zD3_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α β γ : Fin n) :
 /-- The term `S_{αβ}` in the second `z`-derivative formula for `v1`. -/
 abbrev v1S (y : ℝ^m) (α β : Fin n) : ℝ :=
   (∑ i : Fin m, ∑ γ : Fin n,
-    upsilonZ y 0 *
-      (u1XW y i γ * zD1 (psiZ y) β γ * zD1 (phiZ y) α i)) +
+    Υc y 0 *
+      (u1XW y i γ * zD1 (ψc y) β γ * zD1 (φc y) α i)) +
   (∑ γ : Fin n,
-    zD1 (upsilonZ y) α * (u1W y 0 (e γ) * zD1 (psiZ y) β γ))
+    zD1 (Υc y) α * (u1W y 0 (e γ) * zD1 (ψc y) β γ))
 
 /-- The function `v1` vanishes at `z=0`. -/
-lemma v1_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : ccd.v1 y 0 = 0 := by
-  change upsilonZ y 0 * u1B y 0 = 0
+lemma v1_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : ccd.v1 y 0 = 0
+:= by
+  change Υc y 0 * u1B y 0 = 0
   rw [u1B_zero y hy]
   simp
 
@@ -310,7 +315,8 @@ lemma v1_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : ccd.v1 y 0 = 0 := by
 lemma zD1_v1 (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
     zD1 (ccd.v1 y) α =
       ∑ γ : Fin n,
-        upsilonZ y 0 * u1W y 0 (e γ) * zD1 (psiZ y) α γ := by
+        Υc y 0 * u1W y 0 (e γ) * zD1 (ψc y) α γ
+:= by
   rw [zD1_v1_prod y hy α, u1B_zero y hy, zD1_u1B_expanded y hy α]
   simp [Finset.mul_sum, mul_assoc]
 
@@ -318,11 +324,12 @@ lemma zD1_v1 (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
 lemma zD2_v1 (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
     zD2 (ccd.v1 y) α β =
       (∑ γ : Fin n, ∑ δ : Fin n,
-        upsilonZ y 0 * (u1WW y 0 γ δ *
-          zD1 (psiZ y) α γ * zD1 (psiZ y) β δ)) +
+        Υc y 0 * (u1WW y 0 γ δ *
+          zD1 (ψc y) α γ * zD1 (ψc y) β δ)) +
       (∑ γ : Fin n,
-        upsilonZ y 0 * (u1W y 0 (e γ) * zD2 (psiZ y) α β γ)) +
-      v1S y α β + v1S y β α := by
+        Υc y 0 * (u1W y 0 (e γ) * zD2 (ψc y) α β γ)) +
+      v1S y α β + v1S y β α
+:= by
   rw [zD2_v1_prod y hy α β, zD2_u1B_expanded y hy α β,
     zD1_u1B_expanded y hy β, zD1_u1B_expanded y hy α]
   simp only [mul_add, Finset.mul_sum, v1S]
