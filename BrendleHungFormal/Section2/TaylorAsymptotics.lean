@@ -203,39 +203,31 @@ lemma third_deriv_symm_last {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ 
     (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) (0 : E) u w) v
 := by
   let A : E → ℝ := fun z => (fderiv ℝ (fderiv ℝ φ) z v) w
-  let Bf : E → ℝ := fun z => (fderiv ℝ (fderiv ℝ φ) z w) v
-  have hg : ContDiff ℝ ⊤ (fderiv ℝ φ) := hφ.fderiv_right (m := ⊤) (by simp)
-  have hsecond : HasFDerivAt (fun z => fderiv ℝ (fderiv ℝ φ) z)
-      (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0) 0 :=
-    ((hg.fderiv_right (m := 1) (by simp)).differentiable (by simp) 0).hasFDerivAt
-  have mkA (q : E) : HasFDerivAt A
-      (((ContinuousLinearMap.apply ℝ ℝ w).comp
-        ((ContinuousLinearMap.apply ℝ (E →L[ℝ] ℝ) v).comp
-          (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0)))) 0 := by
-    have hc : HasFDerivAt (fun _ : E => w) 0 0 := hasFDerivAt_const (𝕜 := ℝ) w 0
-    have hv : HasFDerivAt (fun _ : E => v) 0 0 := hasFDerivAt_const (𝕜 := ℝ) v 0
-    simpa [A] using (hsecond.clm_apply hv).clm_apply hc
-  have mkB (q : E) : HasFDerivAt Bf
-      (((ContinuousLinearMap.apply ℝ ℝ v).comp
-        ((ContinuousLinearMap.apply ℝ (E →L[ℝ] ℝ) w).comp
-          (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0)))) 0 := by
-    have hc : HasFDerivAt (fun _ : E => v) 0 0 := hasFDerivAt_const (𝕜 := ℝ) v 0
-    have hw : HasFDerivAt (fun _ : E => w) 0 0 := hasFDerivAt_const (𝕜 := ℝ) w 0
-    simpa [Bf] using (hsecond.clm_apply hw).clm_apply hc
-  have hEq : A = Bf := by
+  let B : E → ℝ := fun z => (fderiv ℝ (fderiv ℝ φ) z w) v
+  have hAB : A = B := by
     funext z
     have hsymm : IsSymmSndFDerivAt ℝ φ z := hφ.contDiffAt.isSymmSndFDerivAt (by simp)
-    simpa [A, Bf] using hsymm.eq v w
-  have hfA := (mkA u).fderiv
-  have hfB := (mkB u).fderiv
-  rw [hEq] at hfA
-  have hlin : ((ContinuousLinearMap.apply ℝ ℝ w).comp
-        ((ContinuousLinearMap.apply ℝ (E →L[ℝ] ℝ) v).comp
-          (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0))) =
-      ((ContinuousLinearMap.apply ℝ ℝ v).comp
-        ((ContinuousLinearMap.apply ℝ (E →L[ℝ] ℝ) w).comp
-          (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0))) := hfA.symm.trans hfB
-  simpa [ContinuousLinearMap.comp_apply] using congrArg (fun L : E →L[ℝ] ℝ => L u) hlin
+    simpa [A, B] using hsymm.eq v w
+  have hg : ContDiff ℝ ⊤ (fderiv ℝ (fderiv ℝ φ)) := by
+    simpa using (hφ.fderiv_right (m := ⊤) (by simp)).fderiv_right (m := ⊤) (by simp)
+  have hsecond : HasFDerivAt (fun z => fderiv ℝ (fderiv ℝ φ) z)
+      (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0) 0 :=
+    (hg.differentiable (by simp) (0 : E)).hasFDerivAt
+  have hderiv (a b : E) : HasFDerivAt
+      (fun z : E => (fderiv ℝ (fderiv ℝ φ) z a) b)
+      ((ContinuousLinearMap.apply ℝ ℝ b).comp
+        ((ContinuousLinearMap.apply ℝ (E →L[ℝ] ℝ) a).comp
+          (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0))) 0 := by
+    have ha : HasFDerivAt (fun _ : E => a) 0 0 := hasFDerivAt_const (𝕜 := ℝ) a 0
+    have hb : HasFDerivAt (fun _ : E => b) 0 0 := hasFDerivAt_const (𝕜 := ℝ) b 0
+    simpa using (hsecond.clm_apply ha).clm_apply hb
+  have hAderiv := (hderiv v w).fderiv
+  have hBderiv := (hderiv w v).fderiv
+  have hfderivEq : fderiv ℝ A 0 = fderiv ℝ B 0 :=
+    congrArg (fun f : E → ℝ => fderiv ℝ f (0 : E)) hAB
+  rw [hAderiv, hBderiv] at hfderivEq
+  simpa [A, B, ContinuousLinearMap.comp_apply] using
+    congrArg (fun L : E →L[ℝ] ℝ => L u) hfderivEq
 
 /-- Third-order Taylor estimate with `O(‖z‖⁴)` remainder for a smooth real-valued map. -/
 lemma smooth_taylor_three_isBigO
@@ -244,7 +236,8 @@ lemma smooth_taylor_three_isBigO
     (fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
         (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z -
         (1 / 6 : ℝ) • fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0 z z z)
-      =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (4 : ℕ)) := by
+      =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (4 : ℕ))
+:= by
   let g : E → E →L[ℝ] ℝ := fun z => fderiv ℝ φ z
   let B : E →L[ℝ] (E →L[ℝ] ℝ) := fderiv ℝ g 0
   let C : E →L[ℝ] (E →L[ℝ] (E →L[ℝ] ℝ)) := fderiv ℝ (fderiv ℝ g) 0
