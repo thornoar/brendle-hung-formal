@@ -30,18 +30,18 @@ structure InitialAssumptions where
   hs0 : s0 > 0
   σ : ℝ
   hσ : σ > 0
-  u0Smooth : Smooth (↓u0)
-  uSmooth : Smooth (fun (x, w, s) => u x w s)
+  u0Smooth : SmoothGlobal (↓u0)
+  uSmooth : SmoothGlobal (fun (x, w, s) => u x w s)
   u0AtZero : ∀ x : ℝ^m, x ∈ D r0 -> u0 x 0 = 0
   u0Quadratic :
     ∀ x : ℝ^m, ∀ w : ℝ^n,
       x ∈ D r0 →
       w ∈ D r0 →
       u0 x w ≥ σ * (norm w ^ 2)
-  u1Smooth : Smooth (↓u1)
+  u1Smooth : SmoothGlobal (↓u1)
   u1AtZero : ∀ x : ℝ^m, x ∈ D r0 -> u1 x 0 = 0
-  u2Smooth : Smooth (↓u2)
-  u3Smooth : Smooth (↓u3)
+  u2Smooth : SmoothGlobal (↓u2)
+  u3Smooth : SmoothGlobal (↓u3)
   uExp : HasSmoothExpansion3 (D r0 ×ˢ D r0) s0
           (↓u0) (↓u1) (↓u2) (↓u3)
           (↓u)
@@ -101,7 +101,7 @@ lemma u0WWAtZero (x : ℝ^m) (hx : inBounds x) : Matrix.PosDef (u0WW x 0)
       asm.u0 x w ≥ asm.σ * (norm w ^ 2) := by
     intro w hw
     exact asm.u0Quadratic x w hx (B_subset_D hw)
-  have hsmooth : Smooth (asm.u0 x) := by
+  have hsmooth : SmoothGlobal (asm.u0 x) := by
     simpa [Function.comp_def, Function.uncurry_def] using
       (asm.u0Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
   simpa [u0WW, matrixOf] using
@@ -191,13 +191,13 @@ noncomputable def gradW (p : ℝ^m) (w : ℝ^n) (s : ℝ) : ℝ^n :=
 
 /-- For fixed `p`, the map `(w,s) ↦ gradW p w s` is smooth. -/
 lemma gradW_smooth (p : ℝ^m) :
-    Smooth (fun q : ℝ^n × ℝ => gradW p q.1 q.2)
+    SmoothGlobal (fun q : ℝ^n × ℝ => gradW p q.1 q.2)
 := by
   rw [contDiff_pi]
   intro α
   let f : ℝ^n × ℝ → ℝ^n → ℝ := fun q w => asm.u p w q.2
-  have hf : Smooth (uncurry f) := by
-    have hcomp : Smooth (fun z : (ℝ^n × ℝ) × ℝ^n => (p, z.2, z.1.2)) := by fun_prop
+  have hf : SmoothGlobal (uncurry f) := by
+    have hcomp : SmoothGlobal (fun z : (ℝ^n × ℝ) × ℝ^n => (p, z.2, z.1.2)) := by fun_prop
     simpa [f, Function.uncurry_def] using asm.uSmooth.comp hcomp
   simpa [gradW, f] using
     (hf.fderiv_apply (g := fun q : ℝ^n × ℝ => q.1) (k := fun _ : ℝ^n × ℝ => e α)
@@ -251,11 +251,11 @@ lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
         ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap)) 0
 := by
   have hB : B asm.r0 ∈ 𝓝 (0 : ℝ^n) := B_mem_nhds_zero asm.hr0
-  have hu0Smooth : Smooth (asm.u0 p) := by
+  have hu0Smooth : SmoothGlobal (asm.u0 p) := by
     simpa [Function.comp_def, Function.uncurry_def] using
       (asm.u0Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) p))
-  have hgSmooth : Smooth (fun w : ℝ^n => asm.u p w 0) := by
-    have hcomp : Smooth (fun w : ℝ^n => (p, w, (0 : ℝ))) := by fun_prop
+  have hgSmooth : SmoothGlobal (fun w : ℝ^n => asm.u p w 0) := by
+    have hcomp : SmoothGlobal (fun w : ℝ^n => (p, w, (0 : ℝ))) := by fun_prop
     simpa [Function.comp_def] using asm.uSmooth.comp hcomp
   have hclm : HasFDerivAt (fun w : ℝ^n => fderiv ℝ (fun w' => asm.u p w' 0) w (e α))
       ((ContinuousLinearMap.apply ℝ ℝ (e α)).comp
@@ -337,12 +337,12 @@ lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
     HasDerivAt (fun s : ℝ => gradW x 0 s α) (u1W x 0 (e α)) 0
 := by
   let F : ℝ × ℝ^n → ℝ := fun z => asm.u x z.2 z.1
-  have hFsmooth : Smooth F := by
-    have hcomp : Smooth (fun z : ℝ × ℝ^n => (x, z.2, z.1)) := by fun_prop
+  have hFsmooth : SmoothGlobal F := by
+    have hcomp : SmoothGlobal (fun z : ℝ × ℝ^n => (x, z.2, z.1)) := by fun_prop
     simpa [F, Function.comp_def] using asm.uSmooth.comp hcomp
   have hF2 : ContDiff ℝ (2 : WithTop ℕ∞) F := hFsmooth.of_le le_top
   let p0 : ℝ × ℝ^n := ((0 : ℝ), (0 : ℝ^n))
-  have hfderivSmooth : Smooth (fderiv ℝ F) :=
+  have hfderivSmooth : SmoothGlobal (fderiv ℝ F) :=
     hFsmooth.fderiv_right (m := ⊤) (by simp)
   have hsecond : HasFDerivAt (fderiv ℝ F)
       (fderiv ℝ (fderiv ℝ F) p0) p0 :=
@@ -476,13 +476,13 @@ lemma hasFDerivAt_gradW_s (x : ℝ^m) (hx : inBounds x) :
 
 /-- Smoothness of the parametrized gradient map `F((x,s),w) = gradW x w s`. -/
 lemma gradWParam_smooth :
-    Smooth (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
+    SmoothGlobal (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
 := by
   rw [contDiff_pi]
   intro α
   let g : (ℝ^m × ℝ) × ℝ^n → ℝ^n → ℝ := fun z w => asm.u z.1.1 w z.1.2
-  have hg : Smooth (uncurry g) := by
-    have hcomp : Smooth (fun q : ((ℝ^m × ℝ) × ℝ^n) × ℝ^n => (q.1.1.1, q.2, q.1.1.2)) := by
+  have hg : SmoothGlobal (uncurry g) := by
+    have hcomp : SmoothGlobal (fun q : ((ℝ^m × ℝ) × ℝ^n) × ℝ^n => (q.1.1.1, q.2, q.1.1.2)) := by
       fun_prop
     simpa [g, Function.uncurry_def] using asm.uSmooth.comp hcomp
   simpa [gradW, g] using
@@ -1018,22 +1018,22 @@ lemma bud_U_zero (x : ℝ^m) (hx : inBounds x) : bud.U x 0 = 0 := by
   exact le_antisymm hle hge
 
 /-- Smoothness of `u0` after fixing the parameter `x`. -/
-lemma u0_x_smooth (x : ℝ^m) : Smooth (asm.u0 x) := by
+lemma u0_x_smooth (x : ℝ^m) : SmoothGlobal (asm.u0 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u0Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
 /-- Smoothness of `u1` after fixing the parameter `x`. -/
-lemma u1_x_smooth (x : ℝ^m) : Smooth (asm.u1 x) := by
+lemma u1_x_smooth (x : ℝ^m) : SmoothGlobal (asm.u1 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u1Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
 /-- Smoothness of `u2` after fixing the parameter `x`. -/
-lemma u2_x_smooth (x : ℝ^m) : Smooth (asm.u2 x) := by
+lemma u2_x_smooth (x : ℝ^m) : SmoothGlobal (asm.u2 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u2Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
 /-- Smoothness of `u3` after fixing the parameter `x`. -/
-lemma u3_x_smooth (x : ℝ^m) : Smooth (asm.u3 x) := by
+lemma u3_x_smooth (x : ℝ^m) : SmoothGlobal (asm.u3 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u3Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
@@ -1338,36 +1338,36 @@ noncomputable abbrev u1WVec (x : ℝ^m) : ℝ^n
 := fun α : Fin n => u1W x 0 (e α)
 
 /-- Smoothness in `x` of one Hessian component of `u0(x, ·)` at zero. -/
-lemma u0WW_smooth_apply (α β : Fin n) : Smooth (fun x : ℝ^m => u0WW x 0 α β)
+lemma u0WW_smooth_apply (α β : Fin n) : SmoothGlobal (fun x : ℝ^m => u0WW x 0 α β)
 := by
   let f : ((ℝ^m × ℝ^n) × ℝ^n) → ℝ^n → ℝ :=
     fun z w => asm.u0 z.1.1 w
-  have hf : Smooth (uncurry f) := by
-    have hcomp : Smooth (fun z : (((ℝ^m × ℝ^n) × ℝ^n) × ℝ^n) =>
+  have hf : SmoothGlobal (uncurry f) := by
+    have hcomp : SmoothGlobal (fun z : (((ℝ^m × ℝ^n) × ℝ^n) × ℝ^n) =>
         (z.1.1.1, z.2)) := by fun_prop
     simpa [f, Function.uncurry_def] using asm.u0Smooth.comp hcomp
-  have hD : Smooth (fun z : (ℝ^m × ℝ^n) × ℝ^n =>
+  have hD : SmoothGlobal (fun z : (ℝ^m × ℝ^n) × ℝ^n =>
       fderiv ℝ (fun w : ℝ^n => asm.u0 z.1.1 w) z.2) := by
     simpa [f] using hf.fderiv
       (g := fun z : (ℝ^m × ℝ^n) × ℝ^n => z.2)
       (by fun_prop) (by simp)
-  have hDapp : Smooth (fun z : (ℝ^m × ℝ^n) × ℝ^n =>
+  have hDapp : SmoothGlobal (fun z : (ℝ^m × ℝ^n) × ℝ^n =>
       fderiv ℝ (fun w : ℝ^n => asm.u0 z.1.1 w) z.2 (e β)) := by
     simpa using hD.clm_apply
-      (contDiff_const : Smooth (fun _ : (ℝ^m × ℝ^n) × ℝ^n => e β))
+      (contDiff_const : SmoothGlobal (fun _ : (ℝ^m × ℝ^n) × ℝ^n => e β))
   let f2 : (ℝ^m × ℝ^n) → ℝ^n → ℝ :=
     fun q w => fderiv ℝ (fun v : ℝ^n => asm.u0 q.1 v) w (e β)
-  have hf2 : Smooth (uncurry f2) := by
+  have hf2 : SmoothGlobal (uncurry f2) := by
     simpa [f2] using hDapp
-  have h2prod : Smooth (fun q : ℝ^m × ℝ^n =>
+  have h2prod : SmoothGlobal (fun q : ℝ^m × ℝ^n =>
       fderiv ℝ (fun w : ℝ^n => fderiv ℝ (fun v : ℝ^n => asm.u0 q.1 v) w (e β))
         q.2 (e α)) := by
     simpa [f2] using hf2.fderiv_apply
       (g := fun q : ℝ^m × ℝ^n => q.2)
       (k := fun _ : ℝ^m × ℝ^n => e α)
       (by fun_prop) (by fun_prop) (by simp)
-  have hincl : Smooth (fun x : ℝ^m => (x, (0 : ℝ^n))) := by fun_prop
-  have h2 : Smooth (fun x : ℝ^m =>
+  have hincl : SmoothGlobal (fun x : ℝ^m => (x, (0 : ℝ^n))) := by fun_prop
+  have h2 : SmoothGlobal (fun x : ℝ^m =>
       fderiv ℝ (fun w : ℝ^n => fderiv ℝ (fun v : ℝ^n => asm.u0 x v) w (e β))
         0 (e α)) := by
     simpa using h2prod.comp hincl
@@ -1391,29 +1391,29 @@ lemma u0WW_symm (x : ℝ^m) (α β : Fin n) : u0WW x 0 α β = u0WW x 0 β α
   simpa [u0WW, diff2, diff] using hsymm.eq (e α) (e β)
 
 /-- Smoothness in `x` of one component of the gradient of `u1(x, ·)` at zero. -/
-lemma u1W_smooth_apply (α : Fin n) : Smooth (fun x : ℝ^m => u1W x 0 (e α))
+lemma u1W_smooth_apply (α : Fin n) : SmoothGlobal (fun x : ℝ^m => u1W x 0 (e α))
 := by
   let f : ℝ^m → ℝ^n → ℝ := fun x w => asm.u1 x w
-  have hf : Smooth (uncurry f) := by
+  have hf : SmoothGlobal (uncurry f) := by
     simpa [f, Function.uncurry_def] using asm.u1Smooth
   simpa [f, u1W] using hf.fderiv_apply
     (g := fun x : ℝ^m => (0 : ℝ^n)) (k := fun _ : ℝ^m => e α)
     (by fun_prop) (by fun_prop) (by simp)
 
 /-- Smoothness of the Hessian of `u0(x, ·)` at zero as a linear map. -/
-lemma u0WWLin_smooth : Smooth u0WWLin
+lemma u0WWLin_smooth : SmoothGlobal u0WWLin
 := by
   rw [contDiff_clm_apply_iff]
   intro z
   rw [contDiff_pi]
   intro α
-  have hsum : Smooth (fun x : ℝ^m => ∑ β : Fin n, u0WW x 0 α β * z β) := by
+  have hsum : SmoothGlobal (fun x : ℝ^m => ∑ β : Fin n, u0WW x 0 α β * z β) := by
     exact ContDiff.sum (s := Finset.univ) (fun β _ =>
       (u0WW_smooth_apply α β).mul contDiff_const)
   simpa [u0WWLin, Matrix.toLin'_apply, Matrix.mulVec, dotProduct] using hsum
 
 /-- Smoothness of the gradient vector of `u1(x, ·)` at zero. -/
-lemma u1WVec_smooth : Smooth u1WVec
+lemma u1WVec_smooth : SmoothGlobal u1WVec
 := by
   rw [contDiff_pi]
   intro α
@@ -1493,8 +1493,8 @@ lemma derivative_U2 (x : ℝ^m) (hx : inBounds x) (i : Fin m) :
     (u1W_smooth_apply α).differentiable (by simp) x
   have hCd (α β : Fin n) : DifferentiableAt ℝ (fun y : ℝ^m => u0WW y 0 α β) x :=
     (u0WW_smooth_apply α β).differentiable (by simp) x
-  have hu2Smooth : Smooth (fun y : ℝ^m => asm.u2 y 0) := by
-    have hcomp : Smooth (fun y : ℝ^m => (y, (0 : ℝ^n))) := by fun_prop
+  have hu2Smooth : SmoothGlobal (fun y : ℝ^m => asm.u2 y 0) := by
+    have hcomp : SmoothGlobal (fun y : ℝ^m => (y, (0 : ℝ^n))) := by fun_prop
     simpa [Function.comp_def, Function.uncurry_def] using asm.u2Smooth.comp hcomp
   have hu2d : DifferentiableAt ℝ (fun y : ℝ^m => asm.u2 y 0) x :=
     hu2Smooth.differentiable (by simp) x
@@ -1647,7 +1647,7 @@ direction, matching the paper's `(ψ^β_{z^α}(y,0))` convention. -/
 noncomputable def zJacobian (F : ℝ^m × ℝ^n → ℝ^n) (y : ℝ^m) : Matrix (Fin n) (Fin n) ℝ
 := Matrix.of fun β α => fderiv ℝ (fun z : ℝ^n => F (y, z) β) 0 (e α : ℝ^n)
 
-/-- Smooth coordinate changes and the invertibility hypothesis from Section 2. -/
+/-- Locally smooth coordinate changes and the invertibility hypothesis from Section 2. -/
 structure CoordChangeAssumptions where
   Ω : Set ℝ^m
   Ω_open : IsOpen Ω
@@ -1659,14 +1659,14 @@ structure CoordChangeAssumptions where
   Υ : ℝ^m × ℝ^n → ℝ
   Υ_pos : ∀ y, ∀ z,
     y ∈ Ω → z ∈ B r1 → Υ (y, z) > 0
-  Υ_smooth : Smooth Υ
+  Υ_smooth : Smooth Υ on (Ω ×ˢ B r1)
 
   φ : ℝ^m × ℝ^n → ℝ^m
-  φ_smooth : Smooth φ
+  φ_smooth : Smooth φ on (Ω ×ˢ B r1)
   φ_y_0 : ∀ y, y ∈ Ω → φ (y, 0) = y
 
   ψ : ℝ^m × ℝ^n → ℝ^n
-  ψ_smooth : Smooth ψ
+  ψ_smooth : Smooth ψ on (Ω ×ˢ B r1)
   ψ_y_0 : ∀ y, y ∈ Ω → ψ (y, 0) = 0
 
   ψ_jacobian_inv : ∀ y, y ∈ Ω → IsUnit (zJacobian ψ y)
@@ -1677,6 +1677,21 @@ lemma CoordChangeAssumptions.psi_jacobian_det_ne_zero
     (c : CoordChangeAssumptions) (y : ℝ^m) (hy : y ∈ c.Ω) :
     (zJacobian c.ψ y).det ≠ 0
 := by exact ((Matrix.isUnit_iff_isUnit_det (zJacobian c.ψ y)).mp (c.ψ_jacobian_inv y hy)).ne_zero
+
+/-- For `y ∈ Ω`, the `z`-slice of `ψ` is globally smooth near `z = 0`. -/
+lemma CoordChangeAssumptions.psi_z_smoothAt
+    (c : CoordChangeAssumptions) (y : ℝ^m) (hy : y ∈ c.Ω) :
+    ContDiffAt ℝ ⊤ (fun z : ℝ^n => c.ψ (y, z)) 0
+:= by
+  have hopen : IsOpen (c.Ω ×ˢ (B (d := n) c.r1)) :=
+    c.Ω_open.prod (isOpen_B (d := n) c.r1)
+  have hmem : (y, (0 : ℝ^n)) ∈ c.Ω ×ˢ (B (d := n) c.r1) := by
+    refine ⟨hy, ?_⟩
+    simpa [B, BrendleHung.Section2.Multivar.norm] using c.r1_pos
+  have hψat : ContDiffAt ℝ ⊤ c.ψ (y, 0) :=
+    c.ψ_smooth.contDiffAt (hopen.mem_nhds hmem)
+  have hslice : SmoothGlobal (fun z : ℝ^n => (y, z)) := by fun_prop
+  exact hψat.comp 0 hslice.contDiffAt
 
 /-- An arbitrary choice of the Section 2 coordinate-change assumptions. -/
 axiom cca : CoordChangeAssumptions

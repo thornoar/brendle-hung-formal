@@ -121,7 +121,16 @@ axiom m : ℕ
 /-- Fixed dimension of the variable space `ℝ^n`. -/
 axiom n : ℕ
 
-notation "Smooth" => ContDiff ℝ (⊤ : WithTop ℕ∞)
+/-- Global smoothness, retained for proofs that genuinely need derivatives on
+all of an ambient vector space. -/
+notation "SmoothGlobal" => ContDiff ℝ (⊤ : WithTop ℕ∞)
+
+/-- Smoothness of a function only on a specified subset of its domain. -/
+abbrev SmoothOn {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (f : E → F) (s : Set E) : Prop
+:= ContDiffOn ℝ (⊤ : WithTop ℕ∞) f s
+
+notation "Smooth" f:67 " on " s:67 => SmoothOn f s
 
 -- A Lean-friendly `O(s^4)` assertion for
 -- `f(p,s) = f0(p) + s f1(p) + s² f2(p) + s³ f3(p) + O(s⁴)`.
@@ -141,7 +150,7 @@ def HasExpansion3 {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E] (ball : 
 -- The stronger form of the expansion assumption used for `u` in Section 2.
 def HasSmoothExpansion3 {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E] (ball : Set E) (a : ℝ) (f0 f1 f2 f3 : E -> ℝ) (f : E -> ℝ → ℝ) : Prop :=
   ∃ ρ : E × ℝ → ℝ,
-    Smooth ρ ∧
+    SmoothGlobal ρ ∧
     ∀ p s,
       p ∈ ball ->
       s ∈ segment a ->
@@ -192,7 +201,7 @@ theorem ineq_zero_deriv (f : ℝ^n -> ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σ
 
 /-- The Hessian at zero of such a function is positive definite. -/
 theorem ineq_pos_def (f : ℝ^n → ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σh : σ > 0) :
-  Smooth f ->
+  SmoothGlobal f ->
   f 0 = 0 →
   (∀ w : ℝ^n, w ∈ B r → f w ≥ σ * (norm w ^ 2)) →
   Matrix.PosDef (matrixOf $ diff2 f 0)
@@ -219,8 +228,8 @@ theorem ineq_pos_def (f : ℝ^n → ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σh 
 
   -- Slice f along the line t ↦ t v.
   let φ : ℝ → ℝ := fun t => f (t • v)
-  have hφSmooth : Smooth φ := by
-    have hlin : Smooth (fun t : ℝ => t • v) := by exact contDiff_id.smul contDiff_const
+  have hφSmooth : SmoothGlobal φ := by
+    have hlin : SmoothGlobal (fun t : ℝ => t • v) := by exact contDiff_id.smul contDiff_const
     exact hfSmooth.comp hlin
   have hφ0 : φ 0 = 0 := by simp [φ, fAtZero]
   have hφ1 : deriv φ 0 = 0 := by
