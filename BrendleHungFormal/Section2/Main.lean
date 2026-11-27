@@ -1,5 +1,6 @@
 import BrendleHungFormal.Section2.Multivar
 import Mathlib.Analysis.Calculus.ImplicitContDiff
+import Mathlib.Analysis.SpecialFunctions.SmoothTransition
 
 open Function (uncurry)
 open Filter
@@ -384,14 +385,134 @@ theorem expansion_of_U :
   have hs1_pos : 0 < s1 := by
     refine lt_min (by linarith [asm.hs0]) (lt_min one_pos ?_)
     exact div_pos (div_pos hboundary hBnd_pos) (by norm_num)
-  refine ⟨s1, hs1_pos, ?_⟩
+  refine ⟨s1 / 2, by linarith, ?_⟩
   unfold HasExpansion3
-  -- Algebraic remainder; smoothness and coefficient identification are proved below/in-progress.
-  let ρ : ℝ^m × ℝ → ℝ := fun (q, t) =>
+  let ρalg : ℝ^m × ℝ → ℝ := fun (q, t) =>
     if t = 0 then 0 else (bud.U q t - t ^ 2 * bud.U2 q - t ^ 3 * bud.U3 q) / t ^ 4
+  let a1 : ℝ := s1 / 2
+  let b1 : ℝ := 3 * s1 / 4
+  let ψ : ℝ → ℝ := fun t => 1 - Real.smoothTransition ((t ^ 2 - a1 ^ 2) / (b1 ^ 2 - a1 ^ 2))
+  let ρ : ℝ^m × ℝ → ℝ := fun (q, t) => ψ t * ρalg (q, t)
   refine ⟨ρ, ?_, ?_⟩
-  · -- Smoothness of the remainder requires Taylor expansion via the implicit-function minimizer.
-    sorry
+  · -- Smoothness of ρ = ψ * ρalg.
+    have hden_pos : 0 < b1 ^ 2 - a1 ^ 2 := by
+      have : 0 < s1 := hs1_pos
+      dsimp [a1, b1]; nlinarith [sq_nonneg s1]
+    have hψ_smooth : ContDiff ℝ (⊤ : WithTop ℕ∞) ψ := by
+      sorry
+    have hψ_support : ∀ t : ℝ, b1 ≤ |t| → ψ t = 0 := by
+      intro t ht
+      have hb1 : 0 ≤ b1 := by dsimp [b1]; linarith [hs1_pos.le]
+      have ht2 : b1 ^ 2 ≤ t ^ 2 := by
+        have : b1 ≤ |t| := ht
+        nlinarith [sq_abs t]
+      have harg : 1 ≤ (t ^ 2 - a1 ^ 2) / (b1 ^ 2 - a1 ^ 2) := by
+        rw [one_le_div hden_pos]
+        linarith
+      simp [ψ, Real.smoothTransition.one_of_one_le harg]
+    -- It suffices to show ρalg is smooth on ℝ^m × (-s1,s1).
+    suffices hρalg : ContDiffOn ℝ (⊤ : WithTop ℕ∞)
+        (fun qt : ℝ^m × ℝ => ρalg qt) (Set.univ ×ˢ Set.Ioo (-s1) s1) by
+      rw [show ρ = fun qt => ψ qt.2 * ρalg qt from rfl]
+      refine contDiff_iff_contDiffAt.mpr ?_
+      intro ⟨q, t⟩
+      by_cases ht : b1 < |t|
+      · -- ψ is locally zero
+        have hzero : ∀ᶠ qt : ℝ^m × ℝ in 𝓝 (q, t), ψ qt.2 * ρalg qt = 0 := by
+          have hopen : IsOpen {x : ℝ | b1 < |x|} := by
+            simpa using isOpen_lt continuous_const continuous_abs
+          filter_upwards [isOpen_univ.prod hopen |>.mem_nhds (by exact ⟨trivial, ht⟩ : (q,t) ∈ Set.univ ×ˢ _)] with qt hqt
+          simp [hψ_support qt.2 (le_of_lt hqt.2)]
+        exact (contDiffAt_const : ContDiffAt ℝ ⊤ (fun _ : ℝ^m × ℝ => (0:ℝ)) (q,t)).congr_of_eventuallyEq hzero
+      · -- |t| <= b1 < s1, so ρalg is smooth here and ψ is smooth
+        push Not at ht
+        have htI : (⟨q, t⟩ : ℝ^m × ℝ) ∈ Set.univ ×ˢ Set.Ioo (-s1) s1 := by
+          refine ⟨trivial, ?_⟩
+          have hb1_lt : b1 < s1 := by dsimp [b1]; linarith [hs1_pos]
+          rcases abs_le.mp ht with ⟨htl, htr⟩
+          constructor <;> linarith
+        have hopen : IsOpen (Set.univ ×ˢ Set.Ioo (-s1) s1 : Set (ℝ^m × ℝ)) :=
+          isOpen_univ.prod isOpen_Ioo
+        have hρalg_at : ContDiffAt ℝ (⊤ : WithTop ℕ∞) (fun qt : ℝ^m × ℝ => ρalg qt) (q, t) :=
+          hρalg.contDiffAt (hopen.mem_nhds htI)
+        have hψ_at : ContDiffAt ℝ (⊤ : WithTop ℕ∞) (fun qt : ℝ^m × ℝ => ψ qt.2) (q, t) :=
+          hψ_smooth.contDiffAt.comp (q, t) contDiffAt_snd
+        exact hψ_at.mul hρalg_at
+    -- Main task: ρalg is smooth on ℝ^m × (-s1, s1).
+    intro ⟨q, t⟩ hqt
+    rcases hqt with ⟨_, htIoo⟩
+    have htabs : |t| < s1 := abs_lt.mpr ⟨by linarith [htIoo.1], by linarith [htIoo.2]⟩
+    by_cases ht0 : t = 0
+    · -- t = 0: use Taylor expansion / IFT minimizer identity
+      subst ht0
+      -- ρalg(q,0) = 0 by definition. Smoothness at 0 requires Taylor remainder argument.
+      -- For now, use the algebraic structure: near (q,0), bud.U = u ∘ w* and coefficients vanish.
+      sorry
+    · -- t ≠ 0: ρalg is (bud.U - poly) / t^4.
+      have ht_ne : t ≠ 0 := ht0
+      have ht4_ne : t ^ 4 ≠ 0 := pow_ne_zero 4 ht_ne
+      have hU2 : ContDiffAt ℝ (⊤ : WithTop ℕ∞) (fun qt : ℝ^m × ℝ => bud.U2 qt.1) (q, t) := by sorry
+      have hU3 : ContDiffAt ℝ (⊤ : WithTop ℕ∞) (fun qt : ℝ^m × ℝ => bud.U3 qt.1) (q, t) := by sorry
+      have hpoly : ContDiffAt ℝ (⊤ : WithTop ℕ∞)
+          (fun qt : ℝ^m × ℝ => qt.2 ^ 2 * bud.U2 qt.1 + qt.2 ^ 3 * bud.U3 qt.1) (q, t) := by
+        refine ContDiffAt.add ?_ ?_
+        · exact (contDiffAt_snd.pow 2).mul hU2
+        · exact (contDiffAt_snd.pow 3).mul hU3
+      have ht4 : ContDiffAt ℝ (⊤ : WithTop ℕ∞) (fun qt : ℝ^m × ℝ => qt.2 ^ 4) (q, t) :=
+        contDiffAt_snd.pow 4
+      have hbud_smooth : ContDiffAt ℝ (⊤ : WithTop ℕ∞) (fun qt : ℝ^m × ℝ => bud.U qt.1 qt.2) (q, t) := by
+        by_cases hqD : q ∈ D (d := m) data.r0
+        · -- minimizer identity via IFT
+          have hqDb : inBounds q := hqD
+          -- IFT at (q,0)
+          let Fq : (ℝ^m × ℝ) × ℝ^n → ℝ^n := fun z => gradW z.1.1 z.2 z.1.2
+          have hFq_smooth : Smooth Fq := gradWParam_smooth
+          have hFq0 : Fq ((q, (0:ℝ)), (0:ℝ^n)) = 0 := by simpa [Fq] using gradW_zero q hqDb
+          have hFqderiv_w : HasFDerivAt (fun w : ℝ^n => Fq ((q, (0:ℝ)), w))
+              ((Matrix.toLin' (u0WW q 0)).toContinuousLinearMap) 0 := by
+            simpa [Fq] using hasFDerivAt_gradW_w q hqDb
+          have hInrq : fderiv ℝ Fq ((q, (0:ℝ)), (0:ℝ^n)) ∘L
+              ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)
+              = ((Matrix.toLin' (u0WW q 0)).toContinuousLinearMap) := by
+            have hcomp : fderiv ℝ (fun w : ℝ^n => Fq ((q, (0:ℝ)), w)) 0 =
+                fderiv ℝ Fq ((q, (0:ℝ)), (0:ℝ^n)) ∘L ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n) := by
+              have hlin : HasFDerivAt (fun w : ℝ^n => ((q, (0:ℝ)), w))
+                  (ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)) 0 :=
+                HasFDerivAt.prodMk (hasFDerivAt_const ((q, (0:ℝ)) : ℝ^m × ℝ) (0:ℝ^n)) (hasFDerivAt_id (0:ℝ^n))
+              have hFdiff : DifferentiableAt ℝ Fq ((q, (0:ℝ)), (0:ℝ^n)) :=
+                (hFq_smooth.differentiable (by simp)).differentiableAt
+              simpa [Function.comp] using (hFdiff.hasFDerivAt.comp (0:ℝ^n) hlin).fderiv
+            rw [← hcomp]; exact hFqderiv_w.fderiv
+          have hInvq : (fderiv ℝ Fq ((q, (0:ℝ)), (0:ℝ^n)) ∘L
+              ContinuousLinearMap.inr ℝ (ℝ^m × ℝ) (ℝ^n)).IsInvertible := by
+            rw [hInrq]
+            let e' : (Fin n → ℝ) ≃ₗ[ℝ] (Fin n → ℝ) :=
+              Matrix.toLinearEquiv (Pi.basisFun ℝ (Fin n)) (u0WW q 0) (((Matrix.isUnit_iff_isUnit_det _).mp (u0WWAtZero q hqDb).isUnit))
+            exact ⟨e'.toContinuousLinearEquiv, by ext x i; simp [e', Matrix.toLin_eq_toLin']⟩
+          have hIFTq := (hFq_smooth.contDiffAt : ContDiffAt ℝ (⊤ : WithTop ℕ∞) Fq ((q, (0:ℝ)), (0:ℝ^n)))
+          let wq : (ℝ^m × ℝ) → ℝ^n := hIFTq.implicitFunction (by simp) hInvq
+          have hwq_smooth : ContDiffAt ℝ (⊤ : WithTop ℕ∞) wq (q, (0:ℝ)) := by
+            simpa [wq] using hIFTq.contDiffAt_implicitFunction (by simp) hInvq
+          have hwq_self : wq (q, (0:ℝ)) = 0 := by
+            simpa [wq] using hIFTq.implicitFunction_apply_self (by simp) hInvq
+          have hwq_eq : ∀ᶠ x : ℝ^m × ℝ in 𝓝 (q, (0:ℝ)), Fq (x, wq x) = Fq ((q, (0:ℝ)), (0:ℝ^n)) := by
+            simpa [wq] using hIFTq.eventually_apply_implicitFunction (by simp) hInvq
+          -- bud.U equals u ∘ wq in a neighborhood of (q,0), hence smooth.
+          -- For (q,t) with |t|<s1, use minimizer identity.
+          sorry
+        · -- outside D r0: bud.U may not be smooth; this is a boundary case
+          sorry
+      have hnum : ContDiffAt ℝ (⊤ : WithTop ℕ∞)
+          (fun qt : ℝ^m × ℝ => bud.U qt.1 qt.2 - qt.2 ^ 2 * bud.U2 qt.1 - qt.2 ^ 3 * bud.U3 qt.1) (q, t) := by
+        convert hbud_smooth.sub hpoly using 1; ext qt; ring
+      have hdiv : ContDiffAt ℝ (⊤ : WithTop ℕ∞)
+          (fun qt : ℝ^m × ℝ => (bud.U qt.1 qt.2 - qt.2 ^ 2 * bud.U2 qt.1 - qt.2 ^ 3 * bud.U3 qt.1) / qt.2 ^ 4)
+          (q, t) := hnum.div ht4 ht4_ne
+      have heq : ∀ᶠ qt : ℝ^m × ℝ in 𝓝 (q, t),
+          ρalg qt = (bud.U qt.1 qt.2 - qt.2 ^ 2 * bud.U2 qt.1 - qt.2 ^ 3 * bud.U3 qt.1) / qt.2 ^ 4 := by
+        filter_upwards [continuous_snd.isOpen_preimage _ isOpen_ne |>.mem_nhds (show (q,t).2 ≠ 0 from ht_ne)] with qt hqt_ne
+        simp [ρalg, show qt.2 ≠ 0 from hqt_ne]
+      exact (hdiv.congr_of_eventuallyEq heq).contDiffWithinAt
   · intro p s hp hs
     have hplt : norm p < data.r0 := by simpa [B] using hp
     have hpD : inBounds p := by
@@ -459,8 +580,6 @@ theorem expansion_of_U :
       have hB0' : B (data.r0 / 2) ∈ 𝓝 (wStar (p, (0 : ℝ))) := by simpa [hwStar_self] using hB0
       simpa using hwStar_cont.preimage_mem_nhds hB0'
     -- Local minimizer identification: for small (q,s), wStar(q,s) is in D and minimizes u(q,·,s).
-    rcases (asm.uExp : HasExpansion3 (D data.r0 ×ˢ D data.r0) data.s0
-        (↓data.u0) (↓data.u1) (↓data.u2) (↓data.u3) (↓data.u)) with ⟨ρu, hρuSmooth, hρu⟩
     have hDcompact : IsCompact (D (d := n) data.r0) := by
       have hclosed : IsClosed (D (d := n) data.r0) := by
         simpa [D] using isClosed_le (normCont n) continuous_const
@@ -534,21 +653,44 @@ theorem expansion_of_U :
     have hKcompact : IsCompact (((D data.r0 ×ˢ D (d := n) data.r0) :
         Set (ℝ^m × ℝ^n)) ×ˢ BrendleHung.Section2.Multivar.segment data.s0) :=
       (hDcompact_m.prod hDcompact).prod hseg_compact
-    -- Bounds for perturbation terms on the compact domain.
-    have hρu_cont : Continuous ρu := hρuSmooth.continuous
-    have hKcompact' : IsCompact ((D (d := m) data.r0 ×ˢ D (d := n) data.r0) ×ˢ
-        BrendleHung.Section2.Multivar.segment data.s0) := hKcompact
-    obtain ⟨Mρ, hMρ⟩ := hKcompact'.exists_bound_of_continuousOn (hρu_cont.continuousOn)
-    -- Lower-order term bounds: u1, u2, u3 are continuous on D r0 × D r0.
-    have hDomCompact : IsCompact (D (d := m) data.r0 ×ˢ D (d := n) data.r0) :=
-      hDcompact_m.prod hDcompact
-    obtain ⟨M1, hM1⟩ := hDomCompact.exists_bound_of_continuousOn
-      (asm.u1Smooth.continuous.continuousOn : ContinuousOn (↓data.u1) (D (d := m) data.r0 ×ˢ D (d := n) data.r0))
-    obtain ⟨M2, hM2⟩ := hDomCompact.exists_bound_of_continuousOn
-      (asm.u2Smooth.continuous.continuousOn : ContinuousOn (↓data.u2) (D (d := m) data.r0 ×ˢ D (d := n) data.r0))
-    obtain ⟨M3, hM3⟩ := hDomCompact.exists_bound_of_continuousOn
-      (asm.u3Smooth.continuous.continuousOn : ContinuousOn (↓data.u3) (D (d := m) data.r0 ×ˢ D (d := n) data.r0))
-    -- Algebraic equality: ρ is defined as the exact remainder.
+    -- Use outer uniform bounds M1,M2,M3,Mρ for ρu0.
+    -- Boundary exclusion: for s in segment s1, minimizers of u(p,·,s) on D r0 lie in B(r0/2).
+    have hs1_le : s1 ≤ data.s0 / 2 := le_trans (min_le_left _ _) (le_refl _)
+    have hs_mem_s0 : s ∈ BrendleHung.Section2.Multivar.segment data.s0 := by
+      have hsabs : |s| ≤ s1 / 2 := by simpa [BrendleHung.Section2.Multivar.segment] using hs
+      simp only [BrendleHung.Section2.Multivar.segment, Set.mem_setOf_eq]
+      exact le_trans hsabs (le_trans (by linarith) (le_trans hs1_le (by linarith [asm.hs0])))
+    have hs_small : |s| ≤ asm.σ * data.r0 ^ 2 / 4 / Bnd / 2 := by
+      have : s1 ≤ asm.σ * data.r0 ^ 2 / 4 / Bnd / 2 :=
+        le_trans (min_le_right _ _) (min_le_right _ _)
+      have hsabs : |s| ≤ s1 / 2 := by simpa [BrendleHung.Section2.Multivar.segment] using hs
+      linarith
+    have hs_le_one : |s| ≤ 1 := by
+      have : s1 ≤ 1 := le_trans (min_le_right _ _) (min_le_left _ _)
+      have hsabs : |s| ≤ s1 / 2 := by simpa [BrendleHung.Section2.Multivar.segment] using hs
+      linarith
+    have hboundary_excl : ∀ w : ℝ^n, w ∈ D (d := n) data.r0 → data.r0 / 2 ≤ norm w →
+        data.u p 0 s < data.u p w s := by
+      sorry
+
+    -- Existence of a minimizer on the compact D r0.
+    have hcont_u : ContinuousOn (fun w : ℝ^n => data.u p w s) (D (d := n) data.r0) := by
+      have : Continuous (fun w : ℝ^n => data.u p w s) := by
+        have h := asm.uSmooth.continuous
+        exact h.comp (continuous_const.prodMk (continuous_id.prodMk continuous_const))
+      exact this.continuousOn
+    have hDne : (D (d := n) data.r0).Nonempty := ⟨0, by simp [D, BrendleHung.Section2.Multivar.norm, asm.hr0.le]⟩
+    obtain ⟨w0, hw0D, hw0min⟩ := hDcompact.exists_isMinOn hDne hcont_u
+    -- Algebraic equality: ρ = ρalg on segment (s1/2).
+    have hψ1 : ψ s = 1 := by
+      have hsabs : |s| ≤ a1 := by simpa [BrendleHung.Section2.Multivar.segment, a1] using hs
+      have hs2 : s ^ 2 ≤ a1 ^ 2 := by nlinarith [abs_le.mp hsabs]
+      have hden : 0 < b1 ^ 2 - a1 ^ 2 := by
+        have : 0 < s1 := hs1_pos
+        dsimp [a1, b1]; nlinarith [sq_nonneg s1]
+      have harg : (s ^ 2 - a1 ^ 2) / (b1 ^ 2 - a1 ^ 2) ≤ 0 :=
+        div_nonpos_of_nonpos_of_nonneg (by linarith) (le_of_lt hden)
+      simp [ψ, Real.smoothTransition.zero_of_nonpos harg]
     by_cases hsz : s = 0
     · subst hsz
       have hU0 : bud.U p 0 = 0 := by
@@ -574,9 +716,11 @@ theorem expansion_of_U :
           rw [data_u_zero p hpD (w : ℝ^n) hwD]
           exact le_trans (by nlinarith [asm.hσ, sq_nonneg (norm (w : ℝ^n))])
             (asm.u0Quadratic p (w : ℝ^n) hpD hwD)
-      simp [ρ, hU0]
+      simp [ρ, ρalg, ψ, hU0]
     · have hs4 : s ^ 4 ≠ 0 := pow_ne_zero 4 hsz
-      simp only [ρ, hsz, ↓reduceIte]
+      have hρeq : ρ (p, s) = ρalg (p, s) := by simp [ρ, hψ1]
+      rw [hρeq]
+      simp only [ρalg, hsz, ↓reduceIte]
       field_simp [hs4]
       ring_nf
       simp
