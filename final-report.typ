@@ -28,5 +28,10 @@ The round sphere $SS^2$ has a constant Gauss curvature of 1, and one can easily 
 However, it vanishes for tangent planes that combine vectors from the tangent spaces of both $SS^2$ factors.
 A natural question (posed by Hopf) is whether a metric exists on $SS^2 times SS^2$ whose sectional curvature is strictly positive for all tangent 2-planes. Brendle and Hung (2026) have answered this question in the positive.
 
-The paper is structured as follows:
-/ Section 2: 
+The paper is divided into the following logical parts:
+- An abstract framework concerned with an arbitrary smooth function $u : overline(B^m_(r_0)) times overline(B^n_(r_0)) times [-s_0, s_0] -> RR$, where the authors develop tools to guarantee, under certain conditions, that the minimum
+  $
+    f(s) = min_(y in A) min_(w in overline(B^n_(r_0))) u(y, w, s)
+  $
+  is positive for sufficiently small $s$, where $A$ is a suitable compact subset of $overline(B^m_(r_0))$.
+- 

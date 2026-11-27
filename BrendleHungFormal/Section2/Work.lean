@@ -2957,6 +2957,136 @@ lemma zD2_v1_prod (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
     (upsilon_z_smoothAt y hy) (u1B_smoothAt y hy) α β
   simpa [zD1, zD2, u1B_zero y hy] using h
 
+/-- The uncurried second-order coefficient `u2` on the product space. -/
+abbrev u2Prod (q : ℝ^m × ℝ^n) : ℝ := asm.u2 q.1 q.2
+
+/-- First derivative of `u2Prod`. -/
+abbrev u2D1 (q : ℝ^m × ℝ^n) : (ℝ^m × ℝ^n) →L[ℝ] ℝ := fderiv ℝ u2Prod q
+
+/-- The coordinate `x^i` derivative of `u2` at fixed `w = 0`. -/
+abbrev u2X (x : ℝ^m) (i : Fin m) : ℝ :=
+  fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) x (e i)
+
+/-- Smoothness of the product-space version of `u2`. -/
+lemma u2Prod_smooth : SmoothGlobal u2Prod := by
+  simpa [u2Prod] using asm.u2Smooth
+
+/-- The derivative of `u2Prod` in a pure `w` direction is the `w`-derivative of `u2`. -/
+lemma u2D1_snd (x : ℝ^m) (w v : ℝ^n) :
+    u2D1 (x, w) (0, v) = diff (asm.u2 x) w v := by
+  have hG : DifferentiableAt ℝ (fun w' : ℝ^n => (x, w')) w := by fun_prop
+  have hU : DifferentiableAt ℝ u2Prod (x, w) := u2Prod_smooth.differentiable (by simp) _
+  have hGderiv : fderiv ℝ (fun w' : ℝ^n => (x, w')) w =
+      ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_right x w).fderiv
+  have hEq : fderiv ℝ (fun w' : ℝ^n => u2Prod (x, w')) w =
+      u2D1 (x, w) ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := by
+    simpa [u2D1, hGderiv] using fderiv_comp' w hU hG
+  have hSlice : (fun w' : ℝ^n => u2Prod (x, w')) = (fun w' : ℝ^n => asm.u2 x w') := rfl
+  rw [hSlice] at hEq
+  simpa using (congrArg (fun L : ℝ^n →L[ℝ] ℝ => L v) hEq).symm
+
+/-- The derivative of `u2Prod` in a pure `x` direction is the fixed-`w` derivative of `u2`. -/
+lemma u2D1_fst (x v : ℝ^m) (w : ℝ^n) :
+    u2D1 (x, w) (v, 0) = fderiv ℝ (fun x' : ℝ^m => asm.u2 x' w) x v := by
+  have hG : DifferentiableAt ℝ (fun x' : ℝ^m => (x', w)) x := by fun_prop
+  have hU : DifferentiableAt ℝ u2Prod (x, w) := u2Prod_smooth.differentiable (by simp) _
+  have hGderiv : fderiv ℝ (fun x' : ℝ^m => (x', w)) x =
+      ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_left x w).fderiv
+  have hEq : fderiv ℝ (fun x' : ℝ^m => u2Prod (x', w)) x =
+      u2D1 (x, w) ∘L ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := by
+    simpa [u2D1, hGderiv] using fderiv_comp' x hU hG
+  have hSlice : (fun x' : ℝ^m => u2Prod (x', w)) = (fun x' : ℝ^m => asm.u2 x' w) := rfl
+  rw [hSlice] at hEq
+  simpa using (congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hEq).symm
+
+/-- The first derivative of `u2Prod` splits into pure `x` and `w` parts. -/
+lemma u2D1_split (q : ℝ^m × ℝ^n) (v : ℝ^m × ℝ^n) :
+    u2D1 q v = u2D1 q (v.1, 0) + u2D1 q (0, v.2) := by
+  conv_lhs => rw [← prod_vec_split v]
+  rw [map_add]
+
+/-- The first derivative of `u2Prod` at `(y,0)` has an `x` and a `w` contribution. -/
+lemma u2D1_at_zero (y : ℝ^m) (v : ℝ^m × ℝ^n) :
+    u2D1 (y, 0) v =
+      (∑ β : Fin n, u2W y 0 (e β) * v.2 β) +
+        fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) y v.1 := by
+  calc
+    u2D1 (y, 0) v = u2D1 (y, 0) (v.1, 0) + u2D1 (y, 0) (0, v.2) :=
+      u2D1_split (y, 0) v
+    _ = fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) y v.1
+          + diff (asm.u2 y) 0 v.2 := by rw [u2D1_fst, u2D1_snd]
+    _ = (∑ β : Fin n, u2W y 0 (e β) * v.2 β) +
+          fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) y v.1 := by
+      have h := clm_apply_eq_sum_basis (diff (asm.u2 y) 0) v.2
+      have hsum : (∑ β : Fin n, u2W y 0 (e β) * v.2 β) =
+          diff (asm.u2 y) 0 v.2 := by
+        simpa [u2W, mul_comm] using h.symm
+      rw [hsum]
+      ring
+
+/-- Expand a continuous linear functional on `ℝ^m` in the standard basis. -/
+lemma clm_apply_eq_sum_basis_m (L : ℝ^m →L[ℝ] ℝ) (v : ℝ^m) :
+    L v = ∑ i : Fin m, v i * L (e i) := by
+  have hv : v = ∑ i : Fin m, v i • e i := pi_sum_basis v
+  rw [hv]
+  simp [e, Finset.sum_apply, Pi.single_apply, Finset.mem_univ, map_sum, map_smul,
+    smul_eq_mul]
+
+/-- Expand a derivative of `u2(·,0)` in the standard basis of `ℝ^m`. -/
+lemma u2X_sum_basis (y : ℝ^m) (v : ℝ^m) :
+    fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) y v =
+      ∑ i : Fin m, u2X y i * v i := by
+  have h := clm_apply_eq_sum_basis_m (fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) y) v
+  simpa [u2X, mul_comm] using h
+
+/-- The derivative of `u2Prod ∘ G` in the direction `e α`. -/
+lemma zD1_u2_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
+    (hG : ContDiffAt ℝ ⊤ G z) (α : Fin n) :
+    fderiv ℝ (fun z' : ℝ^n => u2Prod (G z')) z (e α) =
+      u2D1 (G z) (fderiv ℝ G z (e α)) := by
+  have hU : DifferentiableAt ℝ u2Prod (G z) := u2Prod_smooth.differentiable (by simp) _
+  have hGd : DifferentiableAt ℝ G z := hG.differentiableAt (by simp)
+  have hcomp := fderiv_comp' z hU hGd
+  simpa [u2D1] using congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e α)) hcomp
+
+/-- The `u2` factor of `v2` after the coordinate change. -/
+abbrev u2B (y : ℝ^m) (z : ℝ^n) : ℝ := u2Prod (coordG y z)
+
+/-- Smoothness at `z=0` of the `u2` factor `u2B y`. -/
+lemma u2B_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    ContDiffAt ℝ ⊤ (u2B y) 0 := by
+  simpa [u2B, Function.comp_def] using
+    u2Prod_smooth.contDiffAt.comp 0 (coordG_smoothAt y hy)
+
+/-- The factor `u2B y` specializes to `u2(y,0)` at `z=0`. -/
+lemma u2B_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : u2B y 0 = asm.u2 y 0 := by
+  rw [u2B, coordG_zero y hy]
+
+/-- The first `z`-derivative of `u2B y` at zero. -/
+lemma zD1_u2B (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    zD1 (u2B y) α = u2D1 (y, 0) (dG (coordG y) 0 α) := by
+  calc
+    zD1 (u2B y) α = u2D1 (coordG y 0) (dG (coordG y) 0 α) := by
+      simpa [u2B, zD1] using zD1_u2_comp_at (coordG y) 0 (coordG_smoothAt y hy) α
+    _ = u2D1 (y, 0) (dG (coordG y) 0 α) := by rw [coordG_zero y hy]
+
+/-- The first `z`-derivative of `u2B` in the coordinate basis. -/
+lemma zD1_u2B_expanded (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    zD1 (u2B y) α =
+      (∑ β : Fin n, u2W y 0 (e β) * zD1 (ψc y) α β) +
+      (∑ i : Fin m, u2X y i * zD1 (φc y) α i) := by
+  rw [zD1_u2B y hy α, u2D1_at_zero y (dG (coordG y) 0 α),
+    u2X_sum_basis y (dG (coordG y) 0 α).1]
+  simp_rw [dG_coordG_fst y hy, dG_coordG_snd y hy]
+
+/-- Product-rule formula for the first `z`-derivative of `v2`. -/
+lemma zD1_v2_prod (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    zD1 (ccd.v2 y) α =
+      Υc y 0 * zD1 (u2B y) α + zD1 (Υc y) α * u2B y 0 := by
+  change zD1 (fun z : ℝ^n => Υc y z * u2B y z) α = _
+  simpa [zD1] using zD1_mul_at (Υc y) (u2B y) 0
+    (upsilon_z_smoothAt y hy) (u2B_smoothAt y hy) α
+
 end
 
 end Section2

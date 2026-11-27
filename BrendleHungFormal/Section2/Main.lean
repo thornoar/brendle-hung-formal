@@ -335,6 +335,24 @@ lemma zD2_v1 (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
   simp only [mul_add, Finset.mul_sum, v1S]
   abel
 
+/-- The value of `v2` at `z=0`. -/
+lemma v2_zero (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    ccd.v2 y 0 = Υc y 0 * asm.u2 y 0 := by
+  change Υc y 0 * u2B y 0 = Υc y 0 * asm.u2 y 0
+  rw [u2B_zero y hy]
+
+/-- The first `z`-derivative formula for `v2` at zero. -/
+lemma zD1_v2 (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    zD1 (ccd.v2 y) α =
+      (∑ β : Fin n,
+        Υc y 0 * u2W y 0 (e β) * zD1 (ψc y) α β) +
+      (∑ i : Fin m,
+        Υc y 0 * u2X y i * zD1 (φc y) α i) +
+      zD1 (Υc y) α * asm.u2 y 0
+:= by
+  rw [zD1_v2_prod y hy α, zD1_u2B_expanded y hy α, u2B_zero y hy]
+  simp only [mul_add, Finset.mul_sum, mul_assoc]
+
 end
 
 end Section2
