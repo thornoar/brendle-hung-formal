@@ -353,6 +353,11 @@ lemma zD1_v2 (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
   rw [zD1_v2_prod y hy α, zD1_u2B_expanded y hy α, u2B_zero y hy]
   simp only [mul_add, Finset.mul_sum, mul_assoc]
 
+/-- The relation between `bar w` and `bar z`: applying the `ψ` Jacobian to `bar z` gives `bar w`. -/
+lemma relation_barw_barz (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    ∑ β : Fin n, zD1 (ψc y) β α * barz y β = bud.barw y α
+:= by exact barz_spec y hy α
+
 end
 
 end Section2

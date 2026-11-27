@@ -1,6 +1,7 @@
 import BrendleHungFormal.Section2.Multivar
 import BrendleHungFormal.Section2.TaylorAsymptotics
 import BrendleHungFormal.Section2.Definitions
+import Mathlib.Data.Real.StarOrdered
 import Mathlib.Analysis.Calculus.ImplicitContDiff
 import Mathlib.Analysis.SpecialFunctions.SmoothTransition
 
@@ -3086,6 +3087,261 @@ lemma zD1_v2_prod (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
   change zD1 (fun z : ℝ^n => Υc y z * u2B y z) α = _
   simpa [zD1] using zD1_mul_at (Υc y) (u2B y) 0
     (upsilon_z_smoothAt y hy) (u2B_smoothAt y hy) α
+
+/-- The Hessian matrix of `v0` in the `z` variables at zero. -/
+abbrev v0Hessian (y : ℝ^m) : Matrix (Fin n) (Fin n) ℝ :=
+  Matrix.of fun α β => zD2 (ccd.v0 y) α β
+
+/-- Coordinate expansion of the second `z`-derivative of `v0` at zero. -/
+lemma zD2_v0_expanded (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
+    zD2 (ccd.v0 y) α β =
+      ∑ γ : Fin n, ∑ δ : Fin n,
+        Υc y 0 * u0WW y 0 γ δ *
+          zD1 (ψc y) α γ * zD1 (ψc y) β δ := by
+  rw [zD2_v0_prod y hy α β, zD2_v0B_expanded y hy α β]
+  simp [Finset.mul_sum, mul_assoc, mul_comm, mul_left_comm]
+
+/-- Smoothness in `y` of one entry of the `z`-Jacobian of `ψ` at `z=0`. -/
+lemma psi_z_entry_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) (β α : Fin n) :
+    ContDiffAt ℝ ⊤ (fun y' : ℝ^m => zJacobian cca.ψ y' β α) y := by
+  have hopen : IsOpen (cca.Ω ×ˢ (B (d := n) cca.r1)) :=
+    cca.Ω_open.prod (isOpen_B (d := n) cca.r1)
+  have hmem : (y, (0 : ℝ^n)) ∈ cca.Ω ×ˢ (B (d := n) cca.r1) := by
+    refine ⟨hy, ?_⟩
+    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
+  have hψat : ContDiffAt ℝ ⊤ cca.ψ (y, 0) :=
+    cca.ψ_smooth.contDiffAt (hopen.mem_nhds hmem)
+  have hcoord : ContDiffAt ℝ ⊤ (fun q : ℝ^m × ℝ^n => cca.ψ q β) (y, 0) :=
+    (contDiffAt_apply (𝕜 := ℝ) (E := ℝ) (n := ⊤) β (cca.ψ (y, 0))).comp (y, 0) hψat
+  have hcurried : ContDiffAt ℝ ⊤
+      (Function.uncurry (fun y' : ℝ^m => fun z : ℝ^n => cca.ψ (y', z) β)) (y, 0) := by
+    simpa [Function.uncurry_def] using hcoord
+  have hfd : ContDiffAt ℝ ⊤
+      (fun y' : ℝ^m => fderiv ℝ (fun z : ℝ^n => cca.ψ (y', z) β) (0 : ℝ^n)) y := by
+    exact ContDiffAt.fderiv (f := fun y' : ℝ^m => fun z : ℝ^n => cca.ψ (y', z) β)
+      hcurried (g := fun _ : ℝ^m => (0 : ℝ^n)) contDiffAt_const (by simp)
+  simpa [zJacobian] using hfd.clm_apply (contDiffAt_const (c := e α))
+
+/-- The `z`-Jacobian entry of `ψ` agrees with the coordinate of its `zD1`. -/
+lemma zJacobian_psi_apply (y : ℝ^m) (hy : y ∈ cca.Ω) (β α : Fin n) :
+    zJacobian cca.ψ y β α = zD1 (ψc y) α β := by
+  have hψd : DifferentiableAt ℝ (ψc y) 0 :=
+    (CoordChangeAssumptions.psi_z_smoothAt y hy).differentiableAt (by simp)
+  have hcomp := fderiv_comp (𝕜 := ℝ) (x := (0 : ℝ^n))
+    (f := ψc y) (g := fun v : ℝ^n => v β)
+    ((contDiffAt_apply (𝕜 := ℝ) (E := ℝ) (n := ⊤) β (ψc y 0)).differentiableAt (by simp)) hψd
+  have hcoordFd : fderiv ℝ (fun v : ℝ^n => v β) (ψc y 0) =
+      ContinuousLinearMap.proj β :=
+    (hasFDerivAt_apply (𝕜 := ℝ) β (ψc y 0)).fderiv
+  have hval := congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e α)) hcomp
+  rw [hcoordFd] at hval
+  simpa [zJacobian, ψc, zD1, Function.comp_def, ContinuousLinearMap.proj_apply] using hval
+
+/-- The `z`-Jacobian of `ψ` as a continuous linear map. -/
+noncomputable abbrev psiJacLin (y : ℝ^m) : ℝ^n →L[ℝ] ℝ^n :=
+  (Matrix.toLin' (zJacobian cca.ψ y)).toContinuousLinearMap
+
+/-- Smoothness in `y` of the `z`-Jacobian of `ψ` at `z=0`. -/
+lemma psiJacLin_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    ContDiffAt ℝ ⊤ psiJacLin y := by
+  have hOn : ContDiffOn ℝ ⊤ psiJacLin cca.Ω := by
+    rw [contDiffOn_clm_apply]
+    intro z y' hy'
+    have hentry (β α : Fin n) : ContDiffWithinAt ℝ ⊤
+        (fun y'' : ℝ^m => zJacobian cca.ψ y'' β α) cca.Ω y' :=
+      (psi_z_entry_smoothAt y' hy' β α).contDiffWithinAt
+    have hsum : ContDiffWithinAt ℝ ⊤
+        (fun y'' : ℝ^m => fun β : Fin n =>
+          ∑ α : Fin n, zJacobian cca.ψ y'' β α * z α) cca.Ω y' := by
+      rw [contDiffWithinAt_pi]
+      intro β
+      exact ContDiffWithinAt.sum (s := Finset.univ) (fun α _ =>
+        (hentry β α).mul contDiffWithinAt_const)
+    simpa [psiJacLin, Matrix.toLin'_apply, Matrix.mulVec, dotProduct] using hsum
+  exact hOn.contDiffAt (cca.Ω_open.mem_nhds hy)
+
+/-- The `z`-Jacobian of `ψ` is invertible on `Ω`. -/
+lemma psiJac_isInvertible (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    (psiJacLin y).IsInvertible := by
+  classical
+  have hunitMat : IsUnit (zJacobian cca.ψ y) := cca.ψ_jacobian_inv y hy
+  have hunitDet : IsUnit (zJacobian cca.ψ y).det :=
+    (Matrix.isUnit_iff_isUnit_det (zJacobian cca.ψ y)).mp hunitMat
+  let eLin : ℝ^n ≃ₗ[ℝ] ℝ^n :=
+    (zJacobian cca.ψ y).toLinearEquiv (Pi.basisFun ℝ (Fin n)) hunitDet
+  refine ⟨eLin.toContinuousLinearEquiv, ?_⟩
+  ext v i
+  simp [psiJacLin, eLin, Matrix.toLin_eq_toLin', Matrix.toLin'_apply]
+
+/-- The Jacobian characterization of `bar z`, used as an intermediate result. -/
+noncomputable def barzViaPsi (y : ℝ^m) : ℝ^n := (psiJacLin y).inverse (bud.barw y)
+
+/-- Smoothness of the Jacobian characterization of `bar z` on `Ω`. -/
+lemma barzViaPsi_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) : ContDiffAt ℝ ⊤ barzViaPsi y := by
+  have hInv : ContDiffAt ℝ ⊤ (fun y' : ℝ^m => (psiJacLin y').inverse) y :=
+    (psiJac_isInvertible y hy).contDiffAt_map_inverse.comp y (psiJacLin_smoothAt y hy)
+  have hVec : ContDiffAt ℝ ⊤ (fun y' : ℝ^m => bud.barw y') y :=
+    barw_contDiffAt y (B_subset_D (cca.Ω_subset_B hy))
+  simpa [barzViaPsi] using hInv.clm_apply hVec
+
+/-- The Jacobian relation for the intermediate vector. -/
+lemma barzViaPsi_spec (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    ∑ β : Fin n, zD1 (ψc y) β α * barzViaPsi y β = bud.barw y α := by
+  have hlin := (psiJac_isInvertible y hy).self_apply_inverse (bud.barw y)
+  have h := congrFun hlin α
+  simpa [barzViaPsi, psiJacLin, Matrix.toLin'_apply, Matrix.mulVec, dotProduct,
+    zJacobian_psi_apply y hy] using h
+
+/-- The Hessian of `v0` is the positive `Υ(y,0)` multiple of a congruence of the positive Hessian of `u0`. -/
+lemma v0Hessian_eq (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    v0Hessian y = Υc y 0 • ((zJacobian cca.ψ y)ᴴ * u0WW y 0 * zJacobian cca.ψ y) := by
+  ext α β
+  change zD2 (ccd.v0 y) α β =
+    Υc y 0 * ((zJacobian cca.ψ y)ᴴ * u0WW y 0 * zJacobian cca.ψ y) α β
+  rw [zD2_v0_expanded y hy α β]
+  have hR : Υc y 0 * ((zJacobian cca.ψ y)ᴴ * u0WW y 0 * zJacobian cca.ψ y) α β =
+      ∑ δ : Fin n, ∑ γ : Fin n,
+        Υc y 0 * u0WW y 0 γ δ * zD1 (ψc y) α γ * zD1 (ψc y) β δ := by
+    simp only [Matrix.mul_apply, Matrix.conjTranspose_apply, star_trivial]
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro δ _
+    rw [Finset.sum_mul, Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro γ _
+    rw [zJacobian_psi_apply y hy γ α, zJacobian_psi_apply y hy δ β]
+    ring
+  conv_lhs => rw [Finset.sum_comm]
+  exact hR.symm
+
+/-- The Hessian of `v0` in the `z` variables is positive definite. -/
+lemma v0Hessian_posDef (y : ℝ^m) (hy : y ∈ cca.Ω) : (v0Hessian y).PosDef := by
+  classical
+  have hz : (0 : ℝ^n) ∈ B (d := n) cca.r1 := by
+    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
+  have hΥpos : 0 < Υc y 0 := cca.Υ_pos y 0 hy hz
+  have hJunit : IsUnit (zJacobian cca.ψ y) := cca.ψ_jacobian_inv y hy
+  have hJinj : Function.Injective (zJacobian cca.ψ y).mulVec :=
+    Matrix.mulVec_injective_of_isUnit hJunit
+  have hcong : ((zJacobian cca.ψ y)ᴴ * u0WW y 0 * zJacobian cca.ψ y).PosDef :=
+    (u0WWAtZero y (B_subset_D (cca.Ω_subset_B hy))).conjTranspose_mul_mul_same hJinj
+  have hscaled : (Υc y 0 • ((zJacobian cca.ψ y)ᴴ * u0WW y 0 * zJacobian cca.ψ y)).PosDef := by
+    refine Matrix.PosDef.of_dotProduct_mulVec_pos
+      (hcong.isHermitian.smul (IsSelfAdjoint.of_nonneg hΥpos.le)) ?_
+    intro x hx
+    simpa [Matrix.smul_mulVec, dotProduct_smul, smul_eq_mul] using
+      mul_pos hΥpos (hcong.dotProduct_mulVec_pos hx)
+  rw [v0Hessian_eq y hy]
+  exact hscaled
+
+/-- Swap the last two summations of a triple finite sum. -/
+lemma sum_swap₃ (f : Fin n → Fin n → Fin n → ℝ) :
+    (∑ β : Fin n, ∑ γ : Fin n, ∑ δ : Fin n, f β γ δ) =
+      ∑ γ : Fin n, ∑ δ : Fin n, ∑ β : Fin n, f β γ δ := by
+  rw [Finset.sum_comm]
+  apply Finset.sum_congr rfl
+  intro γ _
+  rw [Finset.sum_comm]
+
+/-- The defining equation for the Jacobian characterization of `bar z`. -/
+lemma barzViaPsi_defining_equation (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    ∑ β : Fin n, zD2 (ccd.v0 y) α β * barzViaPsi y β = - zD1 (ccd.v1 y) α := by
+  classical
+  have hbarw := barw_spec y (B_subset_D (cca.Ω_subset_B hy))
+  have hrow (γ : Fin n) : ∑ δ : Fin n, u0WW y 0 γ δ * bud.barw y δ =
+      - u1W y 0 (e γ) := by
+    simpa [Matrix.mulVec, dotProduct] using congrFun hbarw γ
+  calc
+    ∑ β : Fin n, zD2 (ccd.v0 y) α β * barzViaPsi y β
+        = ∑ β : Fin n, (∑ γ : Fin n, ∑ δ : Fin n,
+            Υc y 0 * u0WW y 0 γ δ *
+              zD1 (ψc y) α γ * zD1 (ψc y) β δ) * barzViaPsi y β := by
+          simp_rw [zD2_v0_expanded y hy α]
+    _ = ∑ γ : Fin n, ∑ δ : Fin n,
+          (Υc y 0 * u0WW y 0 γ δ * zD1 (ψc y) α γ) *
+            (∑ β : Fin n, zD1 (ψc y) β δ * barzViaPsi y β) := by
+          simp_rw [Finset.sum_mul]
+          rw [sum_swap₃]
+          apply Finset.sum_congr rfl
+          intro γ _
+          apply Finset.sum_congr rfl
+          intro δ _
+          rw [Finset.mul_sum]
+          apply Finset.sum_congr rfl
+          intro β _
+          ring
+    _ = ∑ γ : Fin n, ∑ δ : Fin n,
+          (Υc y 0 * u0WW y 0 γ δ * zD1 (ψc y) α γ) * bud.barw y δ := by
+          simp_rw [barzViaPsi_spec y hy]
+    _ = ∑ γ : Fin n, Υc y 0 * zD1 (ψc y) α γ *
+          (∑ δ : Fin n, u0WW y 0 γ δ * bud.barw y δ) := by
+          apply Finset.sum_congr rfl
+          intro γ _
+          rw [Finset.mul_sum]
+          apply Finset.sum_congr rfl
+          intro δ _
+          ring
+    _ = ∑ γ : Fin n, Υc y 0 * zD1 (ψc y) α γ * (- u1W y 0 (e γ)) := by
+          simp_rw [hrow]
+    _ = -(∑ γ : Fin n, Υc y 0 * u1W y 0 (e γ) * zD1 (ψc y) α γ) := by
+          rw [← Finset.sum_neg_distrib]
+          apply Finset.sum_congr rfl
+          intro γ _
+          ring
+    _ = - zD1 (ccd.v1 y) α := by
+          rw [zD1_v1_prod y hy α, u1B_zero y hy, zD1_u1B_expanded y hy α]
+          simp [Finset.mul_sum, mul_assoc, mul_comm]
+
+/-- The Hessian of `v0` as a continuous linear map. -/
+noncomputable abbrev v0HessianLin (y : ℝ^m) : ℝ^n →L[ℝ] ℝ^n :=
+  (Matrix.toLin' (v0Hessian y)).toContinuousLinearMap
+
+/-- The `z`-gradient of `v1` at zero as a vector. -/
+abbrev v1GradVec (y : ℝ^m) : ℝ^n := fun α : Fin n => zD1 (ccd.v1 y) α
+
+/-- The `v0` Hessian is invertible on `Ω`. -/
+lemma v0HessianLin_isInvertible (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    (v0HessianLin y).IsInvertible := by
+  classical
+  have hunitMat : IsUnit (v0Hessian y) := (v0Hessian_posDef y hy).isUnit
+  have hunitDet : IsUnit (v0Hessian y).det :=
+    (Matrix.isUnit_iff_isUnit_det (v0Hessian y)).mp hunitMat
+  let eLin : ℝ^n ≃ₗ[ℝ] ℝ^n :=
+    (v0Hessian y).toLinearEquiv (Pi.basisFun ℝ (Fin n)) hunitDet
+  refine ⟨eLin.toContinuousLinearEquiv, ?_⟩
+  ext v i
+  simp [v0HessianLin, eLin, Matrix.toLin_eq_toLin', Matrix.toLin'_apply]
+
+/-- The reduced `z`-direction as defined in the paper. -/
+noncomputable def barz (y : ℝ^m) : ℝ^n := (v0HessianLin y).inverse (-v1GradVec y)
+
+/-- The paper's `bar z` agrees with the Jacobian characterization on `Ω`. -/
+lemma barz_eq_barzViaPsi (y : ℝ^m) (hy : y ∈ cca.Ω) : barz y = barzViaPsi y := by
+  have hinv := v0HessianLin_isInvertible y hy
+  have hvec : v0HessianLin y (barzViaPsi y) = -v1GradVec y := by
+    ext α
+    simpa [v0HessianLin, v1GradVec, v0Hessian, Matrix.toLin'_apply,
+      Matrix.mulVec, dotProduct] using barzViaPsi_defining_equation y hy α
+  simpa [barz] using hinv.inverse_apply_eq.mpr hvec.symm
+
+/-- Smoothness of the paper's `bar z` on `Ω`. -/
+lemma barz_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) : ContDiffAt ℝ ⊤ barz y := by
+  have hEq : barz =ᶠ[𝓝 y] barzViaPsi := by
+    filter_upwards [cca.Ω_open.mem_nhds hy] with y' hy'
+    exact barz_eq_barzViaPsi y' hy'
+  exact (barzViaPsi_smoothAt y hy).congr_of_eventuallyEq hEq
+
+/-- The defining equation for the paper's `bar z`. -/
+lemma barz_defining_equation (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    ∑ β : Fin n, zD2 (ccd.v0 y) α β * barz y β = - zD1 (ccd.v1 y) α := by
+  rw [barz_eq_barzViaPsi y hy]
+  exact barzViaPsi_defining_equation y hy α
+
+/-- The relation `J barz = barw` in coordinates. -/
+lemma barz_spec (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
+    ∑ β : Fin n, zD1 (ψc y) β α * barz y β = bud.barw y α := by
+  rw [barz_eq_barzViaPsi y hy]
+  exact barzViaPsi_spec y hy α
 
 end
 
