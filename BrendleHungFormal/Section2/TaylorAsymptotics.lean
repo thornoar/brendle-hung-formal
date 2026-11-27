@@ -525,22 +525,19 @@ lemma trilinear_leading_isBigO
   have hRRb4 : (fun s : ℝ => T (R s) (R s) b) =O[𝓝 0] (fun s : ℝ => s ^ 4) := by
     exact (isBigO_bilinear_apply Tthird hR hR).congr
       (fun s => by simp [Tthird, ContinuousLinearMap.flip_apply]) (fun s => by ring)
-  have hbRR5 : (fun s : ℝ => s * T b (R s) (R s)) =O[𝓝 0] (fun s : ℝ => s ^ 5) := by
-    simpa using isBigO_mul_pow_of_isBigO_pow hbRR4 1
-  have hRbR5 : (fun s : ℝ => s * T (R s) b (R s)) =O[𝓝 0] (fun s : ℝ => s ^ 5) := by
-    simpa using isBigO_mul_pow_of_isBigO_pow hRbR4 1
-  have hRRb5 : (fun s : ℝ => s * T (R s) (R s) b) =O[𝓝 0] (fun s : ℝ => s ^ 5) := by
-    simpa using isBigO_mul_pow_of_isBigO_pow hRRb4 1
-  have hbRR4' : (fun s : ℝ => s * T b (R s) (R s)) =O[𝓝 0] (fun s : ℝ => s ^ 4) :=
-    hbRR5.trans (isBigO_pow_of_le_nhds_zero (m := 5) (n := 4) (by norm_num))
-  have hRbR4' : (fun s : ℝ => s * T (R s) b (R s)) =O[𝓝 0] (fun s : ℝ => s ^ 4) :=
-    hRbR5.trans (isBigO_pow_of_le_nhds_zero (m := 5) (n := 4) (by norm_num))
-  have hRRb4' : (fun s : ℝ => s * T (R s) (R s) b) =O[𝓝 0] (fun s : ℝ => s ^ 4) :=
-    hRRb5.trans (isBigO_pow_of_le_nhds_zero (m := 5) (n := 4) (by norm_num))
-  have hRRR6 : (fun s : ℝ => T (R s) (R s) (R s)) =O[𝓝 0] (fun s : ℝ => s ^ 6) := by
-    exact (isBigO_trilinear_apply T hR hR hR).congr (fun _ => rfl) (fun s => by ring)
-  have hRRR4 : (fun s : ℝ => T (R s) (R s) (R s)) =O[𝓝 0] (fun s : ℝ => s ^ 4) :=
-    hRRR6.trans (isBigO_pow_of_le_nhds_zero (m := 6) (n := 4) (by norm_num))
+  have hbRR4' : (fun s : ℝ => s * T b (R s) (R s)) =O[𝓝 0] (fun s : ℝ => s ^ 4) := by
+    simpa using (isBigO_mul_pow_of_isBigO_pow hbRR4 1).trans
+      (isBigO_pow_of_le_nhds_zero (m := 5) (n := 4) (by norm_num))
+  have hRbR4' : (fun s : ℝ => s * T (R s) b (R s)) =O[𝓝 0] (fun s : ℝ => s ^ 4) := by
+    simpa using (isBigO_mul_pow_of_isBigO_pow hRbR4 1).trans
+      (isBigO_pow_of_le_nhds_zero (m := 5) (n := 4) (by norm_num))
+  have hRRb4' : (fun s : ℝ => s * T (R s) (R s) b) =O[𝓝 0] (fun s : ℝ => s ^ 4) := by
+    simpa using (isBigO_mul_pow_of_isBigO_pow hRRb4 1).trans
+      (isBigO_pow_of_le_nhds_zero (m := 5) (n := 4) (by norm_num))
+  have hRRR4 : (fun s : ℝ => T (R s) (R s) (R s)) =O[𝓝 0] (fun s : ℝ => s ^ 4) := by
+    simpa using
+      ((isBigO_trilinear_apply T hR hR hR).congr (fun _ => rfl) (fun s => by ring)).trans
+        (isBigO_pow_of_le_nhds_zero (m := 6) (n := 4) (by norm_num))
   have hsum : (fun s : ℝ =>
       s ^ 2 * T b b (R s) + s ^ 2 * T b (R s) b + s ^ 2 * T (R s) b b
       + s * T b (R s) (R s) + s * T (R s) b (R s) + s * T (R s) (R s) b

@@ -167,8 +167,7 @@ lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w)
     HasDerivAt (data.u x w) (data.u1 x w) 0 := by
   rcases asm.uExp with ⟨ρ, hρSmooth, hρ⟩
   have hseg : ∀ᶠ s : ℝ in 𝓝 0, s ∈ segment data.s0 := by
-    refine mem_of_superset (Metric.ball_mem_nhds (0 : ℝ) asm.hs0) ?_
-    intro s hs
+    filter_upwards [Metric.ball_mem_nhds (0 : ℝ) asm.hs0] with s hs
     change |s| ≤ data.s0
     simpa [Real.dist_eq] using (le_of_lt (by simpa [Real.dist_eq] using hs))
   have hEq : (data.u x w) =ᶠ[𝓝 0]
@@ -178,32 +177,19 @@ lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w)
     exact hρ (x, w) s ⟨hx, hw⟩ hs
   have hρdiff : HasDerivAt (fun s : ℝ => ρ ((x, w), s))
       (deriv (fun s : ℝ => ρ ((x, w), s)) 0) 0 := by
-    have hρat : DifferentiableAt ℝ ρ ((x, w), 0) := hρSmooth.differentiable (by simp) ((x, w), 0)
-    have hline : DifferentiableAt ℝ (fun s : ℝ => ((x, w), s)) 0 := by fun_prop
-    exact (hρat.comp 0 hline).hasDerivAt
-  have hpow2 : HasDerivAt (fun s : ℝ => s ^ 2) 0 0 := by
-    simpa using (hasDerivAt_pow 2 (0 : ℝ))
-  have hpow3 : HasDerivAt (fun s : ℝ => s ^ 3) 0 0 := by
-    simpa using (hasDerivAt_pow 3 (0 : ℝ))
-  have hpow4 : HasDerivAt (fun s : ℝ => s ^ 4) 0 0 := by
-    simpa using (hasDerivAt_pow 4 (0 : ℝ))
-  have h1 : HasDerivAt (fun s : ℝ => s * data.u1 x w) (data.u1 x w) 0 := by
-    simpa using (hasDerivAt_id (0 : ℝ)).mul_const (data.u1 x w)
-  have h2 : HasDerivAt (fun s : ℝ => s ^ 2 * data.u2 x w) 0 0 := by
-    simpa using hpow2.mul_const (data.u2 x w)
-  have h3 : HasDerivAt (fun s : ℝ => s ^ 3 * data.u3 x w) 0 0 := by
-    simpa using hpow3.mul_const (data.u3 x w)
-  have h4 : HasDerivAt (fun s : ℝ => s ^ 4 * ρ ((x, w), s)) 0 0 := by
-    simpa using hpow4.mul hρdiff
+    exact ((hρSmooth.differentiable (by simp) ((x, w), 0)).comp 0 (by fun_prop)).hasDerivAt
   have hpoly : HasDerivAt
       (fun s : ℝ => data.u0 x w + s * data.u1 x w + s ^ 2 * data.u2 x w
         + s ^ 3 * data.u3 x w + s ^ 4 * ρ ((x, w), s)) (data.u1 x w) 0 := by
-    convert ((hasDerivAt_const (0 : ℝ) (data.u0 x w)).add
-      (h1.add (h2.add (h3.add h4)))) using 1
+    convert (hasDerivAt_const (0 : ℝ) (data.u0 x w)).add
+        (((hasDerivAt_id (0 : ℝ)).mul_const (data.u1 x w)).add
+          (((hasDerivAt_pow 2 (0 : ℝ)).mul_const (data.u2 x w)).add
+            (((hasDerivAt_pow 3 (0 : ℝ)).mul_const (data.u3 x w)).add
+              ((hasDerivAt_pow 4 (0 : ℝ)).mul hρdiff)))) using 1
     · ext s
-      simp
+      simp only [Pi.add_apply, Pi.mul_apply, id_eq]
       ring
-    · ring
+    · simp
   exact hpoly.congr_of_eventuallyEq hEq
 
 -- Gradient of `u` in the `w` variables, represented in the standard basis.
