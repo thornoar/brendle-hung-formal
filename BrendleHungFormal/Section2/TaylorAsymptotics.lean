@@ -15,6 +15,7 @@ open scoped Topology BigOperators
 
 noncomputable section
 
+/-- If `‖fderiv f y‖ ≤ C‖y-x‖^n` near `x`, then `f y - f x = O(‖y-x‖^(n+1))`. -/
 lemma bigO_of_fderiv_bound_pow
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
@@ -113,6 +114,7 @@ lemma taylor_one_isBigO_of_contDiffAt
     (f := fun z => φ z - φ 0 - fderiv ℝ φ 0 z)
     (x := (0 : E)) (R := R) (C := |C|) (n := 1) hR (abs_nonneg C) hdiff' hbound')
 
+/-- First-order Taylor estimate with `O(‖z‖²)` remainder for a globally smooth map. -/
 lemma smooth_taylor_one_isBigO
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
@@ -120,6 +122,7 @@ lemma smooth_taylor_one_isBigO
     (fun z => φ z - φ 0 - fderiv ℝ φ 0 z) =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (2 : ℕ)) := by
   exact taylor_one_isBigO_of_contDiffAt (hφ.contDiffAt)
 
+/-- Zeroth-order Taylor estimate `φ z - φ 0 = O(‖z‖)` for a smooth map. -/
 lemma smooth_taylor_zero_isBigO
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
@@ -128,13 +131,15 @@ lemma smooth_taylor_zero_isBigO
   have h := (hφ.differentiable (by simp) (0 : E)).hasFDerivAt.isBigO_sub
   simpa only [sub_zero] using h.norm_right
 
+/-- Second-order Taylor estimate with `O(‖z‖³)` remainder for a smooth map. -/
 lemma smooth_taylor_two_isBigO
-    {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    [NormedAddCommGroup F] [NormedSpace ℝ F]
-    {φ : E → F} (hφ : ContDiff ℝ ⊤ φ) :
-    (fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-        (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z) =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (3 : ℕ)) := by
-  let g : E → E →L[ℝ] F := fun z => fderiv ℝ φ z
+  {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+  [NormedAddCommGroup F] [NormedSpace ℝ F]
+  {φ : E → F} (hφ : ContDiff ℝ ⊤ φ) :
+    (fun z => φ z - φ 0 - fderiv ℝ φ 0 z - (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z)
+    =O[𝓝 (0 : E)] (fun z => ‖z‖ ^ (3 : ℕ))
+:= by
+  let g : E → E →L[ℝ] F := fderiv ℝ φ
   let B : E →L[ℝ] (E →L[ℝ] F) := fderiv ℝ g 0
   have hg : ContDiff ℝ ⊤ g := by
     simpa [g] using hφ.fderiv_right (m := ⊤) (by simp)
@@ -191,6 +196,7 @@ lemma smooth_taylor_two_isBigO
         (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z)
     (x := (0 : E)) (R := R) (C := |C|) (n := 2) hR (abs_nonneg C) hdiff' hbound')
 
+/-- Symmetry of the third derivative in its last two arguments for a smooth real-valued map. -/
 lemma third_deriv_symm_last {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {φ : E → ℝ} (hφ : ContDiff ℝ ⊤ φ) (u v w : E) :
     (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) (0 : E) u v) w =
@@ -230,6 +236,7 @@ lemma third_deriv_symm_last {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ 
           (fderiv ℝ (fderiv ℝ (fderiv ℝ φ)) 0))) := hfA.symm.trans hfB
   simpa [ContinuousLinearMap.comp_apply] using congrArg (fun L : E →L[ℝ] ℝ => L u) hlin
 
+/-- Third-order Taylor estimate with `O(‖z‖⁴)` remainder for a smooth real-valued map. -/
 lemma smooth_taylor_three_isBigO
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {φ : E → ℝ} (hφ : ContDiff ℝ ⊤ φ) :
@@ -342,12 +349,14 @@ lemma isBigO_pow_of_le_nhds_zero {m n : ℕ} (hnm : n ≤ m) :
   simpa [Real.norm_eq_abs, abs_of_nonneg (pow_nonneg (norm_nonneg s) _),
     Real.norm_of_nonneg (pow_nonneg (norm_nonneg s) _)] using hp
 
+/-- Near zero, `‖s‖^k = O(s^k)`. -/
 lemma isBigO_norm_pow_eq (k : ℕ) :
     (fun s : ℝ => ‖s‖ ^ k) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ k) := by
   refine IsBigO.of_bound 1 ?_
   filter_upwards [] with s
   simp [norm_pow]
 
+/-- Applying a fixed continuous linear map preserves a big-O estimate. -/
 lemma isBigO_clm_apply {α E F G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
     {l : Filter α} (L : F →L[ℝ] G) {f : α → F} {g : α → ℝ}
@@ -364,6 +373,7 @@ lemma isBigO_clm_apply {α E F G : Type*} [NormedAddCommGroup E] [NormedSpace �
     _ = (C * ‖L‖) * ‖g x‖ := by ring
     _ ≤ (|C| * ‖L‖) * ‖g x‖ := mul_le_mul_of_nonneg_right hCL (norm_nonneg _)
 
+/-- Applying a fixed continuous bilinear map multiplies the big-O bounds of its arguments. -/
 lemma isBigO_bilinear_apply {α E F G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
     {l : Filter α} (B : E →L[ℝ] F →L[ℝ] G) {f : α → E} {g : α → F} {h k : α → ℝ}
@@ -391,6 +401,7 @@ lemma isBigO_bilinear_apply {α E F G : Type*} [NormedAddCommGroup E] [NormedSpa
       rw [norm_mul]
       ring
 
+/-- Applying a fixed continuous trilinear map multiplies the big-O bounds of its arguments. -/
 lemma isBigO_trilinear_apply {α E F G H : Type*}
     [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
@@ -404,13 +415,7 @@ lemma isBigO_trilinear_apply {α E F G H : Type*}
   exact isBigO_bilinear_apply
     (B := ContinuousLinearMap.flip (ContinuousLinearMap.apply ℝ H)) hfg hh
 
-lemma isBigO_mul_pow {f : ℝ → ℝ}
-    (hf : f =O[𝓝 (0 : ℝ)] (fun _ : ℝ => (1 : ℝ))) (k : ℕ) :
-    (fun s => s ^ k * f s) =O[𝓝 (0 : ℝ)] (fun _ : ℝ => (1 : ℝ)) := by
-  have hpow : (fun s : ℝ => s ^ k) =O[𝓝 (0 : ℝ)] (fun _ : ℝ => (1 : ℝ)) := by
-    simpa using (isBigO_pow_of_le_nhds_zero (m := k) (n := 0) (by omega))
-  simpa [mul_one] using hpow.mul hf
-
+/-- Multiplying `f = O(s^m)` by `s^k` gives `s^k * f = O(s^(k+m))`. -/
 lemma isBigO_mul_pow_of_isBigO_pow {f : ℝ → ℝ} {m : ℕ}
     (hf : f =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ m)) (k : ℕ) :
     (fun s => s ^ k * f s) =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ (k + m)) := by
@@ -508,6 +513,7 @@ lemma trilinear_leading_isBigO
   simp [map_add, map_smul, smul_eq_mul]
   ring
 
+/-- A continuous real-valued function is locally `O(1)`. -/
 lemma isBigO_one_of_continuousAt {α : Type*} [TopologicalSpace α]
     {f : α → ℝ} {x : α} (hf : ContinuousAt f x) :
     f =O[𝓝 x] (fun _ : α => (1 : ℝ)) := by

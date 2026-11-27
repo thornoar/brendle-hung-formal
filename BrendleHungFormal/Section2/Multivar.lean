@@ -17,6 +17,7 @@ namespace BrendleHung.Section2.Multivar
 open scoped BigOperators Topology
 open Filter
 
+/-- Coordinate vector type `Fin d → ℝ`. -/
 abbrev Vector (d : ℕ) := Fin d → ℝ
 notation:1024 "ℝ" "^" d:1024 => Vector d
 
@@ -24,6 +25,7 @@ notation:1024 "ℝ" "^" d:1024 => Vector d
 noncomputable def norm {d : ℕ} (x : ℝ^d) : ℝ
 := √(∑ i : Fin d, x i ^ 2)
 
+/-- Continuity of the Euclidean norm on coordinate vectors. -/
 lemma normCont : ∀ (d : ℕ), Continuous (norm (d := d))
 := by
   intro d
@@ -35,10 +37,12 @@ lemma normCont : ∀ (d : ℕ), Continuous (norm (d := d))
         (fun i _ => (continuous_apply i).pow 2))
   simpa [norm, g] using Real.continuous_sqrt.comp hgCont
 
+/-- The square of the Euclidean norm is the sum of squared coordinates. -/
 lemma norm_square {d : ℕ} (w : ℝ^d) : norm w ^ 2 = ∑ i : Fin d, w i ^ 2 := by
   unfold norm
   rw [Real.sq_sqrt (Finset.sum_nonneg fun i hi => sq_nonneg (w i))]
 
+/-- The Euclidean norm scales quadratically under scalar multiplication. -/
 lemma norm_mul_sq {d : ℕ} (t : ℝ) (w : ℝ^d) : norm (t • w) ^ 2 = t ^ 2 * norm w ^ 2
 := by
   rewrite [norm_square, norm_square]
@@ -48,6 +52,7 @@ lemma norm_mul_sq {d : ℕ} (t : ℝ) (w : ℝ^d) : norm (t • w) ^ 2 = t ^ 2 *
   intro i hi
   ring
 
+/-- A nonzero vector has strictly positive Euclidean norm. -/
 lemma ne_zero_norm_pos {d : ℕ} {w : ℝ^d} (hw : w ≠ 0) : 0 < norm w := by
   unfold norm
   apply Real.sqrt_pos.2
@@ -68,10 +73,46 @@ def B {d : ℕ} (r : ℝ) : Set ℝ^d
 public def D {d : ℕ} (r : ℝ) : Set ℝ^d
 := {x | norm x ≤ r}
 
+/-- The open coordinate ball `B r` is open. -/
+lemma isOpen_B {d : ℕ} (r : ℝ) : IsOpen (B (d := d) r) := by
+  simpa [B] using (isOpen_lt (normCont d) continuous_const)
+
+/-- If `0 < r`, the open ball `B r` is a neighborhood of the origin. -/
+lemma B_mem_nhds_zero {d : ℕ} {r : ℝ} (hr : 0 < r) : B (d := d) r ∈ 𝓝 (0 : ℝ^d) := by
+  refine IsOpen.mem_nhds (isOpen_B r) ?_
+  simpa [B, norm] using hr
+
+/-- The open ball `B r` is a neighborhood of each of its points. -/
+lemma B_mem_nhds {d : ℕ} {r : ℝ} {x : ℝ^d} (hx : x ∈ B (d := d) r) :
+    B (d := d) r ∈ 𝓝 x :=
+  IsOpen.mem_nhds (isOpen_B r) hx
+
+/-- `B r` is a neighborhood of `x` when `norm x < r`. -/
+lemma B_mem_nhds_of_norm_lt {d : ℕ} {r : ℝ} {x : ℝ^d} (hx : norm x < r) :
+    B (d := d) r ∈ 𝓝 x :=
+  B_mem_nhds (by simpa [B] using hx)
+
+/-- The open ball `B r` is contained in the closed ball `D r`. -/
+lemma B_subset_D {d : ℕ} {r : ℝ} : B (d := d) r ⊆ D (d := d) r := by
+  intro x hx
+  change norm x ≤ r
+  exact le_of_lt (by simpa [B] using hx)
+
+/-- The closed coordinate ball `D r` is closed. -/
+lemma isClosed_D {d : ℕ} (r : ℝ) : IsClosed (D (d := d) r) := by
+  simpa [D] using (isClosed_le (normCont d) continuous_const)
+
+/-- The origin lies in `D r` when `r` is nonnegative. -/
+lemma zero_mem_D {d : ℕ} {r : ℝ} (hr : 0 ≤ r) : (0 : ℝ^d) ∈ D (d := d) r := by
+  simp [D, norm, hr]
+
+/-- The interval `[-a,a]` used for the auxiliary parameter `s`. -/
 def segment (a : ℝ) : Set ℝ
 := {x | |x| ≤ a}
 
+/-- Fixed dimension of the parameter space `ℝ^m`. -/
 axiom m : ℕ
+/-- Fixed dimension of the variable space `ℝ^n`. -/
 axiom n : ℕ
 
 notation "Smooth" => ContDiff ℝ (⊤ : WithTop ℕ∞)
@@ -102,24 +143,30 @@ def HasSmoothExpansion3 {E : Type} [NormedAddCommGroup E] [NormedSpace ℝ E] (b
 
 noncomputable section
 
+/-- The `i`-th standard basis vector of `ℝ^n`. -/
 def e (i : Fin n) : ℝ^n := Pi.single i 1
 
+/-- First derivative of a function on `ℝ^n`, as a continuous linear map. -/
 abbrev diff (f : ℝ^n → ℝ) : ℝ^n -> ℝ^n →L[ℝ] ℝ
 := fderiv ℝ f
 
+/-- Second derivative at `w`, as a continuous bilinear map. -/
 abbrev diff2 (f : ℝ^n → ℝ) (w : ℝ^n)
 : (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ))
 := fderiv ℝ (diff f) w
 
+/-- Matrix of a bilinear map in the standard basis. -/
 abbrev matrixOf (op : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ)) : Matrix (Fin n) (Fin n) ℝ
 := Matrix.of fun i j => op (e i) (e j)
 
+/-- Third derivative at `w`, as a continuous trilinear map. -/
 abbrev diff3 (f : ℝ^n → ℝ) (w : ℝ^n)
 : (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ)))
 := fderiv ℝ (diff2 f) w
 
 end
 
+/-- A function vanishing at zero with a positive quadratic lower bound has zero derivative at zero. -/
 theorem ineq_zero_deriv (f : ℝ^n -> ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σh : σ > 0) :
   (f 0 = 0) ->
   (∀ w : ℝ^n, w ∈ B r -> f w ≥ σ * (norm w ^ 2)) ->
@@ -133,14 +180,11 @@ theorem ineq_zero_deriv (f : ℝ^n -> ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σ
     have hnonneg : 0 ≤ σ * norm w ^ 2 := by
       nlinarith [σh, sq_nonneg (norm w)]
     nlinarith [fAtZero, hnonneg, hquadratic]
-  have hnormCont : Continuous (norm (d := n)) := normCont n
-  have hOpenBallNhds : B r ∈ nhds (0 : ℝ^n) := by
-    refine IsOpen.mem_nhds ?_ ?_
-    · simpa [B] using (isOpen_lt hnormCont continuous_const)
-    · simpa [B, norm] using rh
+  have hOpenBallNhds : B r ∈ nhds (0 : ℝ^n) := B_mem_nhds_zero rh
   have hlocalMin : IsLocalMin f (0 : ℝ^n) := hminOn.isLocalMin hOpenBallNhds
   exact IsLocalMin.fderiv_eq_zero hlocalMin
 
+/-- The Hessian at zero of such a function is positive definite. -/
 theorem ineq_pos_def (f : ℝ^n → ℝ) (r : ℝ) (rh : r > 0) (σ : ℝ) (σh : σ > 0) :
   Smooth f ->
   f 0 = 0 →

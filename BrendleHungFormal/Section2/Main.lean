@@ -17,6 +17,7 @@ open BrendleHung.Section2.TaylorAsymptotics
 local notation "norm" => BrendleHung.Section2.Multivar.norm
 local notation "↓" f => uncurry f
 
+/-- Fixed radii, smooth model functions, and asymptotic coefficients from Section 2. -/
 structure InitialData where
   r0 : ℝ
   s0 : ℝ
@@ -26,8 +27,10 @@ structure InitialData where
   u2 : ℝ^m -> ℝ^n -> ℝ
   u3 : ℝ^m -> ℝ^n -> ℝ
 
+/-- An arbitrary choice of the Section 2 initial data. -/
 axiom data : InitialData
 
+/-- Hypotheses on the data: positivity, smoothness, normalization, a quadratic lower bound, and a smooth third-order expansion. -/
 structure InitialAssumptions where
   hr0 : data.r0 > 0
   hs0 : data.s0 > 0
@@ -49,51 +52,61 @@ structure InitialAssumptions where
           (↓data.u0) (↓data.u1) (↓data.u2) (↓data.u3)
           (↓data.u)
 
+/-- An arbitrary choice of the Section 2 hypotheses. -/
 axiom asm : InitialAssumptions
 
+/-- The closed coordinate ball used as the domain for parameters and `w` variables. -/
 abbrev inBounds {m : ℕ} (x : ℝ^m) : Prop
 := x ∈ D data.r0
 
 noncomputable section
 
+/-- Derivative of `u0(x, ·)` at `w`, as a continuous linear functional. -/
 abbrev u0W (x : ℝ^m) (w : ℝ^n) : ℝ^n -> ℝ
 := diff (data.u0 x) w
 
+/-- Derivative of `u1(x, ·)` at `w`, as a continuous linear functional. -/
 abbrev u1W (x : ℝ^m) (w : ℝ^n) : ℝ^n -> ℝ
 := diff (data.u1 x) w
 
+/-- Derivative of `u2(x, ·)` at `w`, as a continuous linear functional. -/
 abbrev u2W (x : ℝ^m) (w : ℝ^n) : ℝ^n -> ℝ
 := diff (data.u2 x) w
 
+/-- Hessian matrix of `u0(x, ·)` at `w` in the standard basis. -/
 abbrev u0WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
 := Matrix.of fun i j => diff2 (data.u0 x) w (e i) (e j)
 
+/-- Hessian matrix of `u1(x, ·)` at `w` in the standard basis. -/
 abbrev u1WW (x : ℝ^m) (w : ℝ^n) : Matrix (Fin n) (Fin n) ℝ
 := Matrix.of fun i j => diff2 (data.u1 x) w (e i) (e j)
 
+/-- Third derivative tensor component of `u0(x, ·)` at `w` in the standard basis. -/
 abbrev u0WWW (x : ℝ^m) (w : ℝ^n) (i j k : Fin n) : ℝ
 := diff3 (data.u0 x) w (e i) (e j) (e k)
 
 end
 
+/-- The derivative of `u0(x, ·)` vanishes at `w = 0`, by the quadratic lower bound. -/
 lemma u0WAtZero (x : ℝ^m) (hx : inBounds x) : u0W x 0 = 0
 := by
   have hAtZero : data.u0 x 0 = 0 := asm.u0AtZero x hx
   have hquad : ∀ w : ℝ^n, w ∈ B data.r0 →
       data.u0 x w ≥ asm.σ * (norm w ^ 2) := by
     intro w hw
-    exact asm.u0Quadratic x w hx (by simpa [B, D] using le_of_lt hw)
+    exact asm.u0Quadratic x w hx (B_subset_D hw)
   have hderiv := ineq_zero_deriv (data.u0 x) data.r0 asm.hr0 asm.σ asm.hσ hAtZero hquad
   ext w
   simpa [u0W] using congrArg (fun L : ℝ^n →L[ℝ] ℝ => L w) hderiv
 
+/-- The Hessian of `u0(x, ·)` at `w = 0` is positive definite. -/
 lemma u0WWAtZero (x : ℝ^m) (hx : inBounds x) : Matrix.PosDef (u0WW x 0)
 := by
   have hAtZero : data.u0 x 0 = 0 := asm.u0AtZero x hx
   have hquad : ∀ w : ℝ^n, w ∈ B data.r0 →
       data.u0 x w ≥ asm.σ * (norm w ^ 2) := by
     intro w hw
-    exact asm.u0Quadratic x w hx (by simpa [B, D] using le_of_lt hw)
+    exact asm.u0Quadratic x w hx (B_subset_D hw)
   have hsmooth : Smooth (data.u0 x) := by
     simpa [Function.comp_def, Function.uncurry_def] using
       (asm.u0Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
@@ -101,6 +114,7 @@ lemma u0WWAtZero (x : ℝ^m) (hx : inBounds x) : Matrix.PosDef (u0WW x 0)
     (ineq_pos_def (data.u0 x) data.r0 asm.hr0 asm.σ asm.hσ
       hsmooth hAtZero hquad)
 
+/-- Bundle holding the reduced function `U`, its direction `barw`, and its second- and third-order coefficients. -/
 structure BigUData where
   U : ℝ^m -> ℝ -> ℝ
   barw : ℝ^m -> ℝ^n
@@ -196,6 +210,7 @@ lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w)
 noncomputable def gradW (p : ℝ^m) (w : ℝ^n) (s : ℝ) : ℝ^n :=
   fun α => fderiv ℝ (fun w' : ℝ^n => data.u p w' s) w (e α)
 
+/-- For fixed `p`, the map `(w,s) ↦ gradW p w s` is smooth. -/
 lemma gradW_smooth (p : ℝ^m) :
     Smooth (fun q : ℝ^n × ℝ => gradW p q.1 q.2) := by
   rw [contDiff_pi]
@@ -208,17 +223,12 @@ lemma gradW_smooth (p : ℝ^m) :
     (hf.fderiv_apply (g := fun q : ℝ^n × ℝ => q.1) (k := fun _ : ℝ^n × ℝ => e α)
       (by fun_prop) (by fun_prop) (by simp))
 
+/-- The critical point equation holds at `(w,s) = (0,0)`. -/
 lemma gradW_zero (p : ℝ^m) (hp : inBounds p) : gradW p 0 0 = 0 := by
-  have hB : B data.r0 ∈ 𝓝 (0 : ℝ^n) := by
-    refine IsOpen.mem_nhds ?_ ?_
-    · simpa [B] using (isOpen_lt (normCont n) continuous_const)
-    · simpa [B, BrendleHung.Section2.Multivar.norm] using asm.hr0
+  have hB : B data.r0 ∈ 𝓝 (0 : ℝ^n) := B_mem_nhds_zero asm.hr0
   have hEq : (fun w : ℝ^n => data.u p w 0) =ᶠ[𝓝 (0 : ℝ^n)] data.u0 p := by
     filter_upwards [hB] with w hw
-    have hwl : BrendleHung.Section2.Multivar.norm w < data.r0 := by simpa [B] using hw
-    exact data_u_zero p hp w (by
-      change BrendleHung.Section2.Multivar.norm w ≤ data.r0
-      exact le_of_lt hwl)
+    exact data_u_zero p hp w (B_subset_D hw)
   ext α
   have hderiv : fderiv ℝ (fun w : ℝ^n => data.u p w 0) 0 = diff (data.u0 p) 0 := by
     rw [Filter.EventuallyEq.fderiv_eq hEq]
@@ -233,6 +243,7 @@ noncomputable def hatw (x : ℝ^m) : ℝ^n :=
     - ((1 : ℝ) / 2) * ∑ β : Fin n, ∑ γ : Fin n,
         u0WWW x 0 α β γ * bud.barw x β * bud.barw x γ)
 
+/-- Defining identity for `hatw`, obtained by applying `u0WW(x,0)` to its definition. -/
 lemma hatw_spec (x : ℝ^m) (hx : inBounds x) :
     u0WW x 0 *ᵥ hatw x =
       fun α : Fin n =>
@@ -252,14 +263,12 @@ lemma hatw_spec (x : ℝ^m) (hx : inBounds x) :
           u0WWW x 0 β γ δ * bud.barw x γ * bud.barw x δ)) : Fin n → ℝ) α = _
   rw [Matrix.mulVec_mulVec, Matrix.mul_nonsing_inv _ hdet, Matrix.one_mulVec]
 
+/-- One coordinate of the derivative of `w ↦ gradW p w 0` is the corresponding row of `u0WW p 0`. -/
 lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
     HasFDerivAt (fun w : ℝ^n => gradW p w 0 α)
       ((ContinuousLinearMap.proj (R := ℝ) (φ := fun _ : Fin n => ℝ) α).comp
         ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap)) 0 := by
-  have hB : B data.r0 ∈ 𝓝 (0 : ℝ^n) := by
-    refine IsOpen.mem_nhds ?_ ?_
-    · simpa [B] using (isOpen_lt (normCont n) continuous_const)
-    · simpa [B, BrendleHung.Section2.Multivar.norm] using asm.hr0
+  have hB : B data.r0 ∈ 𝓝 (0 : ℝ^n) := B_mem_nhds_zero asm.hr0
   have hu0Smooth : Smooth (data.u0 p) := by
     simpa [Function.comp_def, Function.uncurry_def] using
       (asm.u0Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) p))
@@ -281,11 +290,8 @@ lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
         =ᶠ[𝓝 0] (fun w : ℝ^n => fderiv ℝ (data.u0 p) w) := by
       filter_upwards [hB] with w hw
       have hEqw : (fun w' : ℝ^n => data.u p w' 0) =ᶠ[𝓝 w] data.u0 p := by
-        filter_upwards [IsOpen.mem_nhds (by simpa [B] using (isOpen_lt (normCont n) continuous_const)) hw] with w' hw'
-        have hw'l : BrendleHung.Section2.Multivar.norm w' < data.r0 := by simpa [B] using hw'
-        exact data_u_zero p hp w' (by
-          change BrendleHung.Section2.Multivar.norm w' ≤ data.r0
-          exact le_of_lt hw'l)
+        filter_upwards [B_mem_nhds hw] with w' hw'
+        exact data_u_zero p hp w' (B_subset_D hw')
       simpa using hEqw.fderiv_eq
     rw [hEq'.fderiv_eq]
   have hsymm : IsSymmSndFDerivAt ℝ (data.u0 p) 0 := by
@@ -323,6 +329,7 @@ lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
     simpa [gradW] using hclm
   simpa [hL] using hmain
 
+/-- The derivative in `w` of `gradW p w 0` at `w = 0` is the Hessian map `u0WW p 0`. -/
 lemma hasFDerivAt_gradW_w (p : ℝ^m) (hp : inBounds p) :
     HasFDerivAt (fun w : ℝ^n => gradW p w 0)
       ((Matrix.toLin' (u0WW p 0)).toContinuousLinearMap) 0 := by
@@ -342,6 +349,7 @@ lemma hasFDerivAt_gradW_w (p : ℝ^m) (hp : inBounds p) :
     simp
   simpa [hL] using hpi
 
+/-- One coordinate of the derivative of `s ↦ gradW x 0 s` at `s = 0` is `u1W x 0 (e α)`. -/
 lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
     HasDerivAt (fun s : ℝ => gradW x 0 s α) (u1W x 0 (e α)) 0 := by
   let F : ℝ × ℝ^n → ℝ := fun z => data.u x z.2 z.1
@@ -373,16 +381,11 @@ lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
       simpa [ContinuousLinearMap.toSpanSingleton_apply] using
         congrArg (fun L : ℝ →L[ℝ] ℝ => L 1) hder.hasFDerivAt.fderiv
     exact hval.symm.trans hval2
-  have hB : B data.r0 ∈ 𝓝 (0 : ℝ^n) := by
-    refine IsOpen.mem_nhds ?_ ?_
-    · simpa [B] using (isOpen_lt (normCont n) continuous_const)
-    · simpa [B, BrendleHung.Section2.Multivar.norm] using asm.hr0
+  have hB : B data.r0 ∈ 𝓝 (0 : ℝ^n) := B_mem_nhds_zero asm.hr0
   have hK_eq : (fun w : ℝ^n => fderiv ℝ F ((0 : ℝ), w) ((1 : ℝ), (0 : ℝ^n)))
       =ᶠ[𝓝 (0 : ℝ^n)] data.u1 x := by
     filter_upwards [hB] with w hw
-    exact hKpoint w (by
-      change norm w ≤ data.r0
-      exact le_of_lt (by simpa [B] using hw))
+    exact hKpoint w (B_subset_D hw)
   have hKderiv : HasFDerivAt
       (fun z : ℝ × ℝ^n => fderiv ℝ F z ((1 : ℝ), (0 : ℝ^n)))
       ((ContinuousLinearMap.apply ℝ ℝ ((1 : ℝ), (0 : ℝ^n))).comp
@@ -464,6 +467,7 @@ lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
   exact hHcomp'
 
 
+/-- The derivative in `s` of `gradW x 0 s` at `s = 0` is the vector with components `u1W x 0 (e α)`. -/
 lemma hasFDerivAt_gradW_s (x : ℝ^m) (hx : inBounds x) :
     HasFDerivAt (fun s : ℝ => gradW x 0 s)
       (ContinuousLinearMap.toSpanSingleton ℝ (fun α : Fin n => u1W x 0 (e α))) 0 := by
@@ -485,6 +489,7 @@ lemma hasFDerivAt_gradW_s (x : ℝ^m) (hx : inBounds x) :
     simp
   simpa [hL, v] using hpi
 
+/-- Smoothness of the parametrized gradient map `F((x,s),w) = gradW x w s`. -/
 lemma gradWParam_smooth :
     Smooth (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) := by
   rw [contDiff_pi]
@@ -534,6 +539,7 @@ lemma gradWParam_partial_eq (x : ℝ^m) (hx : inBounds x) :
     simpa [F, Function.comp_def] using hF.comp (0 : ℝ^n) hline
   exact hcomp.unique (hasFDerivAt_gradW_w x hx)
 
+/-- The partial derivative of `F` in the `w` variables at the base point is invertible. -/
 lemma gradWParam_partial_isInvertible (x : ℝ^m) (hx : inBounds x) :
     ((fderiv ℝ
         (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) (((x, (0 : ℝ)), (0 : ℝ^n)))
@@ -548,6 +554,7 @@ noncomputable def wStarAt (x : ℝ^m) (hx : inBounds x) : ℝ^m × ℝ → ℝ^n
       (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt).implicitFunction
     (by simp) (gradWParam_partial_isInvertible x hx)
 
+/-- The implicit solution vanishes at the base point: `wStarAt x hx (x,0) = 0`. -/
 lemma wStarAt_self (x : ℝ^m) (hx : inBounds x) : wStarAt x hx (x, 0) = 0 := by
   simpa [wStarAt] using
     (ContDiffAt.implicitFunction_apply_self
@@ -556,6 +563,7 @@ lemma wStarAt_self (x : ℝ^m) (hx : inBounds x) : wStarAt x hx (x, 0) = 0 := by
         (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt)
       (by simp) (gradWParam_partial_isInvertible x hx))
 
+/-- Smoothness of `wStarAt x hx` at the base point `(x,0)`. -/
 lemma wStarAt_contDiffAt (x : ℝ^m) (hx : inBounds x) :
     ContDiffAt ℝ (⊤ : WithTop ℕ∞) (wStarAt x hx) (x, 0) := by
   simpa [wStarAt] using
@@ -670,20 +678,21 @@ lemma pi_norm_le_euclid {d : ℕ} (w : ℝ^d) : ‖w‖ ≤ BrendleHung.Section2
     exact_mod_cast hcoord
   exact_mod_cast h'
 
+/-- The closed coordinate ball `D r` is compact. -/
 lemma isCompact_D (r : ℝ) : IsCompact (BrendleHung.Section2.Multivar.D (d := n) r) := by
   refine Metric.isCompact_iff_isClosed_bounded.2 ⟨?_, ?_⟩
-  · simpa [BrendleHung.Section2.Multivar.D] using
-      (isClosed_le (BrendleHung.Section2.Multivar.normCont n) continuous_const)
+  · exact isClosed_D (d := n) r
   · refine (Metric.isBounded_iff_subset_closedBall (0 : ℝ^n)).2 ⟨max r 0, ?_⟩
     intro w hw
     rw [Metric.mem_closedBall, dist_eq_norm]
     simpa using (pi_norm_le_euclid w).trans
       ((show BrendleHung.Section2.Multivar.norm w ≤ r from hw).trans (le_max_left r 0))
 
-lemma D_zero_mem : (0 : ℝ^n) ∈ D (d := n) data.r0 := by
-  simp [BrendleHung.Section2.Multivar.D, BrendleHung.Section2.Multivar.norm,
-    le_of_lt asm.hr0]
+/-- The origin belongs to the domain ball `D r0`. -/
+lemma D_zero_mem : (0 : ℝ^n) ∈ D (d := n) data.r0 :=
+  zero_mem_D (d := n) (r := data.r0) (le_of_lt asm.hr0)
 
+/-- The domain ball `D r0` is nonempty. -/
 lemma D_nonempty : (BrendleHung.Section2.Multivar.D (d := n) data.r0 : Set ℝ^n).Nonempty :=
   ⟨0, D_zero_mem⟩
 
@@ -723,18 +732,14 @@ lemma wStarAt_eventually_eq_iff_critical (x : ℝ^m) (hx : inBounds x) :
   have hz0 : gradW x 0 0 = 0 := gradW_zero x hx
   simpa [wStarAt, hz0] using hz
 
+/-- An interior constrained minimizer is a critical point: `gradW x w s = 0`. -/
 lemma minimizer_critical (x : ℝ^m) (s : ℝ) (w : ℝ^n)
     (hwin : norm w < data.r0)
     (hwmin : IsMinOn (fun w : ℝ^n => data.u x w s) (D (d := n) data.r0) w) :
     gradW x w s = 0 := by
-  have hBnhds : B data.r0 ∈ 𝓝 w := by
-    refine IsOpen.mem_nhds ?_ hwin
-    simpa [B] using (isOpen_lt (normCont n) continuous_const)
-  have hDnhds : D (d := n) data.r0 ∈ 𝓝 w := by
-    refine mem_of_superset hBnhds ?_
-    intro v hv
-    change norm v < data.r0 at hv
-    exact le_of_lt hv
+  have hBnhds : B data.r0 ∈ 𝓝 w := B_mem_nhds_of_norm_lt hwin
+  have hDnhds : D (d := n) data.r0 ∈ 𝓝 w :=
+    mem_of_superset hBnhds (B_subset_D (d := n) (r := data.r0))
   have hlocalOn : IsLocalMinOn (fun w : ℝ^n => data.u x w s) (D (d := n) data.r0) w :=
     hwmin.localize
   have hlocal : IsLocalMin (fun w : ℝ^n => data.u x w s) w :=
@@ -892,6 +897,7 @@ lemma clm_apply_eq_sum_basis (L : ℝ^n →L[ℝ] ℝ) (v : ℝ^n) :
   rw [hv]
   simp [e, Finset.sum_apply, Pi.single_apply, Finset.mem_univ, map_sum, map_smul, smul_eq_mul]
 
+/-- Expansion of a bilinear map in the standard basis of `ℝ^n`. -/
 lemma bilinear_apply_eq_sum_basis
     (B : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ)) (v w : ℝ^n) :
     B v w = ∑ i : Fin n, ∑ j : Fin n, v i * w j * B (e i) (e j) := by
@@ -906,6 +912,7 @@ lemma bilinear_apply_eq_sum_basis
     smul_eq_mul, Finset.mul_sum, mul_assoc, mul_left_comm]
   rw [Finset.sum_comm]
 
+/-- Expansion of a trilinear map in the standard basis of `ℝ^n`. -/
 lemma trilinear_apply_eq_sum_basis
     (T : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ))) (u v w : ℝ^n) :
     T u v w = ∑ i : Fin n, ∑ j : Fin n, ∑ k : Fin n,
@@ -963,6 +970,7 @@ lemma barw_cross_cancel (x : ℝ^m) (hx : inBounds x) (v : ℝ^n) :
   rw [hsymmBV, hBsum, hLsum]
   simp
 
+/-- The coordinate sum defining `bud.U2` equals the derivative form used in the expansion proof. -/
 lemma bud_U2_eq (x : ℝ^m) (_ : inBounds x) :
     bud.U2 x = data.u2 x 0 + (1 / 2 : ℝ) * diff (data.u1 x) 0 (bud.barw x) := by
   have hsum := clm_apply_eq_sum_basis (diff (data.u1 x) 0) (bud.barw x)
@@ -972,6 +980,7 @@ lemma bud_U2_eq (x : ℝ^m) (_ : inBounds x) :
   rw [hsum]
   simp [u1W, mul_comm]
 
+/-- The coordinate sums defining `bud.U3` equal their derivative/tensor form. -/
 lemma bud_U3_eq (x : ℝ^m) (_ : inBounds x) :
     bud.U3 x =
       data.u3 x 0 + diff (data.u2 x) 0 (bud.barw x)
@@ -1003,6 +1012,7 @@ lemma bud_U3_eq (x : ℝ^m) (_ : inBounds x) :
       + (1 / 6 : ℝ) * diff3 (data.u0 x) 0 (bud.barw x) (bud.barw x) (bud.barw x)
   rw [h1', h2', h3']
 
+/-- The reduced function vanishes at `s = 0`. -/
 lemma bud_U_zero (x : ℝ^m) (hx : inBounds x) : bud.U x 0 = 0 := by
   rcases exists_minimizer x 0 with ⟨w, hwD, hwmin, hUeq⟩
   have hu00 : data.u x 0 0 = 0 := by
@@ -1021,23 +1031,25 @@ lemma bud_U_zero (x : ℝ^m) (hx : inBounds x) : bud.U x 0 = 0 := by
     linarith
   exact le_antisymm hle hge
 
+/-- Smoothness of `u0` after fixing the parameter `x`. -/
 lemma u0_x_smooth (x : ℝ^m) : Smooth (data.u0 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u0Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
+/-- Smoothness of `u1` after fixing the parameter `x`. -/
 lemma u1_x_smooth (x : ℝ^m) : Smooth (data.u1 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u1Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
+/-- Smoothness of `u2` after fixing the parameter `x`. -/
 lemma u2_x_smooth (x : ℝ^m) : Smooth (data.u2 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u2Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
+/-- Smoothness of `u3` after fixing the parameter `x`. -/
 lemma u3_x_smooth (x : ℝ^m) : Smooth (data.u3 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u3Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
-
-set_option maxHeartbeats 0
 
 /-- The fixed-parameter expansion of `u(x, w*(x,s), s)`.  This is the analytic
 core of the paper's Section 2 computation: all unknown second-order terms of
@@ -1071,12 +1083,11 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
     have hline : ContDiffAt ℝ (⊤ : WithTop ℕ∞) (fun s : ℝ => (x, s)) 0 := by fun_prop
     simpa [W, Function.comp_def] using (wStarAt_contDiffAt x hx).comp (0 : ℝ) hline
   have hRnorm := taylor_one_isBigO_of_contDiffAt hWcd
-  have hfderivW : fderiv ℝ W 0 = ContinuousLinearMap.toSpanSingleton ℝ b :=
-    hWderiv.hasFDerivAt.fderiv
   have hR : R =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 2) := by
     have htmp : R =O[𝓝 (0 : ℝ)] (fun s : ℝ => ‖s‖ ^ (2 : ℕ)) :=
       hRnorm.congr_left (fun s => by
-        simp [R, hW0, hfderivW, ContinuousLinearMap.toSpanSingleton_apply])
+        simp [R, hW0, hWderiv.hasFDerivAt.fderiv,
+          ContinuousLinearMap.toSpanSingleton_apply])
     exact htmp.trans (isBigO_norm_pow_eq 2)
 
   have hcompose : ∀ {k : ℕ} {f : ℝ^n → ℝ},
@@ -1109,20 +1120,18 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
 
   have hρline : Tendsto (fun s : ℝ => ((x, W s), s)) (𝓝 (0 : ℝ))
       (𝓝 ((x, W 0), (0 : ℝ))) := by
-    have hWtendsto' : Tendsto W (𝓝 (0 : ℝ)) (𝓝 (W 0)) := by
-      simpa [hW0] using hWtendsto
     have hp : Tendsto (fun s : ℝ => (x, W s)) (𝓝 (0 : ℝ)) (𝓝 (x, W 0)) :=
-      tendsto_const_nhds.prodMk_nhds hWtendsto'
+      tendsto_const_nhds.prodMk_nhds (by simpa [hW0] using hWtendsto)
     exact hp.prodMk_nhds tendsto_id
   have hρcont : ContinuousAt (fun s : ℝ => ρ ((x, W s), s)) 0 := by
     exact hρSmooth.continuous.continuousAt.tendsto.comp hρline
   have hρO : (fun s : ℝ => ρ ((x, W s), s)) =O[𝓝 (0 : ℝ)]
       (fun _ : ℝ => (1 : ℝ)) := isBigO_one_of_continuousAt hρcont
-  have hρO0 : (fun s : ℝ => ρ ((x, W s), s)) =O[𝓝 (0 : ℝ)]
-      (fun s : ℝ => s ^ 0) := by
-    simpa using hρO
   have hρ4 : (fun s : ℝ => s ^ 4 * ρ ((x, W s), s)) =O[𝓝 (0 : ℝ)]
       (fun s : ℝ => s ^ 4) := by
+    have hρO0 : (fun s : ℝ => ρ ((x, W s), s)) =O[𝓝 (0 : ℝ)]
+        (fun s : ℝ => s ^ 0) := by
+      simpa using hρO
     simpa using isBigO_mul_pow_of_isBigO_pow hρO0 4
 
   have hdu0 : diff (data.u0 x) 0 = 0 := by
@@ -1182,9 +1191,9 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
   have hBRR : (fun s : ℝ => B0 (R s) (R s)) =O[𝓝 (0 : ℝ)]
       (fun s : ℝ => s ^ 4) := by
     exact (isBigO_bilinear_apply B0 hR hR).congr (fun _ => rfl) (fun s => by ring)
-  have hlead0raw : B0 b b + L1 b = 0 := by
-    simpa [b, B0, L1] using barw_cross_cancel x hx b
   have hlead0half : (1 / 2 : ℝ) * B0 b b + (1 / 2 : ℝ) * L1 b = 0 := by
+    have hlead0raw : B0 b b + L1 b = 0 := by
+      simpa [b, B0, L1] using barw_cross_cancel x hx b
     linarith
   have hA0eq : (fun s : ℝ =>
       (1 / 2 : ℝ) * B0 (W s) (W s) + s * L1 (W s)
@@ -1305,6 +1314,7 @@ lemma u_remainder_isBigO (x : ℝ^m) (hx : inBounds x) :
     rw [hs]
   simpa [W] using htarget
 
+/-- Main result: `U` has a third-order expansion with locally bounded remainder on `B r0`. -/
 theorem expansion_of_U :
   ∃ s0 : ℝ, s0 > 0 ∧
   HasExpansion3 (B data.r0) s0 0 0 bud.U2 bud.U3 bud.U
@@ -1315,11 +1325,7 @@ theorem expansion_of_U :
       (bud.U q.1 q.2 - q.2 ^ 2 * bud.U2 q.1 - q.2 ^ 3 * bud.U3 q.1) / q.2 ^ 4
   refine ⟨data.s0, asm.hs0, ρU, ?_, ?_⟩
   · intro p hp
-    have hp_lt : norm p < data.r0 := by
-      simpa [B] using hp
-    have hpD : inBounds p := by
-      change norm p ≤ data.r0
-      exact le_of_lt hp_lt
+    have hpD : inBounds p := B_subset_D hp
     have hO : (fun s : ℝ =>
         bud.U p s - s ^ 2 * bud.U2 p - s ^ 3 * bud.U3 p)
         =O[𝓝 (0 : ℝ)] (fun s : ℝ => s ^ 4) := by
@@ -1348,11 +1354,7 @@ theorem expansion_of_U :
       rw [abs_div]
       simpa [Real.norm_eq_abs] using hdiv
   · intro p s hp hs
-    have hp_lt : norm p < data.r0 := by
-      simpa [B] using hp
-    have hpD : inBounds p := by
-      change norm p ≤ data.r0
-      exact le_of_lt hp_lt
+    have hpD : inBounds p := B_subset_D hp
     by_cases hs0 : s = 0
     · subst s
       simp [ρU, bud_U_zero p hpD]
