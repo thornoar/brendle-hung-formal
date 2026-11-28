@@ -227,6 +227,7 @@ lemma relation_U3_V3 (y : ℝ^m) (hy : y ∈ cca.Ω) :
   ring_nf
   rw [hR, hF]
   abel
+
 /-- The paper's invariance proposition.  On the zero set of `V2` and `dV2`,
 the third-order coefficient agrees with `Υ(y,0) * U3(y)`, and the reciprocal
 rescaling is the restriction of the smooth function `U3` on `D r0`. -/
