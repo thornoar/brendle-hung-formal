@@ -1,8 +1,7 @@
 import BrendleHungFormal.Section2.Work
 
-open Function (uncurry)
 open Filter
-open scoped BigOperators Matrix Topology
+open scoped BigOperators Topology
 
 section BrendleHung.Section2
 
@@ -10,11 +9,6 @@ variable [InitialAssumptions] [CoordChangeAssumptions]
 
 open BrendleHung.Section2.Multivar
 open BrendleHung.Section2.TaylorAsymptotics
-
--- Keep the short name `norm` for the coordinate-space norm in this file,
--- without clashing with Mathlib's global `norm`.
-local notation "norm" => BrendleHung.Section2.Multivar.norm
-local notation "↓" f => uncurry f
 
 noncomputable section
 
@@ -38,20 +32,17 @@ theorem expansion_of_U :
         (Filter.Eventually.of_forall fun _ => rfl)
       filter_upwards [bud_U_eq_u_wStarAt_eventually p hpD] with s hs
       rw [hs]
-    rcases (Asymptotics.isBigO_iff.mp hO) with ⟨c, hc⟩
-    refine ⟨max c 0, ?_⟩
-    have hCnonneg : 0 ≤ max c 0 := le_max_right c 0
-    filter_upwards [hc] with s hs
+    rcases Asymptotics.IsBigO.exists_pos hO with ⟨c, hcpos, hcO⟩
+    refine ⟨c, ?_⟩
+    filter_upwards [Asymptotics.IsBigOWith.bound hcO] with s hs
     by_cases hs0 : s = 0
-    · simp [ρU, hs0, hCnonneg]
+    · simp [ρU, hs0, hcpos.le]
     · have hs4_ne : s ^ 4 ≠ 0 := pow_ne_zero 4 hs0
       have hs4_pos : 0 < ‖s ^ 4‖ := norm_pos_iff.mpr hs4_ne
       have hc' : ‖bud.U p s - s ^ 2 * bud.U2 p - s ^ 3 * bud.U3 p‖
-          ≤ (max c 0) * ‖s ^ 4‖ := by
-        exact le_trans hs
-          (mul_le_mul_of_nonneg_right (le_max_left c 0) (norm_nonneg _))
+          ≤ c * ‖s ^ 4‖ := hs
       have hdiv : ‖bud.U p s - s ^ 2 * bud.U2 p - s ^ 3 * bud.U3 p‖ / ‖s ^ 4‖
-          ≤ max c 0 := by
+          ≤ c := by
         exact (div_le_iff₀ hs4_pos).2 hc'
       rw [show ρU (p, s) =
           (bud.U p s - s ^ 2 * bud.U2 p - s ^ 3 * bud.U3 p) / s ^ 4 by
@@ -79,9 +70,9 @@ lemma zD1_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
     zD1 (ccd.v0 y) α = 0
 := by
   change zD1 (fun z : ℝ^n => Υc y z * v0B y z) α = 0
-  have h := zD1_mul_at (Υc y) (v0B y) 0
-    (upsilon_z_smoothAt y hy) (v0B_smoothAt y hy) α
-  simpa [zD1, v0B_zero y hy, zD1_v0B y hy α] using h
+  simpa [zD1, v0B_zero y hy, zD1_v0B y hy α] using
+    (zD1_mul_at (Υc y) (v0B y) 0
+      (upsilon_z_smoothAt y hy) (v0B_smoothAt y hy) α)
 
 /-- The second `z`-derivative formula for `v0` at zero. -/
 lemma zD2_v0 (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
@@ -138,6 +129,10 @@ lemma relation_U2_V2 (y : ℝ^m) (hy : y ∈ cca.Ω) :
   rw [v2_zero y hy, hsum, hsumΥ]
   ring
 
+private lemma V2_eventually_eq_upsilon_mul_U2 (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    V2 =ᶠ[𝓝 y] fun y' : ℝ^m => Υc y' 0 * bud.U2 y' := by
+  filter_upwards [cca.Ω_open.mem_nhds hy] with y' hy'
+  exact relation_U2_V2 y' hy'
 
 /-- The paper's third-order coefficient after the coordinate change. -/
 abbrev V3 (y : ℝ^m) : ℝ :=
@@ -194,15 +189,15 @@ lemma relation_U3_V3 (y : ℝ^m) (hy : y ∈ cca.Ω) :
           barz y α * barz y β * bud.barw y δ)
         = - (∑ α : Fin n, ∑ β : Fin n, ∑ γ : Fin n,
               Υc y 0 * u1W y 0 (e γ) * zD2 (ψc y) α β γ *
-                barz y α * barz y β) := by
-    linarith [u0WW_psi_cancel y hy]
+                barz y α * barz y β) :=
+    eq_neg_of_add_eq_zero_left (u0WW_psi_cancel y hy)
   have hCneg :
       (∑ γ : Fin n, ∑ δ : Fin n, ∑ ζ : Fin n,
         zD1 (Υc y) γ * u0WW y 0 δ ζ *
           bud.barw y δ * bud.barw y ζ * barz y γ)
         = - (∑ α : Fin n, ∑ γ : Fin n,
-              zD1 (Υc y) α * u1W y 0 (e γ) * barz y α * bud.barw y γ) := by
-    linarith [u0WW_Upsilon_cancel y hy]
+              zD1 (Υc y) α * u1W y 0 (e γ) * barz y α * bud.barw y γ) :=
+    eq_neg_of_add_eq_zero_left (u0WW_Upsilon_cancel y hy)
   have hR :
       (∑ γ : Fin n, zD1 (Υc y) γ * asm.u2 y 0 * barz y γ) =
         ∑ γ : Fin n, asm.u2 y 0 * zD1 (Υc y) γ * barz y γ := by
@@ -244,12 +239,9 @@ theorem invariance (Λ : Set ℝ^m) (hΛΩ : Λ ⊆ cca.Ω)
       have hrel := relation_U2_V2 y hyΩ
       rw [(hV2 y hyΛ).1] at hrel
       exact (mul_eq_zero.mp hrel.symm).resolve_left hΥne
-    have hEqEv : V2 =ᶠ[𝓝 y] fun y' : ℝ^m => Υc y' 0 * bud.U2 y' := by
-      filter_upwards [cca.Ω_open.mem_nhds hyΩ] with y' hy'
-      exact relation_U2_V2 y' hy'
     have hprodZero :
         fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y = 0 := by
-      rw [← hEqEv.fderiv_eq]
+      rw [← (V2_eventually_eq_upsilon_mul_U2 y hyΩ).fderiv_eq]
       exact (hV2 y hyΛ).2
     have hscale : (Υc y 0) • fderiv ℝ bud.U2 y = 0 := by
       simpa [fderiv_upsilon0_mul_U2 y hyΩ hyD, hU2zero] using hprodZero
@@ -265,7 +257,7 @@ theorem invariance (Λ : Set ℝ^m) (hΛΩ : Λ ⊆ cca.Ω)
   intro y hyΛ
   have hΥne : Υc y 0 ≠ 0 := ne_of_gt (upsilon_y0_pos y (hΛΩ hyΛ))
   rw [hV3_eq y hyΛ]
-  field_simp [hΥne]
+  simp [hΥne]
 
 
 namespace BrendleHung.Section2
@@ -336,12 +328,10 @@ theorem positivity
       filter_upwards [cca.Ω_open.mem_nhds hyΩ] with z hz
       simpa [hU2zero] using hU2_nonneg z hz
     have hdU2 : fderiv ℝ bud.U2 y = 0 := hlocal.fderiv_eq_zero
-    have hEqEv : V2 =ᶠ[𝓝 y] fun y' : ℝ^m => Υc y' 0 * bud.U2 y' := by
-      filter_upwards [cca.Ω_open.mem_nhds hyΩ] with y' hy'
-      exact relation_U2_V2 y' hy'
     refine ⟨hV2zero, ?_⟩
     calc
-      fderiv ℝ V2 y = fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y := hEqEv.fderiv_eq
+      fderiv ℝ V2 y = fderiv ℝ (fun y' : ℝ^m => Υc y' 0 * bud.U2 y') y :=
+        (V2_eventually_eq_upsilon_mul_U2 y hyΩ).fderiv_eq
       _ = 0 := by
         simp [fderiv_upsilon0_mul_U2 y hyΩ hyD, hU2zero, hdU2]
   have hV3eqΛ : ∀ y ∈ Λ, V3 y = Υc y 0 * bud.U3 y :=
@@ -417,16 +407,16 @@ theorem positivity
     exact lt_min asm.hs0 (lt_min zero_lt_one (lt_min hk1pos hk2pos))
   have hs1le_s0 : s1 ≤ asm.s0 := by
     dsimp [s1]
-    exact min_le_left _ _
+    simp
   have hs1le_one : s1 ≤ 1 := by
     dsimp [s1]
-    exact (min_le_right _ _).trans (min_le_left _ _)
+    simp
   have hs1le_k1 : s1 ≤ κ / (4 * (C + 1)) := by
     dsimp [s1]
-    exact ((min_le_right _ _).trans (min_le_right _ _)).trans (min_le_left _ _)
+    simp
   have hs1le_k2 : s1 ≤ κ * ε / (2 * (K + 1)) := by
     dsimp [s1]
-    exact ((min_le_right _ _).trans (min_le_right _ _)).trans (min_le_right _ _)
+    simp
   have hmain : ∀ s ∈ Set.Ioc (0 : ℝ) s1,
       (0 < sInf ((fun y => bud.U y s) '' A)) ∧
         (∃ δ : ℝ, 0 < δ ∧ ∀ y ∈ A, δ ≤ bud.U y s) := by
@@ -441,20 +431,12 @@ theorem positivity
       nlinarith [sq_nonneg s, mul_nonneg (sq_nonneg s) (le_of_lt hspos)]
     have hCs_le : C * s ≤ κ / 4 := by
       have hsle : s ≤ κ / (4 * (C + 1)) := hss1.trans hs1le_k1
-      have hmul : s * (4 * (C + 1)) ≤ κ := by
-        calc
-          s * (4 * (C + 1)) ≤ (κ / (4 * (C + 1))) * (4 * (C + 1)) :=
-            mul_le_mul_of_nonneg_right hsle (le_of_lt hden1)
-          _ = κ := by field_simp [ne_of_gt hden1]
+      have hmul : s * (4 * (C + 1)) ≤ κ := (le_div_iff₀ hden1).mp hsle
       have hCsmall : C * s ≤ (C + 1) * s := by nlinarith [le_of_lt hspos]
       nlinarith
     have hK_le : K * s ≤ κ * ε / 2 := by
       have hsle : s ≤ κ * ε / (2 * (K + 1)) := hss1.trans hs1le_k2
-      have hmul : s * (2 * (K + 1)) ≤ κ * ε := by
-        calc
-          s * (2 * (K + 1)) ≤ (κ * ε / (2 * (K + 1))) * (2 * (K + 1)) :=
-            mul_le_mul_of_nonneg_right hsle (le_of_lt hden2)
-          _ = κ * ε := by field_simp [ne_of_gt hden2]
+      have hmul : s * (2 * (K + 1)) ≤ κ * ε := (le_div_iff₀ hden2).mp hsle
       have hKsmall : K * s ≤ (K + 1) * s := by nlinarith [le_of_lt hspos]
       nlinarith
     have hsmall₁ : 0 < (κ / 4) * s ^ 3 := mul_pos (by positivity) hspow3
@@ -513,11 +495,9 @@ theorem positivity
       exact hlower y hyA
     exact ⟨lt_of_lt_of_le hcpos hInfge,
       min ((κ / 4) * s ^ 3) ((κ * ε / 2) * s ^ 2), hcpos, hlower⟩
-  refine ⟨s1, hs1pos, hs1le_s0, ?_, ?_⟩
-  · intro s hs
-    exact (hmain s hs).1
-  · intro s hs
-    exact (hmain s hs).2
+  exact ⟨s1, hs1pos, hs1le_s0,
+    fun s hs => (hmain s hs).1,
+    fun s hs => (hmain s hs).2⟩
 
 end BrendleHung.Section2
 

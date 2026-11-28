@@ -65,3 +65,102 @@ This has multiple benefits:
 We will begin with an overview of how dependent types and proof assistants work.
 
 = Type theory and proof assistants
+// #let ta = math.op(":")
+
+== Motivation
+
+Under the standard Zermelo-Frenkel axiomatic system, all objects in mathematics are sets.
+However, this is not how we think about them.
+The object $2$ is a _natural number,_ $pi$ is a _real number,_ and $x |-> 2x$ is a _function._
+It is weird to say that all of them are actually of the same kind.
+
+Moreover, this notion that "everything is a set" may lead to "accidental equalities".
+Nothing stops two completely unrelated objects from being "equal" when viewed in detail.
+For example, it may be that the Banach space $L^2 (RR)$ happens to be equal, as a set, to the Cartesian product of the Riemann $zeta$-function with the Cantor set.
+
+The main idea of type theory is to introduce a binary relation $(:)$ between objects (which we will also call _terms_). The proposition $a : A$ means that _term $a$ has type $A$._ Note that types are themselves also terms.
+
+In type theory, every term must have a type. This means that the type $A$ must also have a type. Since $A$ _is_ a type, we can create a new term called $"Type"$ and write $A : "Type"$. This term $"Type"$, however, must also have a type, and so on.
+
+To ensure that all terms have a type, one of the usual axioms of type theory is the existence of an infinite sequence of "universes"
+$
+  U_1 : U_2 : U_3 : U_4 : ...
+$
+such that $U_i$ has type $U_(i+1)$ for all $i in NN$. We can then define a term $A$ to be a _type,_ if $A : U_k$ for some $k$. Since every term must have a type, we see that for every term $a$ there is a term $A$ and index $k in NN$ such that $a : A : U_k$.
+
+== The Calculus of Types
+
+Types can be combined to produce new types in the following ways:
+- If $A$ and $B$ are types, the expression $A -> B$ denotes the _function type_ from $A$ to $B$. A term $f : A -> B$ is defined as a function: for all terms $a : A$, one must have a term $f(a) : B$.
+- If $A, B$ are types, the type $A times B$ is the _product type,_ which corresponds to the notion of Cartesian product. Terms of type $A times B$ are pairs $(a,b)$, where $a : A$ and $b : B$.
+- If $A, B$ are types, there is a _sum type_ $A union.sq B$, which corresponds to the notion of disjoint union. Terms of type $A union.sq B$ are defined as follows:
+  + For every term $a : A$, we have a term $op("inl") a : A union.sq B$;
+  + For every term $b : B$, we have a term $op("inr") b : A union.sq B$;
+
+#figure(
+  caption: [A tree representation of typing relations],
+  image("figures/type-tree.pdf")
+) <tree>
+
+Since types are also terms, we may go beyond the standard intuition of functions.
+
+Let $A$ be a type and let $B : A -> U_k$ be a function from $A$ to $U_k$ for some $k$. That is to say, $B$ takes in a term of type $A$ and returns another type.
+Now, we define the type $product_(a : A) B(a)$ of _dependent functions._ To give a term $f : product_(a : A) B(a)$, one has to give a function that for each term $a : A$, gives a term $f(a) : B(a)$. Such functions are called _dependent_ because the type of the output depends on the type of the input.
+
+If the function $B$ is constant, $B(a) = B_0$, then a dependent function $f : product_(a : A) B(a)$ becomes a regular function $f : A -> B_0$.
+
+Consider $A = {0,1}$, where ${0,1}$ is a type that has exactly two terms, $0 : {0,1}$ and $1 : {0,1}$. Then the type $product_(a : A) B(a)$ is equivalent to the product type $B(0) times B(1)$.
+
+Similarly, given a type $A$ and a function $B : A -> U_k$, we introduce the _dependent pair type_ written as $sum_(a : A) B(a)$. Terms of this type are pairs $(a, b)$ where $b : B(a)$. They are called dependent pairs because the type of the second element depends on the first element.
+
+There are other operations on types, but we will not consider them here, for the sake of simplicity.
+
+With these operations, our type system becomes a rich algebraic structure, and we can represent it as a tree, as seen in @tree.
+
+== Propositions as Types
+
+There is a correspondence between propositions and types. For every proposition $P$, we can define a type $tau(P)$, and a term $a$ will have type $tau(P)$ if it is a "proof" of the proposition $P$. This way, true propositions correspond to _inhabited_ ("non-empty") types, while false propositions are mapped to _uninhabited_ ("empty") types.
+
+The reason why this identification is so powerful lies in the correspondence between logical operations and type operations. In what follows, let $P, Q$ be propositions.
+- We have $tau(P => Q) = tau(P) -> tau(Q)$. Indeed, the statement "if $P$ is true, then $Q$ is true" is translated to "if $P$ has a proof, then $Q$ must have a proof", which, in turn, is equivalent to "there is a function that, given a proof of $P$, produces a proof of $Q$".
+- We have $tau(P and Q) = tau(P) times tau(Q)$. Indeed, to produce a proof of $P and Q$, one must produce a proof of $P$ and a proof of $Q$, i.e. a _pair_ of proofs, hence the product type.
+- Similarly, we have $tau(P or Q) = tau(P) union.sq tau()$
+
+But the correspondence goes further. Consider a predicate $P(x)$. Then we have
+$
+  tau(forall x in RR wh P(x)) = product_(x : "Real") tau(P(x)).
+$
+Indeed, to produce a proof of $forall x in RR wh P(x)$, it suffices to give a function that for all $x : "Real"$ produces a proof of $P(x)$.
+
+Similarly, existence propositions correspond to dependent pair types:
+$
+  tau(exists x in RR wh P(x)) = sum_(x : "Real") tau(P(x)).
+$
+
+These observations imply that our algebra of terms has a model of propositional logic inside it.
+As a result, propositions may be specified as types in a programming language, and proofs can be written for them as terms in the same programming language.
+
+== An Overview of the Lean Programming Language
+
+Lean is a programming language that implements the type system described above. A _program_ in Lean is a sequence of term definitions. For example, natural numbers may be defined in Lean as follows:
+```lean
+inductive Nat
+| Z
+| S (n : Nat)
+```
+
+This creates the terms `Z`, `(S Z)`, `(S (S Z))`, ..., as well as the type `Nat` that unites all these terms. For each of these terms, we have a typing sequence
+$
+  S thin (S thin Z) : "Nat" : ("Sort 1") : ("Sort 2") : ("Sort 3") : ...
+$
+Here, `Sort n` is the Lean notation for the type universe $U_n$.
+
+= Results
+
+== Multivariable Taylor Approximations
+
+== Euclidean Framework
+
+== Generalization to Riemannian Manifolds
+
+= Conclusion

@@ -3,27 +3,17 @@ import BrendleHungFormal.Section2.Manifold
 import Mathlib.Geometry.Manifold.PartitionOfUnity
 import Mathlib.Topology.MetricSpace.HausdorffDistance
 
-open Function (uncurry)
 open Filter
-open scoped BigOperators Matrix Topology Manifold ContDiff
+open scoped Topology Manifold ContDiff
 
 section BrendleHung.Section2
 
-variable [InitialAssumptions] [CoordChangeAssumptions]
-
 open BrendleHung.Section2.Multivar
-open BrendleHung.Section2.TaylorAsymptotics
-
--- Keep the short name `norm` for the coordinate-space norm in this file,
--- without clashing with Mathlib's global `norm`.
-local notation "norm" => BrendleHung.Section2.Multivar.norm
-local notation "↓" f => uncurry f
 
 noncomputable section
 
 namespace BrendleHung.Section2
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- The paper's Theorem `smooth.extension`.  On the critical set `Λ`, the
 rescaled third-order coefficient `Υ(·,0)⁻¹ V⁽³⁾` is the restriction of a
 smooth function on the whole submanifold `𝒵`. -/
@@ -107,7 +97,6 @@ theorem smooth_extension
   have hzmem : F z ∈ ({ratio z} : Set ℝ) := by simpa [t, hz] using hF z
   exact (Set.mem_singleton_iff.mp hzmem).symm
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- The paper's Theorem `positivity.manifold.version`.  Covering `𝒵` by
 finitely many charts and applying the Euclidean positivity corollary on each
 chart yields positivity of `inf u(·,s)` over `𝒩` for small positive `s`. -/
@@ -232,9 +221,9 @@ theorem positivity_manifold_version
       let saway : ℝ := min S.s0 (min 1 (min (A0 / (8 * (B1 + 1)))
         (min (A0 / (8 * (B2 + 1))) (min (A0 / (8 * (B3 + 1)))
           (A0 / (8 * (S.C + 1)))))))
-      have hd1 : 0 < 8 * (B1 + 1) := by nlinarith
-      have hd2 : 0 < 8 * (B2 + 1) := by nlinarith
-      have hd3 : 0 < 8 * (B3 + 1) := by nlinarith
+      have hd1 : 0 < 8 * (B1 + 1) := by positivity
+      have hd2 : 0 < 8 * (B2 + 1) := by positivity
+      have hd3 : 0 < 8 * (B3 + 1) := by positivity
       have hd4 : 0 < 8 * (S.C + 1) := by nlinarith [S.hC]
       have hsawaypos : 0 < saway := by
         dsimp [saway]

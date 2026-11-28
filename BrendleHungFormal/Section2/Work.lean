@@ -719,7 +719,7 @@ lemma bud_U_eq_u_wStarAt_eventually (x : ℝ^m) (hx : inBounds x) :
   have hu0_nonneg : 0 ≤ asm.u x w0 0 := by
     have hquad := asm.u0Quadratic x w0 hx hw0D
     have hnonneg : 0 ≤ asm.σ * (norm w0 ^ 2) :=
-      mul_nonneg (le_of_lt asm.hσ) (sq_nonneg _)
+      mul_nonneg asm.hσ.le (sq_nonneg _)
     have hEq : asm.u x w0 0 = asm.u0 x w0 := data_u_zero x hx w0 hw0D
     rw [hEq]
     linarith
@@ -730,9 +730,9 @@ lemma bud_U_eq_u_wStarAt_eventually (x : ℝ^m) (hx : inBounds x) :
       rw [← data_u_zero x hx w0 hw0D, hu0_eq] at hquad
       exact hquad
     have hn2 : norm w0 ^ 2 = 0 := by nlinarith [asm.hσ, sq_nonneg (norm w0)]
+    have hn0 : norm w0 = 0 := sq_eq_zero_iff.mp hn2
     by_contra hne
-    have hpos : 0 < norm w0 := ne_zero_norm_pos hne
-    nlinarith
+    exact (ne_of_gt (ne_zero_norm_pos hne)) hn0
   have hwnorm : Tendsto (fun k => norm (w (φ k))) atTop (𝓝 0) := by
     have ht := (normCont n).continuousAt.tendsto.comp hwsub
     simpa [hw0, BrendleHung.Section2.Multivar.norm] using ht
@@ -913,7 +913,7 @@ lemma bud_U_zero (x : ℝ^m) (hx : inBounds x) : bud.U x 0 = 0 := by
     rw [hUeq, data_u_zero x hx w hwD]
     have hquad := asm.u0Quadratic x w hx hwD
     have hnonneg : 0 ≤ asm.σ * (norm w ^ 2) :=
-      mul_nonneg (le_of_lt asm.hσ) (sq_nonneg _)
+      mul_nonneg asm.hσ.le (sq_nonneg _)
     linarith
   exact le_antisymm hle hge
 
@@ -1296,8 +1296,7 @@ lemma barw_spec_of_det_ne_zero (x : ℝ^m) (hdet : (u0WW x 0).det ≠ 0) :
   have hunitDet : IsUnit (u0WW x 0).det := isUnit_iff_ne_zero.mpr hdet
   have hmul : u0WW x 0 *ᵥ ((u0WW x 0)⁻¹ *ᵥ (-u1WVec x)) = -u1WVec x := by
     rw [Matrix.mulVec_mulVec, Matrix.mul_nonsing_inv _ hunitDet, Matrix.one_mulVec]
-  ext α
-  simpa [bud, u1WVec] using congrFun hmul α
+  simpa [bud, u1WVec] using hmul
 
 omit [CoordChangeAssumptions] in
 /-- The reduced direction `barw` is smooth at an admissible point. -/
@@ -1423,11 +1422,9 @@ lemma u0D1_snd (x : ℝ^m) (w v : ℝ^n) :
   have hU : DifferentiableAt ℝ u0Prod (x, w) := u0Prod_smooth.differentiable (by simp) _
   have hGderiv : fderiv ℝ (fun w' : ℝ^n => (x, w')) w =
       ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_right x w).fderiv
-  have hEq : fderiv ℝ (fun w' : ℝ^n => u0Prod (x, w')) w =
+  have hEq : fderiv ℝ (fun w' : ℝ^n => asm.u0 x w') w =
       u0D1 (x, w) ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := by
     simpa [u0D1, hGderiv] using fderiv_comp' w hU hG
-  have hSlice : (fun w' : ℝ^n => u0Prod (x, w')) = (fun w' : ℝ^n => asm.u0 x w') := rfl
-  rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^n →L[ℝ] ℝ => L v) hEq).symm
 
 omit [CoordChangeAssumptions] in
@@ -1438,11 +1435,9 @@ lemma u0D1_fst (x v : ℝ^m) (w : ℝ^n) :
   have hU : DifferentiableAt ℝ u0Prod (x, w) := u0Prod_smooth.differentiable (by simp) _
   have hGderiv : fderiv ℝ (fun x' : ℝ^m => (x', w)) x =
       ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_left x w).fderiv
-  have hEq : fderiv ℝ (fun x' : ℝ^m => u0Prod (x', w)) x =
+  have hEq : fderiv ℝ (fun x' : ℝ^m => asm.u0 x' w) x =
       u0D1 (x, w) ∘L ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := by
     simpa [u0D1, hGderiv] using fderiv_comp' x hU hG
-  have hSlice : (fun x' : ℝ^m => u0Prod (x', w)) = (fun x' : ℝ^m => asm.u0 x' w) := rfl
-  rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hEq).symm
 
 omit [InitialAssumptions] [CoordChangeAssumptions] in
@@ -1566,9 +1561,7 @@ lemma u0D2_cross_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v : ℝ^m) (ζ : ℝ^n) :
     have h := congrArg (fun f : ℝ^n → ℝ => f ζ)
       (u0WAtZero x (B_subset_D (cca.Ω_subset_B hx)))
     simpa [u0W] using h
-  have hfd : fderiv ℝ (fun x' : ℝ^m => u0D1 (x', 0) (0, ζ)) y =
-      fderiv ℝ (fun _ : ℝ^m => (0 : ℝ)) y := hfun.fderiv_eq
-  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfd
+  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfun.fderiv_eq
 
 /-- The pure `x` second derivative of `u0Prod` vanishes at `(y,0)`. -/
 lemma u0D2_xx_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v dv : ℝ^m) :
@@ -1584,9 +1577,7 @@ lemma u0D2_xx_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v dv : ℝ^m) :
       simpa using hzero.fderiv_eq
     rw [hFd]
     simp
-  have hfd : fderiv ℝ (fun x' : ℝ^m => u0D1 (x', 0) (dv, 0)) y =
-      fderiv ℝ (fun _ : ℝ^m => (0 : ℝ)) y := hfun.fderiv_eq
-  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfd
+  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfun.fderiv_eq
 
 omit [CoordChangeAssumptions] in
 /-- Symmetry of the second derivative of `u0Prod`. -/
@@ -1906,9 +1897,7 @@ lemma u0D3_wxx_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (δ : Fin n) (i j : Fin m) :
       (fun _ : ℝ^m => (0 : ℝ)) := by
     filter_upwards [cca.Ω_open.mem_nhds hy] with x hx
     exact u0D2_cross_zero x hx (e i) (e δ)
-  have hfd : fderiv ℝ (fun x' : ℝ^m => u0D2 (x', 0) (ix i) (iw δ)) y =
-      fderiv ℝ (fun _ : ℝ^m => (0 : ℝ)) y := hfun.fderiv_eq
-  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L (e j)) hfd
+  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L (e j)) hfun.fderiv_eq
 
 /-- The pure `x` third derivative of `u0Prod` at `(y,0)` vanishes. -/
 lemma u0D3_xxx_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (i j k : Fin m) :
@@ -1918,9 +1907,7 @@ lemma u0D3_xxx_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (i j k : Fin m) :
       (fun _ : ℝ^m => (0 : ℝ)) := by
     filter_upwards [cca.Ω_open.mem_nhds hy] with x hx
     exact u0D2_xx_zero x hx (e i) (e j)
-  have hfd : fderiv ℝ (fun x' : ℝ^m => u0D2 (x', 0) (ix i) (ix j)) y =
-      fderiv ℝ (fun _ : ℝ^m => (0 : ℝ)) y := hfun.fderiv_eq
-  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L (e k)) hfd
+  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L (e k)) hfun.fderiv_eq
 
 /-- Third derivative at `(y,0)` with two `x` directions then one `w` direction vanishes. -/
 lemma u0D3_xxw_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (i j : Fin m) (ζ : Fin n) :
@@ -2042,11 +2029,9 @@ lemma u1D1_snd (x : ℝ^m) (w v : ℝ^n) :
   have hU : DifferentiableAt ℝ u1Prod (x, w) := u1Prod_smooth.differentiable (by simp) _
   have hGderiv : fderiv ℝ (fun w' : ℝ^n => (x, w')) w =
       ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_right x w).fderiv
-  have hEq : fderiv ℝ (fun w' : ℝ^n => u1Prod (x, w')) w =
+  have hEq : fderiv ℝ (fun w' : ℝ^n => asm.u1 x w') w =
       u1D1 (x, w) ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := by
     simpa [u1D1, hGderiv] using fderiv_comp' w hU hG
-  have hSlice : (fun w' : ℝ^n => u1Prod (x, w')) = (fun w' : ℝ^n => asm.u1 x w') := rfl
-  rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^n →L[ℝ] ℝ => L v) hEq).symm
 
 omit [CoordChangeAssumptions] in
@@ -2057,11 +2042,9 @@ lemma u1D1_fst (x v : ℝ^m) (w : ℝ^n) :
   have hU : DifferentiableAt ℝ u1Prod (x, w) := u1Prod_smooth.differentiable (by simp) _
   have hGderiv : fderiv ℝ (fun x' : ℝ^m => (x', w)) x =
       ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_left x w).fderiv
-  have hEq : fderiv ℝ (fun x' : ℝ^m => u1Prod (x', w)) x =
+  have hEq : fderiv ℝ (fun x' : ℝ^m => asm.u1 x' w) x =
       u1D1 (x, w) ∘L ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := by
     simpa [u1D1, hGderiv] using fderiv_comp' x hU hG
-  have hSlice : (fun x' : ℝ^m => u1Prod (x', w)) = (fun x' : ℝ^m => asm.u1 x' w) := rfl
-  rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hEq).symm
 
 /-- The pure `x` derivative of `u1Prod` vanishes at `(y,0)` for `y ∈ Ω`. -/
@@ -2071,9 +2054,7 @@ lemma u1D1_fst_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v : ℝ^m) :
   have h : (fun x : ℝ^m => asm.u1 x 0) =ᶠ[𝓝 y] (fun _ : ℝ^m => 0) := by
     filter_upwards [cca.Ω_open.mem_nhds hy] with x hx
     exact asm.u1AtZero x (B_subset_D (cca.Ω_subset_B hx))
-  have hfd : fderiv ℝ (fun x : ℝ^m => asm.u1 x 0) y =
-      fderiv ℝ (fun _ : ℝ^m => (0 : ℝ)) y := h.fderiv_eq
-  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfd
+  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) h.fderiv_eq
 
 /-- The first derivative of `u1Prod` at `(y,0)` only has a `w` contribution. -/
 lemma u1D1_at_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v : ℝ^m × ℝ^n) :
@@ -2174,9 +2155,7 @@ lemma u1D2_fst_fst_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v dv : ℝ^m) :
   have hfun : (fun x : ℝ^m => u1D1 (x, 0) (dv, 0)) =ᶠ[𝓝 y] (fun _ : ℝ^m => 0) := by
     filter_upwards [cca.Ω_open.mem_nhds hy] with x hx
     exact u1D1_fst_zero x hx dv
-  have hfd : fderiv ℝ (fun x : ℝ^m => u1D1 (x, 0) (dv, 0)) y =
-      fderiv ℝ (fun _ : ℝ^m => (0 : ℝ)) y := hfun.fderiv_eq
-  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfd
+  simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfun.fderiv_eq
 
 omit [CoordChangeAssumptions] in
 /-- The mixed `x^i w^α` derivative of `u1Prod` at `(y,0)` in a basis `w` direction. -/
@@ -3070,11 +3049,9 @@ lemma u2D1_snd (x : ℝ^m) (w v : ℝ^n) :
   have hU : DifferentiableAt ℝ u2Prod (x, w) := u2Prod_smooth.differentiable (by simp) _
   have hGderiv : fderiv ℝ (fun w' : ℝ^n => (x, w')) w =
       ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_right x w).fderiv
-  have hEq : fderiv ℝ (fun w' : ℝ^n => u2Prod (x, w')) w =
+  have hEq : fderiv ℝ (fun w' : ℝ^n => asm.u2 x w') w =
       u2D1 (x, w) ∘L ContinuousLinearMap.inr ℝ ℝ^m ℝ^n := by
     simpa [u2D1, hGderiv] using fderiv_comp' w hU hG
-  have hSlice : (fun w' : ℝ^n => u2Prod (x, w')) = (fun w' : ℝ^n => asm.u2 x w') := rfl
-  rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^n →L[ℝ] ℝ => L v) hEq).symm
 
 omit [CoordChangeAssumptions] in
@@ -3085,11 +3062,9 @@ lemma u2D1_fst (x v : ℝ^m) (w : ℝ^n) :
   have hU : DifferentiableAt ℝ u2Prod (x, w) := u2Prod_smooth.differentiable (by simp) _
   have hGderiv : fderiv ℝ (fun x' : ℝ^m => (x', w)) x =
       ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := (hasFDerivAt_prodMk_left x w).fderiv
-  have hEq : fderiv ℝ (fun x' : ℝ^m => u2Prod (x', w)) x =
+  have hEq : fderiv ℝ (fun x' : ℝ^m => asm.u2 x' w) x =
       u2D1 (x, w) ∘L ContinuousLinearMap.inl ℝ ℝ^m ℝ^n := by
     simpa [u2D1, hGderiv] using fderiv_comp' x hU hG
-  have hSlice : (fun x' : ℝ^m => u2Prod (x', w)) = (fun x' : ℝ^m => asm.u2 x' w) := rfl
-  rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hEq).symm
 
 omit [CoordChangeAssumptions] in
@@ -3793,20 +3768,9 @@ lemma barz_psi_single_contract (C : Fin n → ℝ) (y : ℝ^m) (hy : y ∈ cca.�
   calc
     (∑ γ : Fin n, (∑ δ : Fin n, C δ * zD1 (ψc y) γ δ) * barz y γ)
         = ∑ δ : Fin n, C δ * (∑ γ : Fin n, zD1 (ψc y) γ δ * barz y γ) := by
-          conv =>
-            lhs
-            simp only [Finset.sum_mul]
+          simp_rw [Finset.sum_mul, mul_assoc]
           rw [Finset.sum_comm]
-          apply Finset.sum_congr rfl
-          intro δ _
-          calc
-            (∑ γ : Fin n, C δ * zD1 (ψc y) γ δ * barz y γ)
-                = ∑ γ : Fin n, C δ * (zD1 (ψc y) γ δ * barz y γ) := by
-                  apply Finset.sum_congr rfl
-                  intro γ _
-                  ring
-            _ = C δ * (∑ γ : Fin n, zD1 (ψc y) γ δ * barz y γ) := by
-                  rw [Finset.mul_sum]
+          simp_rw [← Finset.mul_sum]
     _ = ∑ δ : Fin n, C δ * bud.barw y δ := by
           apply Finset.sum_congr rfl
           intro δ _
@@ -4504,8 +4468,7 @@ lemma v1_barz_quad (y : ℝ^m) (hy : y ∈ cca.Ω) :
     intro α _
     apply Finset.sum_congr rfl
     intro β _
-    rw [Finset.sum_mul]
-    rw [Finset.sum_mul]
+    simp_rw [Finset.sum_mul]
     apply Finset.sum_congr rfl
     intro γ _
     ring
@@ -4741,9 +4704,7 @@ lemma U2_deriv_barz_contract (y : ℝ^m) (hy : y ∈ cca.Ω) :
                   zD1 (φc y) γ i * barz y γ := by
               apply Finset.sum_congr rfl
               intro γ _
-              rw [Finset.mul_sum]
-              rw [Finset.sum_mul]
-              rw [Finset.sum_mul]
+              simp_rw [Finset.mul_sum, Finset.sum_mul]
         _ = ∑ α : Fin n, ∑ γ : Fin n,
               Υc y 0 * u1XW y i γ * zD1 (φc y) α i * barz y α *
                 bud.barw y γ := by
@@ -4783,14 +4744,9 @@ lemma U2_deriv_barz_contract (y : ℝ^m) (hy : y ∈ cca.Ω) :
               congr 1
               apply Finset.sum_congr rfl
               intro γ _
-              rw [Finset.mul_sum]
-              rw [Finset.sum_mul]
-              rw [Finset.sum_mul]
+              simp_rw [Finset.mul_sum, Finset.sum_mul]
               apply Finset.sum_congr rfl
               intro δ _
-              rw [Finset.mul_sum]
-              rw [Finset.sum_mul]
-              rw [Finset.sum_mul]
               apply Finset.sum_congr rfl
               intro ζ _
               ring
@@ -4861,8 +4817,7 @@ lemma U2_Upsilon_barz_contract (y : ℝ^m) (hy : y ∈ cca.Ω) :
             congr 1
             apply Finset.sum_congr rfl
             intro γ _
-            rw [Finset.mul_sum]
-            rw [Finset.sum_mul]
+            simp_rw [Finset.mul_sum, Finset.sum_mul]
       _ = (1 / 2 : ℝ) * (∑ α : Fin n, ∑ γ : Fin n,
               zD1 (Υc y) γ * u1W y 0 (e α) * bud.barw y α * barz y γ) := by
             congr 1
