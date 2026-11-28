@@ -17,8 +17,9 @@ open BrendleHung.Section2.TaylorAsymptotics
 local notation "norm" => BrendleHung.Section2.Multivar.norm
 local notation "↓" f => uncurry f
 
-/-- The raw functions and radii from the beginning of Section 2. -/
-structure InitialDefinitions where
+/-- Hypotheses on the initial data: positivity, smoothness, normalization,
+a quadratic lower bound, and a smooth third-order expansion. -/
+class InitialAssumptions where
   r0 : ℝ
   s0 : ℝ
   σ : ℝ
@@ -27,10 +28,6 @@ structure InitialDefinitions where
   u1 : ℝ^m -> ℝ^n -> ℝ
   u2 : ℝ^m -> ℝ^n -> ℝ
   u3 : ℝ^m -> ℝ^n -> ℝ
-
-/-- Hypotheses on the initial data: positivity, smoothness, normalization,
-a quadratic lower bound, and a smooth third-order expansion. -/
-structure InitialAssumptions extends InitialDefinitions where
   hr0 : r0 > 0
   hs0 : s0 > 0
   hσ : σ > 0
@@ -50,8 +47,10 @@ structure InitialAssumptions extends InitialDefinitions where
           (↓u0) (↓u1) (↓u2) (↓u3)
           (↓u)
 
-/-- An arbitrary choice of the Section 2 hypotheses. -/
-axiom asm : InitialAssumptions
+/-- The active choice of the Section 2 hypotheses. -/
+abbrev asm [i : InitialAssumptions] : InitialAssumptions := i
+
+variable [InitialAssumptions]
 
 /-- The closed coordinate ball used as the domain for parameters and `w` variables. -/
 abbrev inBounds {m : ℕ} (x : ℝ^m) : Prop
@@ -119,7 +118,7 @@ noncomputable def zJacobian (F : ℝ^m × ℝ^n → ℝ^n) (y : ℝ^m) : Matrix 
 := Matrix.of fun β α => fderiv ℝ (fun z : ℝ^n => F (y, z) β) 0 (e α : ℝ^n)
 
 /-- Locally smooth coordinate changes and the invertibility hypothesis from Section 2. -/
-structure CoordChangeAssumptions where
+class CoordChangeAssumptions where
   Ω : Set ℝ^m
   Ω_open : IsOpen Ω
   Ω_subset_B : Ω ⊆ B asm.r0
@@ -142,8 +141,10 @@ structure CoordChangeAssumptions where
 
   ψ_jacobian_inv : ∀ y, y ∈ Ω → IsUnit (zJacobian ψ y)
 
-/-- An arbitrary choice of the Section 2 coordinate-change assumptions. -/
-axiom cca : CoordChangeAssumptions
+/-- The active choice of the Section 2 coordinate-change hypotheses. -/
+abbrev cca [i : CoordChangeAssumptions] : CoordChangeAssumptions := i
+
+variable [CoordChangeAssumptions]
 
 /-- The four rescaled functions `v^(0)`, `v^(1)`, `v^(2)`, and `v^(3)`
 introduced in Section 2 after the coordinate change. -/

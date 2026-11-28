@@ -11,6 +11,8 @@ open scoped BigOperators Matrix Topology
 
 section BrendleHung.Section2
 
+variable [InitialAssumptions] [CoordChangeAssumptions]
+
 open BrendleHung.Section2.Multivar
 open BrendleHung.Section2.TaylorAsymptotics
 
@@ -19,6 +21,7 @@ open BrendleHung.Section2.TaylorAsymptotics
 local notation "norm" => BrendleHung.Section2.Multivar.norm
 local notation "↓" f => uncurry f
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of `u0(x, ·)` vanishes at `w = 0`, by the quadratic lower bound. -/
 lemma u0WAtZero (x : ℝ^m) (hx : inBounds x) : u0W x 0 = 0
 := by
@@ -31,6 +34,7 @@ lemma u0WAtZero (x : ℝ^m) (hx : inBounds x) : u0W x 0 = 0
   ext w
   simpa [u0W] using congrArg (fun L : ℝ^n →L[ℝ] ℝ => L w) hderiv
 
+omit [CoordChangeAssumptions] in
 /-- The Hessian of `u0(x, ·)` at `w = 0` is positive definite. -/
 lemma u0WWAtZero (x : ℝ^m) (hx : inBounds x) : Matrix.PosDef (u0WW x 0)
 := by
@@ -48,6 +52,7 @@ lemma u0WWAtZero (x : ℝ^m) (hx : inBounds x) : Matrix.PosDef (u0WW x 0)
 
 -- This is equation (1) in the paper, rewritten as
 -- `∑ β, u0WW x 0 α β * barw x β = - u1W x 0 (e α)`.
+omit [CoordChangeAssumptions] in
 lemma barw_spec (x : ℝ^m) (hx : inBounds x) :
   u0WW x 0 *ᵥ bud.barw x = fun α : Fin n => - u1W x 0 (e α)
 := by
@@ -59,6 +64,7 @@ lemma barw_spec (x : ℝ^m) (hx : inBounds x) :
   rw [Matrix.mulVec_mulVec, Matrix.mul_nonsing_inv _ hdet, Matrix.one_mulVec]
 
 -- At `s = 0`, the expansion assumption reduces `u` to `u0` on the domain.
+omit [CoordChangeAssumptions] in
 lemma data_u_zero (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w) :
     asm.u x w 0 = asm.u0 x w
 := by
@@ -70,6 +76,7 @@ lemma data_u_zero (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w) :
   simpa using hρ (x, w) 0 hp hseg0
 
 -- Differentiating the expansion assumption in the `s` variable at `s = 0`.
+omit [CoordChangeAssumptions] in
 lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w) :
     HasDerivAt (asm.u x w) (asm.u1 x w) 0
 := by
@@ -103,6 +110,7 @@ lemma hasDerivAt_u_s (x : ℝ^m) (hx : inBounds x) (w : ℝ^n) (hw : inBounds w)
 noncomputable def gradW (p : ℝ^m) (w : ℝ^n) (s : ℝ) : ℝ^n :=
   fun α => fderiv ℝ (fun w' : ℝ^n => asm.u p w' s) w (e α)
 
+omit [CoordChangeAssumptions] in
 /-- The critical point equation holds at `(w,s) = (0,0)`. -/
 lemma gradW_zero (p : ℝ^m) (hp : inBounds p) : gradW p 0 0 = 0 := by
   have hB : B asm.r0 ∈ 𝓝 (0 : ℝ^n) := B_mem_nhds_zero asm.hr0
@@ -115,6 +123,7 @@ lemma gradW_zero (p : ℝ^m) (hp : inBounds p) : gradW p 0 0 = 0 := by
   have hz : u0W p 0 = 0 := u0WAtZero p hp
   simpa [gradW, u0W, hderiv] using congrArg (fun L : ℝ^n → ℝ => L (e α)) hz
 
+omit [CoordChangeAssumptions] in
 /-- One coordinate of the derivative of `w ↦ gradW p w 0` is the corresponding row of `u0WW p 0`. -/
 lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
     HasFDerivAt (fun w : ℝ^n => gradW p w 0 α)
@@ -182,6 +191,7 @@ lemma hasFDerivAt_gradW_w_comp (p : ℝ^m) (hp : inBounds p) (α : Fin n) :
     simpa [gradW] using hclm
   simpa [hL] using hmain
 
+omit [CoordChangeAssumptions] in
 /-- The derivative in `w` of `gradW p w 0` at `w = 0` is the Hessian map `u0WW p 0`. -/
 lemma hasFDerivAt_gradW_w (p : ℝ^m) (hp : inBounds p) :
     HasFDerivAt (fun w : ℝ^n => gradW p w 0)
@@ -203,6 +213,7 @@ lemma hasFDerivAt_gradW_w (p : ℝ^m) (hp : inBounds p) :
     simp
   simpa [hL] using hpi
 
+omit [CoordChangeAssumptions] in
 /-- One coordinate of the derivative of `s ↦ gradW x 0 s` at `s = 0` is `u1W x 0 (e α)`. -/
 lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
     HasDerivAt (fun s : ℝ => gradW x 0 s α) (u1W x 0 (e α)) 0
@@ -322,6 +333,7 @@ lemma hasDerivAt_gradW_s_comp (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
   exact hHcomp'
 
 
+omit [CoordChangeAssumptions] in
 /-- The derivative in `s` of `gradW x 0 s` at `s = 0` is the vector with components `u1W x 0 (e α)`. -/
 lemma hasFDerivAt_gradW_s (x : ℝ^m) (hx : inBounds x) :
     HasFDerivAt (gradW x 0)
@@ -345,6 +357,7 @@ lemma hasFDerivAt_gradW_s (x : ℝ^m) (hx : inBounds x) :
     simp
   simpa [hL, v] using hpi
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the parametrized gradient map `F((x,s),w) = gradW x w s`. -/
 lemma gradWParam_smooth :
     SmoothGlobal (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2)
@@ -363,6 +376,7 @@ lemma gradWParam_smooth :
 
 -- The derivative in the `w` variables of the gradient map is the Hessian
 -- `u0WW`, which is invertible by the quadratic lower bound on `u0`.
+omit [CoordChangeAssumptions] in
 lemma u0WW_toLin_isInvertible (x : ℝ^m) (hx : inBounds x) :
     ((Matrix.toLin' (u0WW x 0)).toContinuousLinearMap).IsInvertible
 := by
@@ -377,6 +391,7 @@ lemma u0WW_toLin_isInvertible (x : ℝ^m) (hx : inBounds x) :
 
 -- The partial derivative of `F(q,w) = gradW q.1.1 w q.1.2` with respect to
 -- `w` at `(x,0),0` is exactly the map induced by `u0WW x 0`.
+omit [CoordChangeAssumptions] in
 lemma gradWParam_partial_eq (x : ℝ^m) (hx : inBounds x) :
     (fderiv ℝ
         (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) (((x, (0 : ℝ)), (0 : ℝ^n)))
@@ -398,6 +413,7 @@ lemma gradWParam_partial_eq (x : ℝ^m) (hx : inBounds x) :
     simpa [F, Function.comp_def] using hF.comp (0 : ℝ^n) hline
   exact hcomp.unique (hasFDerivAt_gradW_w x hx)
 
+omit [CoordChangeAssumptions] in
 /-- The partial derivative of `F` in the `w` variables at the base point is invertible. -/
 lemma gradWParam_partial_isInvertible (x : ℝ^m) (hx : inBounds x) :
     ((fderiv ℝ (fun z : (ℝ^m × ℝ) × ℝ^n => gradW z.1.1 z.2 z.1.2) ((x, (0 : ℝ)), (0 : ℝ^n))
@@ -412,6 +428,7 @@ noncomputable def wStarAt (x : ℝ^m) (hx : inBounds x) : ℝ^m × ℝ → ℝ^n
       (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt).implicitFunction
     (by simp) (gradWParam_partial_isInvertible x hx)
 
+omit [CoordChangeAssumptions] in
 /-- The implicit solution vanishes at the base point: `wStarAt x hx (x,0) = 0`. -/
 lemma wStarAt_self (x : ℝ^m) (hx : inBounds x) : wStarAt x hx (x, 0) = 0 := by
   simpa [wStarAt] using
@@ -421,6 +438,7 @@ lemma wStarAt_self (x : ℝ^m) (hx : inBounds x) : wStarAt x hx (x, 0) = 0 := by
         (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt)
       (by simp) (gradWParam_partial_isInvertible x hx))
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of `wStarAt x hx` at the base point `(x,0)`. -/
 lemma wStarAt_contDiffAt (x : ℝ^m) (hx : inBounds x) :
     ContDiffAt ℝ (⊤ : WithTop ℕ∞) (wStarAt x hx) (x, 0)
@@ -431,6 +449,7 @@ lemma wStarAt_contDiffAt (x : ℝ^m) (hx : inBounds x) :
       (((x, (0 : ℝ)), (0 : ℝ^n))) from gradWParam_smooth.contDiffAt)
     (by simp) (gradWParam_partial_isInvertible x hx))
 
+omit [CoordChangeAssumptions] in
 -- Differentiating the IFT formula at the base point gives the first-order
 -- term of `w*`:  `d/ds w*(x,s)|₀ = \bar w(x)`.
 lemma hasDerivAt_wStarAt_s (x : ℝ^m) (hx : inBounds x) :
@@ -511,6 +530,7 @@ lemma hasDerivAt_wStarAt_s (x : ℝ^m) (hx : inBounds x) :
 
 -- The Euclidean norm of the paper is bounded below by the sup norm on
 -- coordinate space.  This is used to get compactness of the closed ball `D`.
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 lemma pi_norm_le_euclid {d : ℕ} (w : ℝ^d) : ‖w‖ ≤ BrendleHung.Section2.Multivar.norm w := by
   rw [Pi.norm_def]
   have hnn : 0 ≤ BrendleHung.Section2.Multivar.norm w := Real.sqrt_nonneg _
@@ -525,6 +545,7 @@ lemma pi_norm_le_euclid {d : ℕ} (w : ℝ^d) : ‖w‖ ≤ BrendleHung.Section2
     exact_mod_cast hcoord
   exact_mod_cast h'
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- The closed coordinate ball `D r` is compact. -/
 lemma isCompact_D (r : ℝ) : IsCompact (BrendleHung.Section2.Multivar.D (d := n) r) := by
   refine Metric.isCompact_iff_isClosed_bounded.2 ⟨?_, ?_⟩
@@ -535,12 +556,14 @@ lemma isCompact_D (r : ℝ) : IsCompact (BrendleHung.Section2.Multivar.D (d := n
     simpa using (pi_norm_le_euclid w).trans
       ((show BrendleHung.Section2.Multivar.norm w ≤ r from hw).trans (le_max_left r 0))
 
+omit [CoordChangeAssumptions] in
 /-- The origin belongs to the domain ball `D r0`. -/
 lemma D_zero_mem : (0 : ℝ^n) ∈ D (d := n) asm.r0 :=
   zero_mem_D (d := n) (r := asm.r0) (le_of_lt asm.hr0)
 
 -- Existence of a minimizer of `w ↦ u(x,w,s)` on the compact set `D r0`, and
 -- the fact that `U(x,s)` is equal to the minimum.
+omit [CoordChangeAssumptions] in
 lemma exists_minimizer (x : ℝ^m) (s : ℝ) :
     ∃ w ∈ D (d := n) asm.r0,
       IsMinOn (fun w : ℝ^n => asm.u x w s) (D (d := n) asm.r0) w ∧
@@ -562,6 +585,7 @@ lemma exists_minimizer (x : ℝ^m) (s : ℝ) :
     simpa [bud] using
       (le_ciInf (c := asm.u x w s) (fun wsub : D (d := n) asm.r0 => hwmin wsub.2))
 
+omit [CoordChangeAssumptions] in
 -- Local uniqueness of the implicit solution: near the base point, the
 -- critical point equation `gradW = 0` is equivalent to `w = wStarAt`.
 lemma wStarAt_eventually_eq_iff_critical (x : ℝ^m) (hx : inBounds x) :
@@ -577,6 +601,7 @@ lemma wStarAt_eventually_eq_iff_critical (x : ℝ^m) (hx : inBounds x) :
   have hz0 : gradW x 0 0 = 0 := gradW_zero x hx
   simpa [wStarAt, hz0] using hz
 
+omit [CoordChangeAssumptions] in
 /-- An interior constrained minimizer is a critical point: `gradW x w s = 0`. -/
 lemma minimizer_critical (x : ℝ^m) (s : ℝ) (w : ℝ^n)
     (hwin : norm w < asm.r0)
@@ -596,6 +621,7 @@ lemma minimizer_critical (x : ℝ^m) (s : ℝ) (w : ℝ^n)
   have h := congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e α)) hfderiv
   simpa [gradW] using h
 
+omit [CoordChangeAssumptions] in
 -- The minimizer in the definition of `U` is eventually the implicit function
 -- `wStarAt`.  The argument is a compactness contradiction: a minimizing
 -- sequence must converge to `0` by the quadratic lower bound for `u0`, and
@@ -736,6 +762,7 @@ lemma bud_U_eq_u_wStarAt_eventually (x : ℝ^m) (hx : inBounds x) :
   exact (lt_irrefl _ hlt)
 
 -- Coordinate-sum expansions for continuous multilinear maps on `ℝ^n`.
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 lemma clm_apply_eq_sum_basis (L : ℝ^n →L[ℝ] ℝ) (v : ℝ^n) :
     L v = ∑ i : Fin n, v i * L (e i)
 := by
@@ -745,6 +772,7 @@ lemma clm_apply_eq_sum_basis (L : ℝ^n →L[ℝ] ℝ) (v : ℝ^n) :
   rw [hv]
   simp [e, Finset.sum_apply, Pi.single_apply, Finset.mem_univ, map_sum, map_smul, smul_eq_mul]
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Expansion of a bilinear map in the standard basis of `ℝ^n`. -/
 lemma bilinear_apply_eq_sum_basis
     (B : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ)) (v w : ℝ^n) :
@@ -761,6 +789,7 @@ lemma bilinear_apply_eq_sum_basis
     smul_eq_mul, Finset.mul_sum, mul_assoc, mul_left_comm]
   rw [Finset.sum_comm]
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Expansion of a trilinear map in the standard basis of `ℝ^n`. -/
 lemma trilinear_apply_eq_sum_basis
     (T : ℝ^n →L[ℝ] (ℝ^n →L[ℝ] (ℝ^n →L[ℝ] ℝ))) (u v w : ℝ^n) :
@@ -787,6 +816,7 @@ lemma trilinear_apply_eq_sum_basis
   rw [Finset.sum_comm]
 
 -- The Hessian action cancels the linear term in the direction of `barw`.
+omit [CoordChangeAssumptions] in
 lemma barw_cross_cancel (x : ℝ^m) (hx : inBounds x) (v : ℝ^n) :
     diff2 (asm.u0 x) 0 (bud.barw x) v + diff (asm.u1 x) 0 v = 0
 := by
@@ -821,6 +851,7 @@ lemma barw_cross_cancel (x : ℝ^m) (hx : inBounds x) (v : ℝ^n) :
   rw [hsymmBV, hBsum, hLsum]
   simp
 
+omit [CoordChangeAssumptions] in
 /-- The coordinate sum defining `bud.U2` equals the derivative form used in the expansion proof. -/
 lemma bud_U2_eq (x : ℝ^m) (_ : inBounds x) :
     bud.U2 x = asm.u2 x 0 + (1 / 2 : ℝ) * diff (asm.u1 x) 0 (bud.barw x)
@@ -832,6 +863,7 @@ lemma bud_U2_eq (x : ℝ^m) (_ : inBounds x) :
   rw [hsum]
   simp [u1W, mul_comm]
 
+omit [CoordChangeAssumptions] in
 /-- The coordinate sums defining `bud.U3` equal their derivative/tensor form. -/
 lemma bud_U3_eq (x : ℝ^m) (_ : inBounds x) :
     bud.U3 x =
@@ -865,6 +897,7 @@ lemma bud_U3_eq (x : ℝ^m) (_ : inBounds x) :
       + (1 / 6 : ℝ) * diff3 (asm.u0 x) 0 (bud.barw x) (bud.barw x) (bud.barw x)
   rw [h1', h2', h3']
 
+omit [CoordChangeAssumptions] in
 /-- The reduced function vanishes at `s = 0`. -/
 lemma bud_U_zero (x : ℝ^m) (hx : inBounds x) : bud.U x 0 = 0 := by
   rcases exists_minimizer x 0 with ⟨w, hwD, hwmin, hUeq⟩
@@ -884,26 +917,31 @@ lemma bud_U_zero (x : ℝ^m) (hx : inBounds x) : bud.U x 0 = 0 := by
     linarith
   exact le_antisymm hle hge
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of `u0` after fixing the parameter `x`. -/
 lemma u0_x_smooth (x : ℝ^m) : SmoothGlobal (asm.u0 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u0Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of `u1` after fixing the parameter `x`. -/
 lemma u1_x_smooth (x : ℝ^m) : SmoothGlobal (asm.u1 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u1Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of `u2` after fixing the parameter `x`. -/
 lemma u2_x_smooth (x : ℝ^m) : SmoothGlobal (asm.u2 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u2Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of `u3` after fixing the parameter `x`. -/
 lemma u3_x_smooth (x : ℝ^m) : SmoothGlobal (asm.u3 x) := by
   simpa [Function.comp_def, Function.uncurry_def] using
     (asm.u3Smooth.comp (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) x))
 
+omit [CoordChangeAssumptions] in
 /-- The fixed-parameter expansion of `u(x, w*(x,s), s)`.  This is the analytic
 core of the paper's Section 2 computation: all unknown second-order terms of
 `w*` cancel by the critical-point equation, leaving only the stated
@@ -1155,6 +1193,7 @@ noncomputable abbrev u0WWLin (x : ℝ^m) : ℝ^n →L[ℝ] ℝ^n
 noncomputable abbrev u1WVec (x : ℝ^m) : ℝ^n
 := fun α : Fin n => u1W x 0 (e α)
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness in `x` of one Hessian component of `u0(x, ·)` at zero. -/
 lemma u0WW_smooth_apply (α β : Fin n) : SmoothGlobal (fun x : ℝ^m => u0WW x 0 α β)
 := by
@@ -1201,6 +1240,7 @@ lemma u0WW_smooth_apply (α β : Fin n) : SmoothGlobal (fun x : ℝ^m => u0WW x 
   rw [hEq]
   exact h2
 
+omit [CoordChangeAssumptions] in
 /-- The Hessian matrix of `u0(x, ·)` at zero is symmetric. -/
 lemma u0WW_symm (x : ℝ^m) (α β : Fin n) : u0WW x 0 α β = u0WW x 0 β α
 := by
@@ -1208,12 +1248,14 @@ lemma u0WW_symm (x : ℝ^m) (α β : Fin n) : u0WW x 0 α β = u0WW x 0 β α
     (u0_x_smooth x).contDiffAt.isSymmSndFDerivAt (by simp)
   simpa [u0WW, diff2, diff] using hsymm.eq (e α) (e β)
 
+omit [CoordChangeAssumptions] in
 /-- The defining equation for `barw`, with the Hessian index contracted in the first slot. -/
 lemma barw_spec_symm (x : ℝ^m) (hx : inBounds x) (β : Fin n) :
     ∑ α : Fin n, u0WW x 0 α β * bud.barw x α = - u1W x 0 (e β) := by
   have h := congrFun (barw_spec x hx) β
   simpa [Matrix.mulVec, dotProduct, u0WW_symm x] using h
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness in `x` of one component of the gradient of `u1(x, ·)` at zero. -/
 lemma u1W_smooth_apply (α : Fin n) : SmoothGlobal (fun x : ℝ^m => u1W x 0 (e α))
 := by
@@ -1224,6 +1266,7 @@ lemma u1W_smooth_apply (α : Fin n) : SmoothGlobal (fun x : ℝ^m => u1W x 0 (e 
     (g := fun x : ℝ^m => (0 : ℝ^n)) (k := fun _ : ℝ^m => e α)
     (by fun_prop) (by fun_prop) (by simp)
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the Hessian of `u0(x, ·)` at zero as a linear map. -/
 lemma u0WWLin_smooth : SmoothGlobal u0WWLin
 := by
@@ -1236,6 +1279,7 @@ lemma u0WWLin_smooth : SmoothGlobal u0WWLin
       (u0WW_smooth_apply α β).mul contDiff_const)
   simpa [u0WWLin, Matrix.toLin'_apply, Matrix.mulVec, dotProduct] using hsum
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the gradient vector of `u1(x, ·)` at zero. -/
 lemma u1WVec_smooth : SmoothGlobal u1WVec
 := by
@@ -1243,6 +1287,7 @@ lemma u1WVec_smooth : SmoothGlobal u1WVec
   intro α
   simpa [u1WVec] using u1W_smooth_apply α
 
+omit [CoordChangeAssumptions] in
 /-- The defining equation for `barw` holds wherever the Hessian determinant is nonzero. -/
 lemma barw_spec_of_det_ne_zero (x : ℝ^m) (hdet : (u0WW x 0).det ≠ 0) :
     u0WW x 0 *ᵥ bud.barw x = - u1WVec x
@@ -1254,6 +1299,7 @@ lemma barw_spec_of_det_ne_zero (x : ℝ^m) (hdet : (u0WW x 0).det ≠ 0) :
   ext α
   simpa [bud, u1WVec] using congrFun hmul α
 
+omit [CoordChangeAssumptions] in
 /-- The reduced direction `barw` is smooth at an admissible point. -/
 lemma barw_contDiffAt (x : ℝ^m) (hx : inBounds x) : ContDiffAt ℝ ⊤ bud.barw x
 := by
@@ -1341,14 +1387,17 @@ abbrev zD3 {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (F : ℝ^n → E) (α β γ : Fin n) : E :=
   fderiv ℝ (fun z : ℝ^n => fderiv ℝ (fun z' : ℝ^n => fderiv ℝ F z' (e γ)) z (e β)) 0 (e α)
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the product-space version of `u0`. -/
 lemma u0Prod_smooth : SmoothGlobal u0Prod := by
   simpa [u0Prod] using asm.u0Smooth
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the first derivative of `u0Prod`. -/
 lemma u0D1_smooth : SmoothGlobal u0D1 := by
   simpa [u0D1] using u0Prod_smooth.fderiv_right (m := ⊤) (by simp)
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the second derivative of `u0Prod`. -/
 lemma u0D2_smooth : SmoothGlobal u0D2 := by
   simpa [u0D2, u0D1] using u0D1_smooth.fderiv_right (m := ⊤) (by simp)
@@ -1366,6 +1415,7 @@ then `e α`. -/
 abbrev d3G (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n) (α β γ : Fin n) : ℝ^m × ℝ^n :=
   fderiv ℝ (fun z' : ℝ^n => d2G G z' β γ) z (e α)
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of `u0Prod` in a pure `w` direction is the `w`-derivative of `u0`. -/
 lemma u0D1_snd (x : ℝ^m) (w v : ℝ^n) :
     u0D1 (x, w) (0, v) = diff (asm.u0 x) w v := by
@@ -1380,6 +1430,7 @@ lemma u0D1_snd (x : ℝ^m) (w v : ℝ^n) :
   rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^n →L[ℝ] ℝ => L v) hEq).symm
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of `u0Prod` in a pure `x` direction is the `x`-derivative at fixed `w`. -/
 lemma u0D1_fst (x v : ℝ^m) (w : ℝ^n) :
     u0D1 (x, w) (v, 0) = fderiv ℝ (fun x' : ℝ^m => asm.u0 x' w) x v := by
@@ -1394,10 +1445,12 @@ lemma u0D1_fst (x v : ℝ^m) (w : ℝ^n) :
   rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hEq).symm
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- A vector in the product splits into its `x` and `w` components. -/
 lemma prod_vec_split (v : ℝ^m × ℝ^n) : (v.1, (0 : ℝ^n)) + (0, v.2) = v := by
   ext <;> simp
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- A finite-dimensional vector is the sum of its coordinate multiples of the basis vectors. -/
 lemma pi_sum_basis {d : ℕ} (v : ℝ^d) : v = ∑ i : Fin d, v i • e i := by
   ext j
@@ -1419,6 +1472,7 @@ lemma u0D1_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : u0D1 (y, 0) = 0 := by
   rw [map_add, u0D1_fst, u0D1_snd]
   simp [hx, hw]
 
+omit [CoordChangeAssumptions] in
 /-- Second derivative of `u0Prod` in two pure `w` directions. -/
 lemma u0D2_snd_snd (x : ℝ^m) (w v dv : ℝ^n) :
     u0D2 (x, w) (0, v) (0, dv) =
@@ -1446,6 +1500,7 @@ lemma u0D2_snd_snd (x : ℝ^m) (w v dv : ℝ^n) :
     _ = (fderiv ℝ (fun w' : ℝ^n => u0D1 (x, w') (0, dv)) w) v := hval2.symm
     _ = (fderiv ℝ (fun w' : ℝ^n => diff (asm.u0 x) w' dv) w) v := by rw [hfun]
 
+omit [CoordChangeAssumptions] in
 /-- Second derivative of `u0Prod` in coordinate `w` directions recovers `u0WW`. -/
 lemma u0D2_ww (x : ℝ^m) (w : ℝ^n) (α β : Fin n) :
     u0D2 (x, w) (iw α) (iw β) = u0WW x w α β := by
@@ -1455,6 +1510,7 @@ lemma u0D2_ww (x : ℝ^m) (w : ℝ^n) (α β : Fin n) :
   rw [fderiv_clm_apply hc (differentiableAt_const (c := e β))]
   simp [u0WW, diff2, Matrix.of_apply]
 
+omit [CoordChangeAssumptions] in
 /-- Second derivative of `u0Prod` in an `x` direction then a `w` direction. -/
 lemma u0D2_fst_snd (x : ℝ^m) (v : ℝ^m) (w dv : ℝ^n) :
     u0D2 (x, w) (v, 0) (0, dv) =
@@ -1477,6 +1533,7 @@ lemma u0D2_fst_snd (x : ℝ^m) (v : ℝ^m) (w dv : ℝ^n) :
     u0D2 (x, w) (v, 0) (0, dv) = ((fderiv ℝ (fun x' : ℝ^m => u0D1 (x', w)) x) v) (0, dv) := hval.symm
     _ = (fderiv ℝ (fun x' : ℝ^m => u0D1 (x', w) (0, dv)) x) v := hval2.symm
 
+omit [CoordChangeAssumptions] in
 /-- Second derivative of `u0Prod` in two pure `x` directions. -/
 lemma u0D2_fst_fst (x : ℝ^m) (v dv : ℝ^m) (w : ℝ^n) :
     u0D2 (x, w) (v, 0) (dv, 0) =
@@ -1531,6 +1588,7 @@ lemma u0D2_xx_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v dv : ℝ^m) :
       fderiv ℝ (fun _ : ℝ^m => (0 : ℝ)) y := hfun.fderiv_eq
   simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfd
 
+omit [CoordChangeAssumptions] in
 /-- Symmetry of the second derivative of `u0Prod`. -/
 lemma u0D2_symm (q : ℝ^m × ℝ^n) (v dv : ℝ^m × ℝ^n) :
     u0D2 q v dv = u0D2 q dv v := by
@@ -1580,6 +1638,7 @@ lemma u0D2_at_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v dv : ℝ^m × ℝ^n) :
       simp [mul_comm]
       try abel
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of the scalar-valued second derivative of `u0Prod` is the third derivative. -/
 lemma u0D3_apply (q : ℝ^m × ℝ^n) (u v dv : ℝ^m × ℝ^n) :
     fderiv ℝ (fun r : ℝ^m × ℝ^n => u0D2 r v dv) q u = u0D3 q u v dv := by
@@ -1596,6 +1655,7 @@ lemma u0D3_apply (q : ℝ^m × ℝ^n) (u v dv : ℝ^m × ℝ^n) :
       (fun L : (ℝ^m × ℝ^n) →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ℝ) => L u dv) h₃
   exact h₂.trans h₄
 
+omit [CoordChangeAssumptions] in
 /-- Symmetry of the first two arguments of the third derivative of `u0Prod`. -/
 lemma u0D3_symm_left (q : ℝ^m × ℝ^n) (u v dv : ℝ^m × ℝ^n) :
     u0D3 q u v dv = u0D3 q v u dv := by
@@ -1604,6 +1664,7 @@ lemma u0D3_symm_left (q : ℝ^m × ℝ^n) (u v dv : ℝ^m × ℝ^n) :
   have h := hsymm.eq u v
   simpa [u0D3] using congrArg (fun L : (ℝ^m × ℝ^n) →L[ℝ] ℝ => L dv) h
 
+omit [CoordChangeAssumptions] in
 /-- A pure `x` first direction reduces `u0D3` to the `x`-derivative of the remaining derivative. -/
 lemma u0D3_fst_apply (x v : ℝ^m) (w : ℝ^n) (v' dv' : ℝ^m × ℝ^n) :
     u0D3 (x, w) (v, 0) v' dv' =
@@ -1627,6 +1688,7 @@ lemma u0D3_fst_apply (x v : ℝ^m) (w : ℝ^n) (v' dv' : ℝ^m × ℝ^n) :
         fderiv ℝ (fun r : ℝ^m × ℝ^n => u0D2 r v' dv') (x, w) (v, 0) := happ.symm
     _ = (fderiv ℝ (fun x' : ℝ^m => u0D2 (x', w) v' dv') x) v := hval.symm
 
+omit [CoordChangeAssumptions] in
 /-- Symmetry of the last two arguments of the third derivative of `u0Prod`. -/
 lemma u0D3_symm_right (q : ℝ^m × ℝ^n) (u v dv : ℝ^m × ℝ^n) :
     u0D3 q u v dv = u0D3 q u dv v := by
@@ -1637,6 +1699,7 @@ lemma u0D3_symm_right (q : ℝ^m × ℝ^n) (u v dv : ℝ^m × ℝ^n) :
   have h := congrArg (fun f : (ℝ^m × ℝ^n) → ℝ => fderiv ℝ f q u) hfun
   simpa [u0D3_apply] using h
 
+omit [CoordChangeAssumptions] in
 /-- Third derivative of `u0Prod` in three pure `w` directions. -/
 lemma u0D3_snd_snd_snd (x : ℝ^m) (w v dv dv2 : ℝ^n) :
     u0D3 (x, w) (0, v) (0, dv) (0, dv2) =
@@ -1667,6 +1730,7 @@ lemma u0D3_snd_snd_snd (x : ℝ^m) (w v dv dv2 : ℝ^n) :
     _ = (fderiv ℝ (fun w' : ℝ^n =>
         fderiv ℝ (fun w'' : ℝ^n => diff (asm.u0 x) w'' dv2) w' dv) w) v := by rw [hfun]
 
+omit [CoordChangeAssumptions] in
 /-- Third derivative of `u0Prod` with one pure `x` direction and two pure `w` directions. -/
 lemma u0D3_fst_snd_snd (x v : ℝ^m) (w dv dv2 : ℝ^n) :
     u0D3 (x, w) (v, 0) (0, dv) (0, dv2) =
@@ -1690,6 +1754,7 @@ lemma u0D3_fst_snd_snd (x v : ℝ^m) (w dv dv2 : ℝ^n) :
         fderiv ℝ (fun r : ℝ^m × ℝ^n => u0D2 r (0, dv) (0, dv2)) (x, w) (v, 0) := happ.symm
     _ = (fderiv ℝ (fun x' : ℝ^m => u0D2 (x', w) (0, dv) (0, dv2)) x) v := hval.symm
 
+omit [CoordChangeAssumptions] in
 /-- Expand the first argument of `u0D3` at `(y,0)` in the product basis. -/
 lemma u0D3_expand₁ (y : ℝ^m) (u v dv : ℝ^m × ℝ^n) :
     u0D3 (y, 0) u v dv =
@@ -1716,6 +1781,7 @@ lemma u0D3_expand₁ (y : ℝ^m) (u v dv : ℝ^m × ℝ^n) :
       rw [hx, hw]
       simp [Lx, Lw, ix, iw, Finset.sum_apply]
 
+omit [CoordChangeAssumptions] in
 /-- Expand the second argument of `u0D3` at `(y,0)` in the product basis. -/
 lemma u0D3_expand₂ (y : ℝ^m) (u v dv : ℝ^m × ℝ^n) :
     u0D3 (y, 0) u v dv =
@@ -1742,6 +1808,7 @@ lemma u0D3_expand₂ (y : ℝ^m) (u v dv : ℝ^m × ℝ^n) :
       rw [hx, hw]
       simp [Lx, Lw, ix, iw, Finset.sum_apply]
 
+omit [CoordChangeAssumptions] in
 /-- Expand the third argument of `u0D3` at `(y,0)` in the product basis. -/
 lemma u0D3_expand₃ (y : ℝ^m) (u v dv : ℝ^m × ℝ^n) :
     u0D3 (y, 0) u v dv =
@@ -1768,6 +1835,7 @@ lemma u0D3_expand₃ (y : ℝ^m) (u v dv : ℝ^m × ℝ^n) :
       rw [hx, hw]
       simp [Lx, Lw, ix, iw]
 
+omit [CoordChangeAssumptions] in
 /-- Third derivative of `u0Prod` in coordinate `w` directions recovers `u0WWW`. -/
 lemma u0D3_www (x : ℝ^m) (w : ℝ^n) (δ ζ η : Fin n) :
     u0D3 (x, w) (iw δ) (iw ζ) (iw η) = u0WWW x w δ ζ η := by
@@ -1796,6 +1864,7 @@ lemma u0D3_www (x : ℝ^m) (w : ℝ^n) (δ ζ η : Fin n) :
       (fderiv_clm_apply hdiff2 (differentiableAt_const (c := e ζ)))
   rw [hstep₁, hstep₂]
 
+omit [CoordChangeAssumptions] in
 /-- Third derivative of `u0Prod` with one `x` direction and two `w` directions recovers `u0XWW`. -/
 lemma u0D3_xww (y : ℝ^m) (i : Fin m) (ζ η : Fin n) :
     u0D3 (y, 0) (ix i) (iw ζ) (iw η) = u0XWW y i ζ η := by
@@ -1806,6 +1875,7 @@ lemma u0D3_xww (y : ℝ^m) (i : Fin m) (ζ η : Fin n) :
     exact u0D2_ww x' 0 ζ η
   rw [hfun]
 
+omit [CoordChangeAssumptions] in
 /-- Symmetry of the last two indices of `u0XWW`. -/
 lemma u0XWW_symm (x : ℝ^m) (i : Fin m) (α β : Fin n) :
     u0XWW x i α β = u0XWW x i β α := by
@@ -1816,11 +1886,13 @@ lemma u0XWW_symm (x : ℝ^m) (i : Fin m) (α β : Fin n) :
   have h := congrArg (fun f : ℝ^m → ℝ => fderiv ℝ f x (e i)) hfun
   simpa [u0XWW] using h
 
+omit [CoordChangeAssumptions] in
 /-- Mixed third derivative with the `x` direction in the middle reduces to `u0XWW`. -/
 lemma u0D3_wxw (y : ℝ^m) (δ : Fin n) (i : Fin m) (η : Fin n) :
     u0D3 (y, 0) (iw δ) (ix i) (iw η) = u0XWW y i δ η := by
   rw [u0D3_symm_left, u0D3_xww]
 
+omit [CoordChangeAssumptions] in
 /-- Mixed third derivative with the `x` direction last reduces to `u0XWW`. -/
 lemma u0D3_wwx (y : ℝ^m) (δ ζ : Fin n) (i : Fin m) :
     u0D3 (y, 0) (iw δ) (iw ζ) (ix i) = u0XWW y i δ ζ := by
@@ -1952,14 +2024,17 @@ abbrev u1D2 (q : ℝ^m × ℝ^n) : (ℝ^m × ℝ^n) →L[ℝ] ((ℝ^m × ℝ^n) 
 abbrev u1XW (x : ℝ^m) (i : Fin m) (α : Fin n) : ℝ :=
   fderiv ℝ (fun x' : ℝ^m => u1W x' 0 (e α)) x (e i)
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the product-space version of `u1`. -/
 lemma u1Prod_smooth : SmoothGlobal u1Prod := by
   simpa [u1Prod] using asm.u1Smooth
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the first derivative of `u1Prod`. -/
 lemma u1D1_smooth : SmoothGlobal u1D1 := by
   simpa [u1D1] using u1Prod_smooth.fderiv_right (m := ⊤) (by simp)
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of `u1Prod` in a pure `w` direction is the `w`-derivative of `u1`. -/
 lemma u1D1_snd (x : ℝ^m) (w v : ℝ^n) :
     u1D1 (x, w) (0, v) = diff (asm.u1 x) w v := by
@@ -1974,6 +2049,7 @@ lemma u1D1_snd (x : ℝ^m) (w v : ℝ^n) :
   rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^n →L[ℝ] ℝ => L v) hEq).symm
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of `u1Prod` in a pure `x` direction is the `x`-derivative at fixed `w`. -/
 lemma u1D1_fst (x v : ℝ^m) (w : ℝ^n) :
     u1D1 (x, w) (v, 0) = fderiv ℝ (fun x' : ℝ^m => asm.u1 x' w) x v := by
@@ -2007,6 +2083,7 @@ lemma u1D1_at_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v : ℝ^m × ℝ^n) :
   have h := clm_apply_eq_sum_basis (diff (asm.u1 y) 0) v.2
   simpa [u1W, mul_comm] using h
 
+omit [CoordChangeAssumptions] in
 /-- Second derivative of `u1Prod` in two pure `w` directions. -/
 lemma u1D2_snd_snd (x : ℝ^m) (w v dv : ℝ^n) :
     u1D2 (x, w) (0, v) (0, dv) =
@@ -2034,6 +2111,7 @@ lemma u1D2_snd_snd (x : ℝ^m) (w v dv : ℝ^n) :
     _ = (fderiv ℝ (fun w' : ℝ^n => u1D1 (x, w') (0, dv)) w) v := hval2.symm
     _ = (fderiv ℝ (fun w' : ℝ^n => diff (asm.u1 x) w' dv) w) v := by rw [hfun]
 
+omit [CoordChangeAssumptions] in
 /-- Second derivative of `u1Prod` in coordinate `w` directions recovers `u1WW`. -/
 lemma u1D2_ww (x : ℝ^m) (w : ℝ^n) (α β : Fin n) :
     u1D2 (x, w) (iw α) (iw β) = u1WW x w α β := by
@@ -2043,6 +2121,7 @@ lemma u1D2_ww (x : ℝ^m) (w : ℝ^n) (α β : Fin n) :
   rw [fderiv_clm_apply hc (differentiableAt_const (c := e β))]
   simp [u1WW, diff2, Matrix.of_apply]
 
+omit [CoordChangeAssumptions] in
 /-- Second derivative of `u1Prod` in an `x` direction then a `w` direction. -/
 lemma u1D2_fst_snd (x : ℝ^m) (v : ℝ^m) (w dv : ℝ^n) :
     u1D2 (x, w) (v, 0) (0, dv) =
@@ -2065,6 +2144,7 @@ lemma u1D2_fst_snd (x : ℝ^m) (v : ℝ^m) (w dv : ℝ^n) :
     u1D2 (x, w) (v, 0) (0, dv) = ((fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w)) x) v) (0, dv) := hval.symm
     _ = (fderiv ℝ (fun x' : ℝ^m => u1D1 (x', w) (0, dv)) x) v := hval2.symm
 
+omit [CoordChangeAssumptions] in
 /-- Second derivative of `u1Prod` in two pure `x` directions. -/
 lemma u1D2_fst_fst (x : ℝ^m) (v dv : ℝ^m) (w : ℝ^n) :
     u1D2 (x, w) (v, 0) (dv, 0) =
@@ -2098,6 +2178,7 @@ lemma u1D2_fst_fst_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v dv : ℝ^m) :
       fderiv ℝ (fun _ : ℝ^m => (0 : ℝ)) y := hfun.fderiv_eq
   simpa using congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hfd
 
+omit [CoordChangeAssumptions] in
 /-- The mixed `x^i w^α` derivative of `u1Prod` at `(y,0)` in a basis `w` direction. -/
 lemma u1D2_fst_snd_basis (y : ℝ^m) (v : ℝ^m) (α : Fin n) :
     u1D2 (y, 0) (v, 0) (0, e α) = ∑ i : Fin m, v i * u1XW y i α := by
@@ -2115,6 +2196,7 @@ lemma u1D2_fst_snd_basis (y : ℝ^m) (v : ℝ^m) (α : Fin n) :
   rw [map_sum]
   simp [u1XW, smul_eq_mul]
 
+omit [CoordChangeAssumptions] in
 /-- The mixed `x` then `w` second derivative of `u1Prod` at `(y,0)`. -/
 lemma u1D2_fst_snd_at_zero (y : ℝ^m) (v : ℝ^m) (ζ : ℝ^n) :
     u1D2 (y, 0) (v, 0) (0, ζ) =
@@ -2146,6 +2228,7 @@ lemma u1D2_fst_snd_at_zero (y : ℝ^m) (v : ℝ^m) (ζ : ℝ^n) :
       rw [Finset.sum_comm]
       simp [Finset.mul_sum, mul_comm, mul_left_comm]
 
+omit [CoordChangeAssumptions] in
 /-- Symmetry of the second derivative of `u1Prod`. -/
 lemma u1D2_symm (q : ℝ^m × ℝ^n) (v dv : ℝ^m × ℝ^n) :
     u1D2 q v dv = u1D2 q dv v := by
@@ -2199,6 +2282,7 @@ lemma u1D2_at_zero (y : ℝ^m) (hy : y ∈ cca.Ω)
     u1D2_symm (y, 0) (0, v.2) (dv.1, 0), u1D2_fst_snd_at_zero y dv.1 v.2, hpure]
   abel
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of `u0Prod ∘ G` in the direction `e α`. -/
 lemma zD1_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
     (hG : ContDiffAt ℝ ⊤ G z) (α : Fin n) :
@@ -2209,6 +2293,7 @@ lemma zD1_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
   have hcomp := fderiv_comp' z hU hGd
   simpa [u0D1] using congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e α)) hcomp
 
+omit [CoordChangeAssumptions] in
 /-- The mixed derivative of `u0Prod ∘ G`, with the inner direction `e γ` and
 the outer direction `e β`. -/
 lemma zD2_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
@@ -2241,6 +2326,7 @@ lemma zD2_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
   rw [hcderiv] at hval
   simpa only [Dγ, ContinuousLinearMap.comp_apply, ContinuousLinearMap.flip_apply, add_comm] using hval
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of `u1Prod ∘ G` in the direction `e α`. -/
 lemma zD1_u1_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
     (hG : ContDiffAt ℝ ⊤ G z) (α : Fin n) :
@@ -2251,6 +2337,7 @@ lemma zD1_u1_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
   have hcomp := fderiv_comp' z hU hGd
   simpa [u1D1] using congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e α)) hcomp
 
+omit [CoordChangeAssumptions] in
 /-- The mixed derivative of `u1Prod ∘ G`, with the inner direction `e γ` and
 the outer direction `e β`. -/
 lemma zD2_u1_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
@@ -2282,6 +2369,7 @@ lemma zD2_u1_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
   have hval := congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e β)) happ
   rw [hcderiv] at hval
   simpa only [Dγ, ContinuousLinearMap.comp_apply, ContinuousLinearMap.flip_apply, add_comm] using hval
+omit [CoordChangeAssumptions] in
 /-- The third mixed derivative of `u0Prod ∘ G`, with the innermost direction
 `e γ`, middle direction `e β`, and outermost direction `e α`. -/
 lemma zD3_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
@@ -2397,6 +2485,7 @@ lemma zD3_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
   simp only [Dβ, Dγ, D2βγ, dG, d2G, d3G]
   abel
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- The first derivative of a product of scalar functions. -/
 lemma zD1_mul_at (A B : ℝ^n → ℝ) (z : ℝ^n)
     (hA : ContDiffAt ℝ ⊤ A z) (hB : ContDiffAt ℝ ⊤ B z) (α : Fin n) :
@@ -2408,6 +2497,7 @@ lemma zD1_mul_at (A B : ℝ^n → ℝ) (z : ℝ^n)
   have hval := congrArg (fun L : ℝ^n →L[ℝ] ℝ => L (e α)) hmul
   simpa [smul_eq_mul, mul_comm] using hval
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- The second mixed `z`-derivative of a product of scalar functions. -/
 lemma zD2_mul_at (A B : ℝ^n → ℝ) (z : ℝ^n)
     (hA : ContDiffAt ℝ ⊤ A z) (hB : ContDiffAt ℝ ⊤ B z) (α β : Fin n) :
@@ -2450,6 +2540,7 @@ lemma zD2_mul_at (A B : ℝ^n → ℝ) (z : ℝ^n)
   simp [mul_comm]
   try abel
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- The third derivative of a product when the second factor vanishes to first
 order at the base point. -/
 lemma zD3_mul_at_of_zero (A B : ℝ^n → ℝ) (hA : ContDiffAt ℝ ⊤ A 0)
@@ -2681,6 +2772,7 @@ lemma d2G_coordG_snd (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
   have hval := congrArg (fun L : ℝ^n →L[ℝ] (ℝ^m × ℝ^n) => L (e α)) (hEq.fderiv_eq.trans hprod2)
   simpa [d2G] using congrArg Prod.snd hval
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Express `zD2` as the second Fréchet derivative of `F`. -/
 lemma zD2_eq_fderiv_fderiv {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (F : ℝ^n → E) (hF : ContDiffAt ℝ ⊤ F 0) (α β : Fin n) :
@@ -2690,6 +2782,7 @@ lemma zD2_eq_fderiv_fderiv {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E
   have happ := fderiv_clm_apply hfdF (differentiableAt_const (c := e β))
   simpa [zD2] using congrArg (fun L : ℝ^n →L[ℝ] E => L (e α)) happ
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Symmetry of `zD2` for a smooth `F`. -/
 lemma zD2_symm {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (F : ℝ^n → E) (hF : ContDiffAt ℝ ⊤ F 0) (α β : Fin n) :
@@ -2964,10 +3057,12 @@ abbrev u2D1 (q : ℝ^m × ℝ^n) : (ℝ^m × ℝ^n) →L[ℝ] ℝ := fderiv ℝ 
 abbrev u2X (x : ℝ^m) (i : Fin m) : ℝ :=
   fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) x (e i)
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the product-space version of `u2`. -/
 lemma u2Prod_smooth : SmoothGlobal u2Prod := by
   simpa [u2Prod] using asm.u2Smooth
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of `u2Prod` in a pure `w` direction is the `w`-derivative of `u2`. -/
 lemma u2D1_snd (x : ℝ^m) (w v : ℝ^n) :
     u2D1 (x, w) (0, v) = diff (asm.u2 x) w v := by
@@ -2982,6 +3077,7 @@ lemma u2D1_snd (x : ℝ^m) (w v : ℝ^n) :
   rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^n →L[ℝ] ℝ => L v) hEq).symm
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of `u2Prod` in a pure `x` direction is the fixed-`w` derivative of `u2`. -/
 lemma u2D1_fst (x v : ℝ^m) (w : ℝ^n) :
     u2D1 (x, w) (v, 0) = fderiv ℝ (fun x' : ℝ^m => asm.u2 x' w) x v := by
@@ -2996,6 +3092,7 @@ lemma u2D1_fst (x v : ℝ^m) (w : ℝ^n) :
   rw [hSlice] at hEq
   simpa using (congrArg (fun L : ℝ^m →L[ℝ] ℝ => L v) hEq).symm
 
+omit [CoordChangeAssumptions] in
 /-- The first derivative of `u2Prod` at `(y,0)` has an `x` and a `w` contribution. -/
 lemma u2D1_at_zero (y : ℝ^m) (v : ℝ^m × ℝ^n) :
     u2D1 (y, 0) v =
@@ -3016,6 +3113,7 @@ lemma u2D1_at_zero (y : ℝ^m) (v : ℝ^m × ℝ^n) :
       rw [hsum]
       ring
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Expand a continuous linear functional on `ℝ^m` in the standard basis. -/
 lemma clm_apply_eq_sum_basis_m (L : ℝ^m →L[ℝ] ℝ) (v : ℝ^m) :
     L v = ∑ i : Fin m, v i * L (e i) := by
@@ -3024,6 +3122,7 @@ lemma clm_apply_eq_sum_basis_m (L : ℝ^m →L[ℝ] ℝ) (v : ℝ^m) :
   simp [e, Finset.sum_apply, Pi.single_apply, Finset.mem_univ, map_sum, map_smul,
     smul_eq_mul]
 
+omit [CoordChangeAssumptions] in
 /-- Expand a derivative of `u2(·,0)` in the standard basis of `ℝ^m`. -/
 lemma u2X_sum_basis (y : ℝ^m) (v : ℝ^m) :
     fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) y v =
@@ -3031,6 +3130,7 @@ lemma u2X_sum_basis (y : ℝ^m) (v : ℝ^m) :
   have h := clm_apply_eq_sum_basis_m (fderiv ℝ (fun x' : ℝ^m => asm.u2 x' 0) y) v
   simpa [u2X, mul_comm] using h
 
+omit [CoordChangeAssumptions] in
 /-- The derivative of `u2Prod ∘ G` in the direction `e α`. -/
 lemma zD1_u2_comp_at (G : ℝ^n → ℝ^m × ℝ^n) (z : ℝ^n)
     (hG : ContDiffAt ℝ ⊤ G z) (α : Fin n) :
@@ -3177,6 +3277,7 @@ lemma v0Hessian_posDef (y : ℝ^m) (hy : y ∈ cca.Ω) : (v0Hessian y).PosDef :=
   rw [v0Hessian_eq y hy]
   exact hscaled
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Swap the last two summations of a triple finite sum. -/
 lemma sum_swap₃ (f : Fin n → Fin n → Fin n → ℝ) :
     (∑ β : Fin n, ∑ γ : Fin n, ∑ δ : Fin n, f β γ δ) =
@@ -3186,6 +3287,7 @@ lemma sum_swap₃ (f : Fin n → Fin n → Fin n → ℝ) :
   intro γ _
   rw [Finset.sum_comm]
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Move the last two summations of a quadruple finite sum to the front. -/
 lemma sum_reorder₄ (f : Fin n → Fin n → Fin n → Fin n → ℝ) :
     (∑ a : Fin n, ∑ b : Fin n, ∑ c : Fin n, ∑ d : Fin n, f a b c d) =
@@ -3219,6 +3321,7 @@ lemma sum_reorder₄ (f : Fin n → Fin n → Fin n → Fin n → ℝ) :
           intro d _
           rw [Finset.sum_comm]
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Move the last three summations of a sextuple finite sum to the front. -/
 lemma sum_reorder₆ (f : Fin n → Fin n → Fin n → Fin n → Fin n → Fin n → ℝ) :
     (∑ a : Fin n, ∑ b : Fin n, ∑ c : Fin n,
@@ -3292,6 +3395,7 @@ lemma sum_reorder₆ (f : Fin n → Fin n → Fin n → Fin n → Fin n → Fin 
           intro e _
           rw [Finset.sum_comm]
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Reorder `∑ a b c d` as `∑ c a d b` for mixed finite index types. -/
 lemma sum_reorder₄_mixed {ι κ : Type*} [Fintype ι] [Fintype κ]
     (f : ι → ι → κ → ι → ℝ) :
@@ -3312,6 +3416,7 @@ lemma sum_reorder₄_mixed {ι κ : Type*} [Fintype ι] [Fintype κ]
           intro a _
           rw [Finset.sum_comm]
 
+omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Reorder `∑ a b c d e g` as `∑ c d a b e g` for mixed finite index types. -/
 lemma sum_reorder₆_mixed {ι κ : Type*} [Fintype ι] [Fintype κ]
     (f : ι → ι → ι → κ → ι → ι → ℝ) :
@@ -3417,6 +3522,7 @@ lemma barz_eq_barzViaPsi (y : ℝ^m) (hy : y ∈ cca.Ω) : barz y = barzViaPsi y
       Matrix.mulVec, dotProduct] using barzViaPsi_defining_equation y hy α
   simpa [barz] using hinv.inverse_apply_eq.mpr hvec.symm
 
+omit [CoordChangeAssumptions] in
 /-- The paper's `derivative.of.U2`: the coordinate derivative of `U^(2)` is the
 coordinate derivative of `u^(2)` plus the two critical-point correction terms. -/
 lemma derivative_U2 (x : ℝ^m) (hx : inBounds x) (i : Fin m) :
@@ -4779,24 +4885,29 @@ lemma v3_zero (y : ℝ^m) (hy : y ∈ cca.Ω) :
 -- proposition.  These are intentionally local in the parameter: the reduced
 -- direction `barw` is proved smooth wherever the Hessian is invertible.
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the full second derivative of `u1Prod`. -/
 lemma u1D2_smooth : SmoothGlobal u1D2 := by
   simpa [u1D2, u1D1] using u1D1_smooth.fderiv_right (m := ⊤) (by simp)
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the full first derivative of `u2Prod`. -/
 lemma u2D1_smooth : SmoothGlobal u2D1 := by
   simpa [u2D1] using u2Prod_smooth.fderiv_right (m := ⊤) (by simp)
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness in `x` of `u2(x,0)`. -/
 lemma u2_at_zero_smooth : SmoothGlobal (fun x : ℝ^m => asm.u2 x 0) := by
   have h : SmoothGlobal (fun x : ℝ^m => (x, (0 : ℝ^n))) := by fun_prop
   simpa [Function.comp_def, Function.uncurry_def] using asm.u2Smooth.comp h
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness in `x` of `u3(x,0)`. -/
 lemma u3_at_zero_smooth : SmoothGlobal (fun x : ℝ^m => asm.u3 x 0) := by
   have h : SmoothGlobal (fun x : ℝ^m => (x, (0 : ℝ^n))) := by fun_prop
   simpa [Function.comp_def, Function.uncurry_def] using asm.u3Smooth.comp h
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness in `x` of one component of the gradient of `u2(x, ·)` at zero. -/
 lemma u2W_smooth_apply (α : Fin n) : SmoothGlobal (fun x : ℝ^m => u2W x 0 (e α)) := by
   have hα : SmoothGlobal (fun q : ℝ^m × ℝ^n => u2D1 q (iw α)) := by
@@ -4805,6 +4916,7 @@ lemma u2W_smooth_apply (α : Fin n) : SmoothGlobal (fun x : ℝ^m => u2W x 0 (e 
   have hcomp := hα.comp (by fun_prop : SmoothGlobal (fun x : ℝ^m => (x, (0 : ℝ^n))))
   simpa [Function.comp_def, u2D1_snd, u2W, iw] using hcomp
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness in `x` of one Hessian component of `u1(x, ·)` at zero. -/
 lemma u1WW_smooth_apply (α β : Fin n) : SmoothGlobal (fun x : ℝ^m => u1WW x 0 α β) := by
   have hα : SmoothGlobal (fun q : ℝ^m × ℝ^n => u1D2 q (iw α)) := by
@@ -4816,6 +4928,7 @@ lemma u1WW_smooth_apply (α β : Fin n) : SmoothGlobal (fun x : ℝ^m => u1WW x 
   have hcomp := hαβ.comp (by fun_prop : SmoothGlobal (fun x : ℝ^m => (x, (0 : ℝ^n))))
   simpa [Function.comp_def, u1D2_ww] using hcomp
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness in `x` of one third-derivative component of `u0(x, ·)` at zero. -/
 lemma u0WWW_smooth_apply (α β γ : Fin n) :
     SmoothGlobal (fun x : ℝ^m => u0WWW x 0 α β γ) := by
@@ -4840,6 +4953,7 @@ lemma u0WWW_smooth_apply (α β γ : Fin n) :
     exact u0D3_apply q (iw α) (iw β) (iw γ)
   simpa [Function.comp_def, hEq, u0D3_www] using hcomp
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness in `y` of one coordinate of the reduced direction `barw`. -/
 lemma barw_coord_contDiffAt (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
     ContDiffAt ℝ ⊤ (fun y : ℝ^m => bud.barw y α) x := by
@@ -4847,6 +4961,7 @@ lemma barw_coord_contDiffAt (x : ℝ^m) (hx : inBounds x) (α : Fin n) :
     (contDiffAt_apply (𝕜 := ℝ) (E := ℝ) (n := ⊤) α (bud.barw x)).comp x
       (barw_contDiffAt x hx)
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the reduced second coefficient `U2` at an admissible point. -/
 lemma bud_U2_contDiffAt (x : ℝ^m) (hx : inBounds x) : ContDiffAt ℝ ⊤ bud.U2 x := by
   change ContDiffAt ℝ ⊤
@@ -4861,6 +4976,7 @@ lemma bud_U2_contDiffAt (x : ℝ^m) (hx : inBounds x) : ContDiffAt ℝ ⊤ bud.U
   have hhalf : ContDiffAt ℝ ⊤ (fun _ : ℝ^m => (1 / 2 : ℝ)) x := contDiffAt_const
   simpa using hu2.add (hhalf.mul hsum)
 
+omit [CoordChangeAssumptions] in
 /-- Smoothness of the reduced third coefficient `U3` at an admissible point. -/
 lemma bud_U3_contDiffAt (x : ℝ^m) (hx : inBounds x) : ContDiffAt ℝ ⊤ bud.U3 x := by
   change ContDiffAt ℝ ⊤
@@ -4905,6 +5021,7 @@ lemma bud_U3_contDiffAt (x : ℝ^m) (hx : inBounds x) : ContDiffAt ℝ ⊤ bud.U
   have hsixth : ContDiffAt ℝ ⊤ (fun _ : ℝ^m => (1 / 6 : ℝ)) x := contDiffAt_const
   simpa using (((hu3.add hlinear).add (hhalf.mul hquad)).add (hsixth.mul hcubic))
 
+omit [CoordChangeAssumptions] in
 /-- The reduced third coefficient is smooth on the closed parameter ball. -/
 lemma bud_U3_smoothOn_D : Smooth bud.U3 on (D asm.r0) := by
   intro x hx
