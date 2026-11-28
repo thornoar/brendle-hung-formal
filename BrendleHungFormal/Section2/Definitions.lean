@@ -17,8 +17,8 @@ open BrendleHung.Section2.TaylorAsymptotics
 local notation "norm" => BrendleHung.Section2.Multivar.norm
 local notation "↓" f => uncurry f
 
-/-- The raw functions and radii from the beginning of Section 2. -/
-class InitialDefinitions where
+/-- Initial data and hypotheses -/
+class InitialAssumptions where
   r0 : ℝ
   s0 : ℝ
   σ : ℝ
@@ -27,10 +27,6 @@ class InitialDefinitions where
   u1 : ℝ^m -> ℝ^n -> ℝ
   u2 : ℝ^m -> ℝ^n -> ℝ
   u3 : ℝ^m -> ℝ^n -> ℝ
-
-/-- Hypotheses on the initial data: positivity, smoothness, normalization,
-a quadratic lower bound, and a smooth third-order expansion. -/
-class InitialAssumptions extends InitialDefinitions where
   hr0 : r0 > 0
   hs0 : s0 > 0
   hσ : σ > 0

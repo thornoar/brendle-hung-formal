@@ -101,27 +101,13 @@ lemma relation_U2_V2 (y : ℝ^m) (hy : y ∈ cca.Ω) :
   have hsum :
       (∑ α : Fin n, zD1 (ccd.v1 y) α * barz y α) =
         ∑ β : Fin n, Υc y 0 * u1W y 0 (e β) * bud.barw y β := by
-    calc
-      ∑ α : Fin n, zD1 (ccd.v1 y) α * barz y α
-          = ∑ β : Fin n, Υc y 0 * u1W y 0 (e β) *
-              (∑ α : Fin n, zD1 (ψc y) α β * barz y α) := by
-            simp_rw [zD1_v1 y hy, Finset.sum_mul]
-            rw [Finset.sum_comm]
-            apply Finset.sum_congr rfl
-            intro β _
-            rw [Finset.mul_sum]
-            apply Finset.sum_congr rfl
-            intro α _
-            ring
-      _ = ∑ β : Fin n, Υc y 0 * u1W y 0 (e β) * bud.barw y β := by
-            simp_rw [relation_barw_barz y hy]
+    simp_rw [zD1_v1 y hy]
+    exact barz_psi_single_contract (fun β => Υc y 0 * u1W y 0 (e β)) y hy
   have hsumΥ :
       (∑ β : Fin n, Υc y 0 * u1W y 0 (e β) * bud.barw y β) =
         Υc y 0 * ∑ β : Fin n, u1W y 0 (e β) * bud.barw y β := by
     rw [Finset.mul_sum]
-    apply Finset.sum_congr rfl
-    intro β _
-    ring
+    simp only [mul_assoc]
   change ccd.v2 y 0 + (1 / 2 : ℝ) * (∑ α : Fin n, zD1 (ccd.v1 y) α * barz y α) =
     Υc y 0 *
       (asm.u2 y 0 + (1 / 2 : ℝ) *
@@ -212,7 +198,7 @@ lemma relation_U3_V3 (y : ℝ^m) (hy : y ∈ cca.Ω) :
     intro α _
     apply Finset.sum_congr rfl
     intro γ _
-    ring
+    ac_rfl
   unfold V3
   rw [v3_zero y hy, v2_barz_linear y hy, v1_barz_quad y hy, v0_barz_cubic y hy]
   rw [hBud, U2_deriv_barz_contract y hy, U2_Upsilon_barz_contract y hy]
@@ -290,8 +276,8 @@ theorem positivity
     have hΥ := upsilon_y0_pos y hy
     have hV := hV2Ω y hy
     rw [relation_U2_V2 y hy] at hV
-    have hV' : Υc y 0 * (κ * ρ y) ≤ Υc y 0 * bud.U2 y := by nlinarith
-    exact (mul_le_mul_iff_of_pos_left hΥ).mp hV'
+    exact (mul_le_mul_iff_of_pos_left hΥ).mp
+      (by simpa [mul_comm, mul_left_comm, mul_assoc] using hV)
   have hU2_ge_A : ∀ y ∈ A, κ * ρ y ≤ bud.U2 y := by
     intro y hyA
     have hyD : inBounds y := hAD hyA
@@ -302,12 +288,6 @@ theorem positivity
     have hU2w : ContinuousWithinAt bud.U2 cca.Ω y :=
       (bud_U2_contDiffAt y hyD).continuousAt.continuousWithinAt
     exact ContinuousWithinAt.closure_le (hAclos hyA) hκρw hU2w hU2_ge_Ω
-  have hV2_nonneg : ∀ y ∈ cca.Ω, 0 ≤ V2 y := by
-    intro y hy
-    have hρy : 0 ≤ ρ y := hρ_nonneg y (hΩD hy)
-    have hcoef : 0 ≤ κ * Υc y 0 :=
-      mul_nonneg (le_of_lt hκ) (le_of_lt (upsilon_y0_pos y hy))
-    nlinarith [hV2Ω y hy, mul_nonneg hcoef hρy]
   have hU2_nonneg : ∀ y ∈ cca.Ω, 0 ≤ bud.U2 y := by
     intro y hy
     have hρy : 0 ≤ ρ y := hρ_nonneg y (hΩD hy)
@@ -341,8 +321,8 @@ theorem positivity
     have hΥ : 0 < Υc y 0 := upsilon_y0_pos y hyΛ.1
     have hV := (hV3Ω y hyΛ.1 hyΛ.2).2
     rw [hV3eqΛ y hyΛ] at hV
-    have hV' : Υc y 0 * κ ≤ Υc y 0 * bud.U3 y := by nlinarith
-    exact (mul_le_mul_iff_of_pos_left hΥ).mp hV'
+    exact (mul_le_mul_iff_of_pos_left hΥ).mp
+      (by simpa [mul_comm] using hV)
   have hU3_ge_A0 : ∀ y ∈ A ∩ {y | ρ y = 0}, κ ≤ bud.U3 y := by
     intro y hy
     have hyD : inBounds y := hAD hy.1
@@ -426,9 +406,8 @@ theorem positivity
     have hsasm : s ∈ Set.Ioc (0 : ℝ) asm.s0 := ⟨hspos, hss1.trans hs1le_s0⟩
     have hspow3 : 0 < s ^ 3 := pow_pos hspos 3
     have hspow3nonneg : 0 ≤ s ^ 3 := le_of_lt hspow3
-    have hs4le3 : s ^ 4 ≤ s ^ 3 := by
-      have hsle1 : s ≤ 1 := hss1.trans hs1le_one
-      nlinarith [sq_nonneg s, mul_nonneg (sq_nonneg s) (le_of_lt hspos)]
+    have hs4le3 : s ^ 4 ≤ s ^ 3 :=
+      pow_le_pow_of_le_one (le_of_lt hspos) (hss1.trans hs1le_one) (by norm_num)
     have hCs_le : C * s ≤ κ / 4 := by
       have hsle : s ≤ κ / (4 * (C + 1)) := hss1.trans hs1le_k1
       have hmul : s * (4 * (C + 1)) ≤ κ := (le_div_iff₀ hden1).mp hsle

@@ -69,17 +69,14 @@ theorem smooth_extension
       · have hgmem : Manifold.budU3_of ch.a (ch.coord y) ∈ ({ratio y} : Set ℝ) := by
           have hyΩ : ch.coord y ∈ Manifold.Ωof ch.a ch.c :=
             ch.coord_mem_Ω y hyU (S.Λ_subset_Ω hyΛ)
-          have hΛe : ch.coord y ∈ Λe := by
-            constructor
-            · simpa [ch.inverse_coord y hyU] using hyΛ
-            · exact hyΩ
+          have hΛe : ch.coord y ∈ Λe :=
+            ⟨by simpa [ch.inverse_coord y hyU] using hyΛ, hyΩ⟩
           have hV3eq := (hinv.1 (ch.coord y) hΛe)
           have hΥeq : Manifold.Υof ch.a ch.c (ch.coord y, 0) = S.Υ y 0 := by
             rw [ch.h_Upsilon (ch.coord y) hyΩ (0 : Fin n → ℝ)
               (Manifold.zero_mem_B_r1_of ch.a ch.c)]
             simp [ch.inverse_coord y hyU]
           have hV3global := ch.h_V3 (ch.coord y) hyΩ
-          change Manifold.V3_of ch.a ch.c (ch.coord y) = _ at hV3eq
           rw [hV3global] at hV3eq
           simp [ch.inverse_coord y hyU] at hV3eq
           rw [Manifold.Υc_of_eq] at hV3eq
@@ -87,7 +84,7 @@ theorem smooth_extension
           have hΥne : S.Υ y 0 ≠ 0 := ne_of_gt (hΥpos y hyΛ)
           change Manifold.budU3_of ch.a (ch.coord y) = (S.Υ y 0)⁻¹ * S.V3 y
           rw [hV3eq]
-          field_simp [hΥne]
+          simp [hΥne]
         simpa [t, hyΛ] using hgmem
       · simp [t, hyΛ]
   rcases exists_contMDiffMap_forall_mem_convex_of_local (I := Manifold.modelZ)
@@ -232,35 +229,16 @@ theorem positivity_manifold_version
             (lt_min (div_pos hA0pos hd3) (div_pos hA0pos hd4)))))
       refine ⟨A0 / 2, saway, div_pos hA0pos (by norm_num), hsawaypos, ?_⟩
       intro s hs p hpK
-      have hsleS : s ≤ S.s0 := hs.2.trans (by
-        dsimp [saway]
-        exact min_le_left _ _)
-      have hsle1 : s ≤ 1 := hs.2.trans (by
-        dsimp [saway]
-        exact (min_le_right _ _).trans (min_le_left _ _))
-      have hsle1den : s ≤ A0 / (8 * (B1 + 1)) := hs.2.trans (by
-        dsimp [saway]
-        exact ((min_le_right _ _).trans (min_le_right _ _)).trans (min_le_left _ _))
-      have hsle2den : s ≤ A0 / (8 * (B2 + 1)) := hs.2.trans (by
-        dsimp [saway]
-        exact (((min_le_right _ _).trans (min_le_right _ _)).trans
-          (min_le_right _ _)).trans (min_le_left _ _))
-      have hsle3den : s ≤ A0 / (8 * (B3 + 1)) := hs.2.trans (by
-        dsimp [saway]
-        exact ((((min_le_right _ _).trans (min_le_right _ _)).trans
-          (min_le_right _ _)).trans (min_le_right _ _)).trans (min_le_left _ _))
-      have hsleCden : s ≤ A0 / (8 * (S.C + 1)) := hs.2.trans (by
-        dsimp [saway]
-        exact ((((min_le_right _ _).trans (min_le_right _ _)).trans
-          (min_le_right _ _)).trans (min_le_right _ _)).trans (min_le_right _ _))
+      have hsleS : s ≤ S.s0 := hs.2.trans (by simp [saway])
+      have hsle1 : s ≤ 1 := hs.2.trans (by simp [saway])
+      have hsle1den : s ≤ A0 / (8 * (B1 + 1)) := hs.2.trans (by simp [saway])
+      have hsle2den : s ≤ A0 / (8 * (B2 + 1)) := hs.2.trans (by simp [saway])
+      have hsle3den : s ≤ A0 / (8 * (B3 + 1)) := hs.2.trans (by simp [saway])
+      have hsleCden : s ≤ A0 / (8 * (S.C + 1)) := hs.2.trans (by simp [saway])
       have hterm (B : ℝ) (hB : 0 ≤ B) (hsB : s ≤ A0 / (8 * (B + 1))) :
           s * B ≤ A0 / 8 := by
         have hden : 0 < 8 * (B + 1) := by positivity
-        have hmul : s * (8 * (B + 1)) ≤ A0 := by
-          calc
-            s * (8 * (B + 1)) ≤ (A0 / (8 * (B + 1))) * (8 * (B + 1)) :=
-              mul_le_mul_of_nonneg_right hsB (le_of_lt hden)
-            _ = A0 := by field_simp [ne_of_gt hden]
+        have hmul : s * (8 * (B + 1)) ≤ A0 := (le_div_iff₀ hden).mp hsB
         have hsmall : s * B ≤ s * (B + 1) :=
           mul_le_mul_of_nonneg_left (by linarith) (le_of_lt hs.1)
         nlinarith
@@ -269,31 +247,18 @@ theorem positivity_manifold_version
       have hB3term : s * B3 ≤ A0 / 8 := hterm B3 hB3nonneg hsle3den
       have hCterm : S.C * s ≤ A0 / 8 := by
         simpa [mul_comm] using hterm S.C S.hC hsleCden
-      have hs2les : s ^ 2 ≤ s := by
-        have hs1nonneg : 0 ≤ 1 - s := sub_nonneg.mpr hsle1
-        have hprod : 0 ≤ s * (1 - s) := mul_nonneg (le_of_lt hs.1) hs1nonneg
-        nlinarith
-      have hs3les : s ^ 3 ≤ s := by
-        have h32 : s ^ 3 ≤ s ^ 2 := by
-          have h := mul_le_mul_of_nonneg_left hsle1 (sq_nonneg s)
-          nlinarith
-        exact h32.trans hs2les
-      have hs4les : s ^ 4 ≤ s := by
-        have h43 : s ^ 4 ≤ s ^ 3 := by
-          have h := mul_le_mul_of_nonneg_left hsle1
-            (pow_nonneg (le_of_lt hs.1) 3)
-          nlinarith
-        exact h43.trans hs3les
+      have hsnonneg : 0 ≤ s := le_of_lt hs.1
+      have hs2les : s ^ 2 ≤ s := pow_le_of_le_one hsnonneg hsle1 (by norm_num)
+      have hs3les : s ^ 3 ≤ s := pow_le_of_le_one hsnonneg hsle1 (by norm_num)
+      have hs4les : s ^ 4 ≤ s := pow_le_of_le_one hsnonneg hsle1 (by norm_num)
       have hB2term2 : s ^ 2 * B2 ≤ A0 / 8 :=
         (mul_le_mul_of_nonneg_right hs2les hB2nonneg).trans hB2term
       have hB3term3 : s ^ 3 * B3 ≤ A0 / 8 :=
         (mul_le_mul_of_nonneg_right hs3les hB3nonneg).trans hB3term
       have hCterm4 : S.C * s ^ 4 ≤ A0 / 8 :=
         (mul_le_mul_of_nonneg_left hs4les S.hC).trans hCterm
-      have hdnonneg : 0 ≤ Metric.infDist p (Set.range S.ι) := Metric.infDist_nonneg
-      have hdsq : δdist ^ 2 ≤ (Metric.infDist p (Set.range S.ι)) ^ 2 := by
-        have hdle := hδdist_le p hpK
-        nlinarith [sq_nonneg (Metric.infDist p (Set.range S.ι) - δdist)]
+      have hdsq : δdist ^ 2 ≤ (Metric.infDist p (Set.range S.ι)) ^ 2 :=
+        (sq_le_sq₀ (le_of_lt hδdistpos) Metric.infDist_nonneg).2 (hδdist_le p hpK)
       have hu0bound : A0 ≤ S.u0 p := by
         dsimp [A0]
         exact (mul_le_mul_of_nonneg_left hdsq (le_of_lt S.hσ)).trans

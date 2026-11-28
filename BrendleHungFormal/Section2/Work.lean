@@ -1332,21 +1332,37 @@ lemma barw_contDiffAt (x : ℝ^m) (hx : inBounds x) : ContDiffAt ℝ ⊤ bud.bar
     exact hyinv.inverse_apply_eq.mpr (barw_spec_of_det_ne_zero y hydet).symm
   exact hExpr.congr_of_eventuallyEq hEqEv.symm
 
-/-- For `y ∈ Ω`, the `z`-slice of `ψ` is globally smooth near `z = 0`. -/
-lemma CoordChangeAssumptions.psi_z_smoothAt
-    (y : ℝ^m) (hy : y ∈ cca.Ω) :
-    ContDiffAt ℝ ⊤ (fun z : ℝ^n => cca.ψ (y, z)) 0
-:= by
+/-- A function smooth on the coordinate product is smooth at `(y, 0)`. -/
+private lemma contDiffAt_at_y0 {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (F : ℝ^m × ℝ^n → E)
+    (hF : Smooth F on (cca.Ω ×ˢ (B (d := n) cca.r1)))
+    (y : ℝ^m) (hy : y ∈ cca.Ω) : ContDiffAt ℝ ⊤ F (y, 0) := by
   have hopen : IsOpen (cca.Ω ×ˢ (B (d := n) cca.r1)) :=
     cca.Ω_open.prod (isOpen_B (d := n) cca.r1)
   have hmem : (y, (0 : ℝ^n)) ∈ cca.Ω ×ˢ (B (d := n) cca.r1) := by
     refine ⟨hy, ?_⟩
     simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
-  have hψat : ContDiffAt ℝ ⊤ cca.ψ (y, 0) :=
-    cca.ψ_smooth.contDiffAt (hopen.mem_nhds hmem)
-  have hslice : Smooth (fun z : ℝ^n => (y, z)) on (Set.univ : Set ℝ^n) :=
-    (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) y).contDiffOn
-  exact hψat.comp 0 (hslice.contDiffAt (by simp))
+  exact hF.contDiffAt (hopen.mem_nhds hmem)
+
+/-- The `z`-slice at fixed `y ∈ Ω` of a function smooth on the product. -/
+private lemma contDiffAt_slice_z {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (F : ℝ^m × ℝ^n → E)
+    (hF : Smooth F on (cca.Ω ×ˢ (B (d := n) cca.r1)))
+    (y : ℝ^m) (hy : y ∈ cca.Ω) : ContDiffAt ℝ ⊤ (fun z : ℝ^n => F (y, z)) 0 := by
+  exact (contDiffAt_at_y0 F hF y hy).comp 0 (by fun_prop)
+
+/-- The `y`-slice at fixed `z = 0` of a function smooth on the product. -/
+private lemma contDiffAt_slice_y {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (F : ℝ^m × ℝ^n → E)
+    (hF : Smooth F on (cca.Ω ×ˢ (B (d := n) cca.r1)))
+    (y : ℝ^m) (hy : y ∈ cca.Ω) : ContDiffAt ℝ ⊤ (fun y' : ℝ^m => F (y', 0)) y := by
+  exact (contDiffAt_at_y0 F hF y hy).comp y (by fun_prop)
+
+/-- For `y ∈ Ω`, the `z`-slice of `ψ` is globally smooth near `z = 0`. -/
+lemma CoordChangeAssumptions.psi_z_smoothAt
+    (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    ContDiffAt ℝ ⊤ (fun z : ℝ^n => cca.ψ (y, z)) 0 := by
+  exact contDiffAt_slice_z cca.ψ cca.ψ_smooth y hy
 
 noncomputable section
 
@@ -1450,6 +1466,14 @@ omit [InitialAssumptions] [CoordChangeAssumptions] in
 lemma pi_sum_basis {d : ℕ} (v : ℝ^d) : v = ∑ i : Fin d, v i • e i := by
   ext j
   simp [e, Pi.single_apply]
+
+omit [InitialAssumptions] [CoordChangeAssumptions] in
+/-- Expand a continuous linear map on `ℝ^d` in the standard basis. -/
+private lemma clm_apply_eq_sum_basis_of_dim {d : ℕ} {E : Type*} [TopologicalSpace E]
+    [AddCommMonoid E] [Module ℝ E] (L : ℝ^d →L[ℝ] E) (v : ℝ^d) :
+    L v = ∑ i : Fin d, v i • L (e i) := by
+  conv_lhs => rw [pi_sum_basis v]
+  simp
 
 /-- The first derivative of `u0Prod` vanishes at `(y,0)` for `y ∈ Ω`. -/
 lemma u0D1_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : u0D1 (y, 0) = 0 := by
@@ -1606,9 +1630,7 @@ lemma u0D2_at_zero (y : ℝ^m) (hy : y ∈ cca.Ω) (v dv : ℝ^m × ℝ^n) :
   let L : ℝ^n →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ℝ) :=
     (u0D2 (y, 0)).comp (ContinuousLinearMap.inr ℝ ℝ^m ℝ^n)
   have hL : L v.2 = ∑ γ : Fin n, v.2 γ • L (e γ) := by
-    conv_lhs => rw [pi_sum_basis v.2]
-    rw [map_sum]
-    simp
+    simpa using (clm_apply_eq_sum_basis_of_dim (d := n) L v.2)
   calc
     u0D2 (y, 0) (0, v.2) (0, dv.2) = (L v.2) (0, dv.2) := rfl
     _ = (∑ γ : Fin n, v.2 γ • L (e γ)) (0, dv.2) := by rw [hL]
@@ -1756,13 +1778,9 @@ lemma u0D3_expand₁ (y : ℝ^m) (u v dv : ℝ^m × ℝ^n) :
   let Lw : ℝ^n →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ℝ)) :=
     (u0D3 (y, 0)).comp (ContinuousLinearMap.inr ℝ ℝ^m ℝ^n)
   have hx : Lx u.1 = ∑ i : Fin m, u.1 i • Lx (e i) := by
-    conv_lhs => rw [pi_sum_basis u.1]
-    rw [map_sum]
-    simp
+    simpa using (clm_apply_eq_sum_basis_of_dim (d := m) Lx u.1)
   have hw : Lw u.2 = ∑ δ : Fin n, u.2 δ • Lw (e δ) := by
-    conv_lhs => rw [pi_sum_basis u.2]
-    rw [map_sum]
-    simp
+    simpa using (clm_apply_eq_sum_basis_of_dim (d := n) Lw u.2)
   calc
     u0D3 (y, 0) u v dv = u0D3 (y, 0) ((u.1, 0) + (0, u.2)) v dv := by rw [prod_vec_split]
     _ = (u0D3 (y, 0) (u.1, 0) + u0D3 (y, 0) (0, u.2)) v dv := by rw [map_add]
@@ -1783,13 +1801,9 @@ lemma u0D3_expand₂ (y : ℝ^m) (u v dv : ℝ^m × ℝ^n) :
   let Lw : ℝ^n →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ℝ) :=
     (u0D3 (y, 0) u).comp (ContinuousLinearMap.inr ℝ ℝ^m ℝ^n)
   have hx : Lx v.1 = ∑ i : Fin m, v.1 i • Lx (e i) := by
-    conv_lhs => rw [pi_sum_basis v.1]
-    rw [map_sum]
-    simp
+    simpa using (clm_apply_eq_sum_basis_of_dim (d := m) Lx v.1)
   have hw : Lw v.2 = ∑ ζ : Fin n, v.2 ζ • Lw (e ζ) := by
-    conv_lhs => rw [pi_sum_basis v.2]
-    rw [map_sum]
-    simp
+    simpa using (clm_apply_eq_sum_basis_of_dim (d := n) Lw v.2)
   calc
     u0D3 (y, 0) u v dv = u0D3 (y, 0) u ((v.1, 0) + (0, v.2)) dv := by rw [prod_vec_split]
     _ = (u0D3 (y, 0) u (v.1, 0) + u0D3 (y, 0) u (0, v.2)) dv := by rw [map_add]
@@ -1810,13 +1824,9 @@ lemma u0D3_expand₃ (y : ℝ^m) (u v dv : ℝ^m × ℝ^n) :
   let Lw : ℝ^n →L[ℝ] ℝ :=
     ((u0D3 (y, 0) u v).comp (ContinuousLinearMap.inr ℝ ℝ^m ℝ^n))
   have hx : Lx dv.1 = ∑ i : Fin m, dv.1 i • Lx (e i) := by
-    conv_lhs => rw [pi_sum_basis dv.1]
-    rw [map_sum]
-    simp
+    simpa using (clm_apply_eq_sum_basis_of_dim (d := m) Lx dv.1)
   have hw : Lw dv.2 = ∑ η : Fin n, dv.2 η • Lw (e η) := by
-    conv_lhs => rw [pi_sum_basis dv.2]
-    rw [map_sum]
-    simp
+    simpa using (clm_apply_eq_sum_basis_of_dim (d := n) Lw dv.2)
   calc
     u0D3 (y, 0) u v dv = u0D3 (y, 0) u v ((dv.1, 0) + (0, dv.2)) := by rw [prod_vec_split]
     _ = u0D3 (y, 0) u v (dv.1, 0) + u0D3 (y, 0) u v (0, dv.2) := by rw [map_add]
@@ -2167,13 +2177,9 @@ lemma u1D2_fst_snd_basis (y : ℝ^m) (v : ℝ^m) (α : Fin n) :
     funext x'
     rw [u1D1_snd]
   rw [hfun]
-  have hv : v = ∑ i : Fin m, v i • e i := pi_sum_basis v
-  have hL := congrArg (fun w : ℝ^m => (fderiv ℝ (fun x' : ℝ^m => u1W x' 0 (e α)) y) w) hv
-  change (fun w : ℝ^m => (fderiv ℝ (fun x' : ℝ^m => u1W x' 0 (e α)) y) w) v = _
-  rw [hL]
-  change (fderiv ℝ (fun x' : ℝ^m => u1W x' 0 (e α)) y) (∑ i : Fin m, v i • e i) = _
-  rw [map_sum]
-  simp [u1XW, smul_eq_mul]
+  simpa [u1XW, smul_eq_mul] using
+    (clm_apply_eq_sum_basis_of_dim (d := m)
+      (fderiv ℝ (fun x' : ℝ^m => u1W x' 0 (e α)) y) v)
 
 omit [CoordChangeAssumptions] in
 /-- The mixed `x` then `w` second derivative of `u1Prod` at `(y,0)`. -/
@@ -2181,17 +2187,7 @@ lemma u1D2_fst_snd_at_zero (y : ℝ^m) (v : ℝ^m) (ζ : ℝ^n) :
     u1D2 (y, 0) (v, 0) (0, ζ) =
       ∑ i : Fin m, ∑ α : Fin n, u1XW y i α * ζ α * v i := by
   have hpair : ((0 : ℝ^m), ζ) = ∑ α : Fin n, ζ α • ((0 : ℝ^m), e α) := by
-    apply Prod.ext
-    · funext j
-      change (0 : ℝ) = (ContinuousLinearMap.fst ℝ ℝ^m ℝ^n
-        (∑ α : Fin n, ζ α • ((0 : ℝ^m), e α))) j
-      rw [map_sum]
-      simp
-    · funext j
-      change ζ j = (ContinuousLinearMap.snd ℝ ℝ^m ℝ^n
-        (∑ α : Fin n, ζ α • ((0 : ℝ^m), e α))) j
-      rw [map_sum]
-      simp [e, Pi.single_apply]
+    simpa using congrArg (ContinuousLinearMap.inr ℝ ℝ^m ℝ^n) (pi_sum_basis ζ)
   calc
     u1D2 (y, 0) (v, 0) (0, ζ) =
         u1D2 (y, 0) (v, 0) (∑ α : Fin n, ζ α • (0, e α)) := by rw [hpair]
@@ -2236,9 +2232,7 @@ lemma u1D2_at_zero (y : ℝ^m) (hy : y ∈ cca.Ω)
     let L : ℝ^n →L[ℝ] ((ℝ^m × ℝ^n) →L[ℝ] ℝ) :=
       (u1D2 (y, 0)).comp (ContinuousLinearMap.inr ℝ ℝ^m ℝ^n)
     have hL : L v.2 = ∑ γ : Fin n, v.2 γ • L (e γ) := by
-      conv_lhs => rw [pi_sum_basis v.2]
-      rw [map_sum]
-      simp
+      simpa using (clm_apply_eq_sum_basis_of_dim (d := n) L v.2)
     calc
       u1D2 (y, 0) (0, v.2) (0, dv.2) = (L v.2) (0, dv.2) := rfl
       _ = (∑ γ : Fin n, v.2 γ • L (e γ)) (0, dv.2) := by rw [hL]
@@ -2617,30 +2611,12 @@ abbrev v0B (y : ℝ^m) (z : ℝ^n) : ℝ := u0Prod (coordG y z)
 /-- Smoothness at `z=0` of the `z`-slice of `φ` at fixed `y`. -/
 lemma phi_z_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) :
     ContDiffAt ℝ ⊤ (φc y) 0 := by
-  have hopen : IsOpen (cca.Ω ×ˢ (B (d := n) cca.r1)) :=
-    cca.Ω_open.prod (isOpen_B (d := n) cca.r1)
-  have hmem : (y, (0 : ℝ^n)) ∈ cca.Ω ×ˢ (B (d := n) cca.r1) := by
-    refine ⟨hy, ?_⟩
-    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
-  have hφat : ContDiffAt ℝ ⊤ cca.φ (y, 0) :=
-    cca.φ_smooth.contDiffAt (hopen.mem_nhds hmem)
-  have hslice : Smooth (fun z : ℝ^n => (y, z)) on (Set.univ : Set ℝ^n) :=
-    (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) y).contDiffOn
-  simpa [φc, Function.comp_def] using hφat.comp 0 (hslice.contDiffAt (by simp))
+  simpa [φc] using contDiffAt_slice_z cca.φ cca.φ_smooth y hy
 
 /-- Smoothness at `z=0` of the `z`-slice of `Υ` at fixed `y`. -/
 lemma upsilon_z_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) :
     ContDiffAt ℝ ⊤ (Υc y) 0 := by
-  have hopen : IsOpen (cca.Ω ×ˢ (B (d := n) cca.r1)) :=
-    cca.Ω_open.prod (isOpen_B (d := n) cca.r1)
-  have hmem : (y, (0 : ℝ^n)) ∈ cca.Ω ×ˢ (B (d := n) cca.r1) := by
-    refine ⟨hy, ?_⟩
-    simpa [B, BrendleHung.Section2.Multivar.norm] using cca.r1_pos
-  have hΥat : ContDiffAt ℝ ⊤ cca.Υ (y, 0) :=
-    cca.Υ_smooth.contDiffAt (hopen.mem_nhds hmem)
-  have hslice : Smooth (fun z : ℝ^n => (y, z)) on (Set.univ : Set ℝ^n) :=
-    (contDiff_prodMk_right (𝕜 := ℝ) (n := ⊤) y).contDiffOn
-  simpa [Υc, Function.comp_def] using hΥat.comp 0 (hslice.contDiffAt (by simp))
+  simpa [Υc] using contDiffAt_slice_z cca.Υ cca.Υ_smooth y hy
 
 /-- Smoothness at `z=0` of the coordinate-change map `coordG y`. -/
 lemma coordG_smoothAt (y : ℝ^m) (hy : y ∈ cca.Ω) :
@@ -2702,26 +2678,26 @@ lemma zD3_v0B (y : ℝ^m) (hy : y ∈ cca.Ω) (α β γ : Fin n) :
       rw [coordG_zero y hy, u0D1_zero y hy]
       simp
 
+/-- The derivative of `coordG y` at `z = 0` splits into the two slice derivatives. -/
+private lemma fderiv_coordG_zero (y : ℝ^m) (hy : y ∈ cca.Ω) :
+    fderiv ℝ (coordG y) 0 =
+      (fderiv ℝ (φc y) 0).prod (fderiv ℝ (ψc y) 0) := by
+  have hφd := (phi_z_smoothAt y hy).differentiableAt (by simp)
+  have hψd := (CoordChangeAssumptions.psi_z_smoothAt y hy).differentiableAt (by simp)
+  simpa [coordG] using hφd.fderiv_prodMk hψd
+
 /-- First component of the first `z`-derivative of `coordG`. -/
 lemma dG_coordG_fst (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
     (dG (coordG y) 0 α).1 = fderiv ℝ (φc y) 0 (e α) := by
-  have hφd := (phi_z_smoothAt y hy).differentiableAt (by simp)
-  have hψd := (CoordChangeAssumptions.psi_z_smoothAt y hy).differentiableAt (by simp)
-  have hprod : fderiv ℝ (coordG y) 0 =
-      (fderiv ℝ (φc y) 0).prod (fderiv ℝ (ψc y) 0) := by
-    simpa [coordG] using hφd.fderiv_prodMk hψd
-  have hval := congrArg (fun L : ℝ^n →L[ℝ] (ℝ^m × ℝ^n) => L (e α)) hprod
+  have hval := congrArg (fun L : ℝ^n →L[ℝ] (ℝ^m × ℝ^n) => L (e α))
+    (fderiv_coordG_zero y hy)
   simpa [dG] using congrArg Prod.fst hval
 
 /-- Second component of the first `z`-derivative of `coordG`. -/
 lemma dG_coordG_snd (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
     (dG (coordG y) 0 α).2 = fderiv ℝ (ψc y) 0 (e α) := by
-  have hφd := (phi_z_smoothAt y hy).differentiableAt (by simp)
-  have hψd := (CoordChangeAssumptions.psi_z_smoothAt y hy).differentiableAt (by simp)
-  have hprod : fderiv ℝ (coordG y) 0 =
-      (fderiv ℝ (φc y) 0).prod (fderiv ℝ (ψc y) 0) := by
-    simpa [coordG] using hφd.fderiv_prodMk hψd
-  have hval := congrArg (fun L : ℝ^n →L[ℝ] (ℝ^m × ℝ^n) => L (e α)) hprod
+  have hval := congrArg (fun L : ℝ^n →L[ℝ] (ℝ^m × ℝ^n) => L (e α))
+    (fderiv_coordG_zero y hy)
   simpa [dG] using congrArg Prod.snd hval
 
 /-- Second component of the mixed second `z`-derivative of `coordG`. -/
@@ -2951,23 +2927,16 @@ lemma u1B_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : u1B y 0 = 0 := by
 /-- The first `z`-derivative of `u1B y` at zero. -/
 lemma zD1_u1B (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
     zD1 (u1B y) α = u1D1 (y, 0) (dG (coordG y) 0 α) := by
-  calc
-    zD1 (u1B y) α = u1D1 (coordG y 0) (dG (coordG y) 0 α) := by
-      simpa [u1B, zD1] using zD1_u1_comp_at (coordG y) 0 (coordG_smoothAt y hy) α
-    _ = u1D1 (y, 0) (dG (coordG y) 0 α) := by rw [coordG_zero y hy]
+  simpa [u1B, zD1, coordG_zero y hy] using
+    zD1_u1_comp_at (coordG y) 0 (coordG_smoothAt y hy) α
 
 /-- The second `z`-derivative of `u1B y` at zero. -/
 lemma zD2_u1B (y : ℝ^m) (hy : y ∈ cca.Ω) (α β : Fin n) :
     zD2 (u1B y) α β =
       u1D2 (y, 0) (dG (coordG y) 0 α) (dG (coordG y) 0 β) +
       u1D1 (y, 0) (d2G (coordG y) 0 α β) := by
-  calc
-    zD2 (u1B y) α β =
-        u1D2 (coordG y 0) (dG (coordG y) 0 α) (dG (coordG y) 0 β) +
-        u1D1 (coordG y 0) (d2G (coordG y) 0 α β) := by
-          simpa [u1B, zD2, d2G] using
-            zD2_u1_comp_at (coordG y) 0 (coordG_smoothAt y hy) α β
-    _ = _ := by rw [coordG_zero y hy]
+  simpa [u1B, zD2, d2G, coordG_zero y hy] using
+    zD2_u1_comp_at (coordG y) 0 (coordG_smoothAt y hy) α β
 
 /-- The first `z`-derivative of `u1B` in the coordinate basis. -/
 lemma zD1_u1B_expanded (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
@@ -3092,10 +3061,7 @@ omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Expand a continuous linear functional on `ℝ^m` in the standard basis. -/
 lemma clm_apply_eq_sum_basis_m (L : ℝ^m →L[ℝ] ℝ) (v : ℝ^m) :
     L v = ∑ i : Fin m, v i * L (e i) := by
-  have hv : v = ∑ i : Fin m, v i • e i := pi_sum_basis v
-  rw [hv]
-  simp [e, Finset.sum_apply, Pi.single_apply, Finset.mem_univ, map_sum, map_smul,
-    smul_eq_mul]
+  simpa [smul_eq_mul] using (clm_apply_eq_sum_basis_of_dim (d := m) L v)
 
 omit [CoordChangeAssumptions] in
 /-- Expand a derivative of `u2(·,0)` in the standard basis of `ℝ^m`. -/
@@ -3132,10 +3098,8 @@ lemma u2B_zero (y : ℝ^m) (hy : y ∈ cca.Ω) : u2B y 0 = asm.u2 y 0 := by
 /-- The first `z`-derivative of `u2B y` at zero. -/
 lemma zD1_u2B (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
     zD1 (u2B y) α = u2D1 (y, 0) (dG (coordG y) 0 α) := by
-  calc
-    zD1 (u2B y) α = u2D1 (coordG y 0) (dG (coordG y) 0 α) := by
-      simpa [u2B, zD1] using zD1_u2_comp_at (coordG y) 0 (coordG_smoothAt y hy) α
-    _ = u2D1 (y, 0) (dG (coordG y) 0 α) := by rw [coordG_zero y hy]
+  simpa [u2B, zD1, coordG_zero y hy] using
+    zD1_u2_comp_at (coordG y) 0 (coordG_smoothAt y hy) α
 
 /-- The first `z`-derivative of `u2B` in the coordinate basis. -/
 lemma zD1_u2B_expanded (y : ℝ^m) (hy : y ∈ cca.Ω) (α : Fin n) :
@@ -3217,20 +3181,15 @@ lemma v0Hessian_eq (y : ℝ^m) (hy : y ∈ cca.Ω) :
   change zD2 (ccd.v0 y) α β =
     Υc y 0 * ((zJacobian cca.ψ y)ᴴ * u0WW y 0 * zJacobian cca.ψ y) α β
   rw [zD2_v0_expanded y hy α β]
-  have hR : Υc y 0 * ((zJacobian cca.ψ y)ᴴ * u0WW y 0 * zJacobian cca.ψ y) α β =
-      ∑ δ : Fin n, ∑ γ : Fin n,
-        Υc y 0 * u0WW y 0 γ δ * zD1 (ψc y) α γ * zD1 (ψc y) β δ := by
-    simp only [Matrix.mul_apply, Matrix.conjTranspose_apply, star_trivial]
-    rw [Finset.mul_sum]
-    apply Finset.sum_congr rfl
-    intro δ _
-    rw [Finset.sum_mul, Finset.mul_sum]
-    apply Finset.sum_congr rfl
-    intro γ _
-    rw [zJacobian_psi_apply y hy γ α, zJacobian_psi_apply y hy δ β]
-    ring
-  conv_lhs => rw [Finset.sum_comm]
-  exact hR.symm
+  simp only [Matrix.mul_apply, Matrix.conjTranspose_apply, star_trivial]
+  rw [Finset.sum_comm]
+  simp_rw [Finset.sum_mul, Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro δ _
+  apply Finset.sum_congr rfl
+  intro γ _
+  rw [zJacobian_psi_apply y hy γ α, zJacobian_psi_apply y hy δ β]
+  ring
 
 /-- The Hessian of `v0` in the `z` variables is positive definite. -/
 lemma v0Hessian_posDef (y : ℝ^m) (hy : y ∈ cca.Ω) : (v0Hessian y).PosDef := by
@@ -3243,14 +3202,7 @@ lemma v0Hessian_posDef (y : ℝ^m) (hy : y ∈ cca.Ω) : (v0Hessian y).PosDef :=
     Matrix.mulVec_injective_of_isUnit hJunit
   have hcong : ((zJacobian cca.ψ y)ᴴ * u0WW y 0 * zJacobian cca.ψ y).PosDef :=
     (u0WWAtZero y (B_subset_D (cca.Ω_subset_B hy))).conjTranspose_mul_mul_same hJinj
-  have hscaled : (Υc y 0 • ((zJacobian cca.ψ y)ᴴ * u0WW y 0 * zJacobian cca.ψ y)).PosDef := by
-    refine Matrix.PosDef.of_dotProduct_mulVec_pos
-      (hcong.isHermitian.smul (IsSelfAdjoint.of_nonneg hΥpos.le)) ?_
-    intro x hx
-    simpa [Matrix.smul_mulVec, dotProduct_smul, smul_eq_mul] using
-      mul_pos hΥpos (hcong.dotProduct_mulVec_pos hx)
-  rw [v0Hessian_eq y hy]
-  exact hscaled
+  simpa [v0Hessian_eq y hy] using hcong.smul hΥpos
 
 omit [InitialAssumptions] [CoordChangeAssumptions] in
 /-- Swap the last two summations of a triple finite sum. -/
@@ -4415,8 +4367,6 @@ lemma v1_barz_quad (y : ℝ^m) (hy : y ∈ cca.Ω) :
     + 2 * (∑ α : Fin n, ∑ γ : Fin n,
         zD1 (Υc y) α * u1W y 0 (e γ) * barz y α * bud.barw y γ) := by
   classical
-  have hmain := barz_psi_quad_contract
-    (fun γ δ => Υc y 0 * u1WW y 0 γ δ) y hy
   have hmain' :
       (∑ α : Fin n, ∑ β : Fin n,
         (∑ γ : Fin n, ∑ δ : Fin n,
@@ -4424,28 +4374,8 @@ lemma v1_barz_quad (y : ℝ^m) (hy : y ∈ cca.Ω) :
           barz y α * barz y β)
         = ∑ γ : Fin n, ∑ δ : Fin n,
             Υc y 0 * u1WW y 0 γ δ * bud.barw y γ * bud.barw y δ := by
-    calc
-      (∑ α : Fin n, ∑ β : Fin n,
-        (∑ γ : Fin n, ∑ δ : Fin n,
-          Υc y 0 * (u1WW y 0 γ δ * zD1 (ψc y) α γ * zD1 (ψc y) β δ)) *
-          barz y α * barz y β)
-          = ∑ α : Fin n, ∑ β : Fin n,
-              (∑ γ : Fin n, ∑ δ : Fin n,
-                (Υc y 0 * u1WW y 0 γ δ) *
-                  zD1 (ψc y) α γ * zD1 (ψc y) β δ) *
-                barz y α * barz y β := by
-            apply Finset.sum_congr rfl
-            intro α _
-            apply Finset.sum_congr rfl
-            intro β _
-            apply congrArg (fun t : ℝ => t * barz y α * barz y β)
-            apply Finset.sum_congr rfl
-            intro γ _
-            apply Finset.sum_congr rfl
-            intro δ _
-            ring
-      _ = ∑ γ : Fin n, ∑ δ : Fin n,
-            Υc y 0 * u1WW y 0 γ δ * bud.barw y γ * bud.barw y δ := hmain
+    simpa [mul_assoc] using
+      (barz_psi_quad_contract (fun γ δ => Υc y 0 * u1WW y 0 γ δ) y hy)
   have hS := v1S_barz_full y hy
   have hSsymm := v1S_barz_symm y hy
   conv =>
@@ -4799,34 +4729,13 @@ lemma U2_Upsilon_barz_contract (y : ℝ^m) (hy : y ∈ cca.Ω) :
           (∑ α : Fin n, u1W y 0 (e α) * bud.barw y α)) * barz y γ)
         = (1 / 2 : ℝ) * (∑ α : Fin n, ∑ γ : Fin n,
             zD1 (Υc y) γ * u1W y 0 (e α) * bud.barw y α * barz y γ) := by
-    calc
-      (∑ γ : Fin n, zD1 (Υc y) γ * ((1 / 2 : ℝ) *
-          (∑ α : Fin n, u1W y 0 (e α) * bud.barw y α)) * barz y γ)
-          = ∑ γ : Fin n, (1 / 2 : ℝ) *
-              (zD1 (Υc y) γ * (∑ α : Fin n,
-                u1W y 0 (e α) * bud.barw y α) * barz y γ) := by
-            apply Finset.sum_congr rfl
-            intro γ _
-            ring
-      _ = (1 / 2 : ℝ) * (∑ γ : Fin n,
-              zD1 (Υc y) γ * (∑ α : Fin n,
-                u1W y 0 (e α) * bud.barw y α) * barz y γ) := by
-            rw [← Finset.mul_sum]
-      _ = (1 / 2 : ℝ) * (∑ γ : Fin n, ∑ α : Fin n,
-              zD1 (Υc y) γ * (u1W y 0 (e α) * bud.barw y α) * barz y γ) := by
-            congr 1
-            apply Finset.sum_congr rfl
-            intro γ _
-            simp_rw [Finset.mul_sum, Finset.sum_mul]
-      _ = (1 / 2 : ℝ) * (∑ α : Fin n, ∑ γ : Fin n,
-              zD1 (Υc y) γ * u1W y 0 (e α) * bud.barw y α * barz y γ) := by
-            congr 1
-            rw [Finset.sum_comm]
-            apply Finset.sum_congr rfl
-            intro α _
-            apply Finset.sum_congr rfl
-            intro γ _
-            ring
+    simp_rw [Finset.mul_sum, Finset.sum_mul]
+    conv_lhs => rw [Finset.sum_comm]
+    apply Finset.sum_congr rfl
+    intro α _
+    apply Finset.sum_congr rfl
+    intro γ _
+    ring
   simp only [mul_add, add_mul, Finset.sum_add_distrib]
   rw [hhalf]
 
@@ -4993,13 +4902,7 @@ lemma upsilon_y0_pos (y : ℝ^m) (hy : y ∈ cca.Ω) : 0 < Υc y 0 := by
 /-- Smoothness in `y` of `Υ(y,0)` for `y ∈ Ω`. -/
 lemma upsilon_y0_contDiffAt (y : ℝ^m) (hy : y ∈ cca.Ω) :
     ContDiffAt ℝ ⊤ (fun y' : ℝ^m => Υc y' 0) y := by
-  have hopen : IsOpen (cca.Ω ×ˢ (B (d := n) cca.r1)) :=
-    cca.Ω_open.prod (isOpen_B (d := n) cca.r1)
-  have hmem : (y, (0 : ℝ^n)) ∈ cca.Ω ×ˢ (B (d := n) cca.r1) := ⟨hy, zero_mem_B_r1⟩
-  have hΥat : ContDiffAt ℝ ⊤ cca.Υ (y, 0) :=
-    cca.Υ_smooth.contDiffAt (hopen.mem_nhds hmem)
-  have hslice : ContDiffAt ℝ ⊤ (fun y' : ℝ^m => (y', (0 : ℝ^n))) y := by fun_prop
-  simpa [Υc, Function.comp_def] using hΥat.comp y hslice
+  simpa [Υc] using contDiffAt_slice_y cca.Υ cca.Υ_smooth y hy
 
 /-- The derivative of `y' ↦ Υ(y',0) * U2(y')` at an admissible parameter. -/
 lemma fderiv_upsilon0_mul_U2 (y : ℝ^m) (hy : y ∈ cca.Ω) (hyD : inBounds y) :

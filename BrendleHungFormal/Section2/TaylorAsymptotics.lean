@@ -26,16 +26,13 @@ abbrev taylorRemainderZero
 abbrev taylorRemainderOne
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F
-:=
-  fun z => φ z - φ 0 - fderiv ℝ φ 0 z
+:= fun z => φ z - φ 0 - fderiv ℝ φ 0 z
 
 /-- The second-order Taylor remainder of `φ` at zero. -/
 abbrev taylorRemainderTwo
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F] (φ : E → F) : E → F
-:=
-  fun z => φ z - φ 0 - fderiv ℝ φ 0 z -
-    (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z
+:= fun z => φ z - φ 0 - fderiv ℝ φ 0 z - (1 / 2 : ℝ) • fderiv ℝ (fderiv ℝ φ) 0 z z
 
 /-- The third-order Taylor remainder of `φ` at zero. -/
 abbrev taylorRemainderThree
@@ -112,8 +109,7 @@ lemma bigO_of_fderiv_bound_pow
       rw [Real.norm_of_nonneg (pow_nonneg (norm_nonneg _) _), hdist]
       ring
 
-/-- A first-order Taylor estimate with remainder `O(‖z‖²)`, assuming only
-smoothness at the base point. -/
+/-- A first-order Taylor estimate with remainder `O(‖z‖²)`, assuming only smoothness at the base point. -/
 lemma taylor_one_isBigO_of_contDiffAt
     {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [NormedAddCommGroup F] [NormedSpace ℝ F]
