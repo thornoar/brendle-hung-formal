@@ -8,7 +8,7 @@ open scoped BigOperators Matrix Topology Manifold ContDiff
 
 section BrendleHung.Section2
 
-variable [InitialAssumptions] [CoordChangeAssumptions]
+variable [InitialAssumptionsInst] [CoordChangeAssumptionsInst]
 
 open BrendleHung.Section2.Multivar
 open BrendleHung.Section2.TaylorAsymptotics
@@ -20,7 +20,7 @@ local notation "↓" f => uncurry f
 
 noncomputable section
 
-omit [CoordChangeAssumptions] in
+omit [CoordChangeAssumptionsInst] in
 /-- Main result: `U` has a third-order expansion with locally bounded remainder on `B r0`. -/
 theorem expansion_of_U :
   ∃ s0 : ℝ, s0 > 0 ∧
@@ -528,7 +528,7 @@ open Function Filter
 open BrendleHung.Section2
 open BrendleHung.Section2.Multivar
 
-variable [InitialAssumptions] [CoordChangeAssumptions]
+variable [InitialAssumptionsInst] [CoordChangeAssumptionsInst]
 
 /-- The coordinate model of the submanifold `𝒵` (dimension `m`). -/
 abbrev modelZ := 𝓘(ℝ, Fin m → ℝ)
@@ -541,12 +541,12 @@ abbrev modelR := 𝓘(ℝ, ℝ)
 
 /-- Promote Euclidean Section 2 data to the typeclasses used by the
  Euclidean results. -/
-@[reducible] def localA (a : InitialAssumptions) : InitialAssumptions :=
-  InitialAssumptions.mk a
+@[reducible] def localA (a : InitialAssumptions) : InitialAssumptionsInst :=
+  InitialAssumptionsInst.mk a
 
 @[reducible] def localC (a : InitialAssumptions) (c : @CoordChangeAssumptions (localA a)) :
-    @CoordChangeAssumptions (localA a) :=
-  @CoordChangeAssumptions.mk (localA a) c
+    @CoordChangeAssumptionsInst (localA a) :=
+  @CoordChangeAssumptionsInst.mk (localA a) c
 
 /-- Explicit projections from chart data with its own Euclidean instance. -/
 abbrev Ωof (a : InitialAssumptions) (c : @CoordChangeAssumptions (localA a)) : Set (Fin m → ℝ) :=
@@ -567,7 +567,7 @@ abbrev V3_of (a : InitialAssumptions) (c : @CoordChangeAssumptions (localA a))
     (y : Fin m → ℝ) : ℝ := @V3 (localA a) (localC a c) y
 
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
+omit [InitialAssumptionsInst] [CoordChangeAssumptionsInst] in
 /-- The scalar factor `Υ(y,0)` with explicit Euclidean data. -/
 abbrev Υc_of (a : InitialAssumptions) (c : @CoordChangeAssumptions (localA a))
     (y : Fin m → ℝ) (z : Fin n → ℝ) : ℝ := @Υc (localA a) (localC a c) y z
@@ -580,11 +580,11 @@ abbrev budU2_of (a : InitialAssumptions) (y : Fin m → ℝ) : ℝ := (@bud (loc
 
 abbrev budU3_of (a : InitialAssumptions) (y : Fin m → ℝ) : ℝ := (@bud (localA a)).U3 y
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
+omit [InitialAssumptionsInst] [CoordChangeAssumptionsInst] in
 lemma Υc_of_eq (a : InitialAssumptions) (c : @CoordChangeAssumptions (localA a))
     (y : Fin m → ℝ) (z : Fin n → ℝ) : Υc_of a c y z = Υof a c (y, z) := rfl
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
+omit [InitialAssumptionsInst] [CoordChangeAssumptionsInst] in
 /-- Smoothness of the local third-order coefficient on its coordinate ball. -/
 lemma budU3_of_smoothOn_D (a : InitialAssumptions) :
     ContMDiffOn modelZ modelR (⊤ : WithTop ℕ∞) (budU3_of a) (D (d := m) a.r0) := by
@@ -592,7 +592,7 @@ lemma budU3_of_smoothOn_D (a : InitialAssumptions) :
     (contMDiffOn_iff_contDiffOn.mpr
       (@bud_U3_smoothOn_D (localA a)))
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
+omit [InitialAssumptionsInst] [CoordChangeAssumptionsInst] in
 /-- The Euclidean invariance proposition applied to explicit local data. -/
 lemma invariance_local (a : InitialAssumptions) (c : @CoordChangeAssumptions (localA a))
     (Λe : Set (Fin m → ℝ)) (hΛeΩ : Λe ⊆ Ωof a c)
@@ -603,32 +603,32 @@ lemma invariance_local (a : InitialAssumptions) (c : @CoordChangeAssumptions (lo
   simpa [V2_of, V3_of, Υc_of, budU3_of, localC] using
     (@invariance (localA a) (localC a c) Λe hΛeΩ hcrit)
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
+omit [InitialAssumptionsInst] [CoordChangeAssumptionsInst] in
 /-- The origin belongs to the normal-coordinate ball of a chart. -/
 lemma zero_mem_B_r1_of (a : InitialAssumptions) (c : @CoordChangeAssumptions (localA a)) :
     (0 : Fin n → ℝ) ∈ B (d := n) (r1of a c) := by
   simpa [B, BrendleHung.Section2.Multivar.norm] using
     (@CoordChangeAssumptions.r1_pos (localA a) c)
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
+omit [InitialAssumptionsInst] [CoordChangeAssumptionsInst] in
 /-- Positivity of `Υ(y,0)` with explicit local data. -/
 lemma upsilon_y0_pos_of (a : InitialAssumptions) (c : @CoordChangeAssumptions (localA a))
     (y : Fin m → ℝ) (hy : y ∈ Ωof a c) : 0 < Υc_of a c y 0 := by
   simpa [Υc_of, localC] using
     (@upsilon_y0_pos (localA a) (localC a c) y hy)
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
+omit [InitialAssumptionsInst] [CoordChangeAssumptionsInst] in
 /-- The reduced function is bounded above by every admissible trial value. -/
 lemma budU_of_le_u (a : InitialAssumptions)
     (y : Fin m → ℝ) (s : ℝ) (w : Fin n → ℝ)
     (hw : w ∈ D (d := n) (a.r0)) :
     budU_of a y s ≤ a.u y w s := by
-  letI : InitialAssumptions := localA a
+  letI : InitialAssumptionsInst := localA a
   rcases (@exists_minimizer (localA a) y s) with ⟨w0, hw0, hmin, hU⟩
   rw [show budU_of a y s = a.u y w0 s by simpa [budU_of] using hU]
   exact hmin hw
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
+omit [InitialAssumptionsInst] [CoordChangeAssumptionsInst] in
 /-- The Euclidean positivity corollary applied to explicit local data. -/
 lemma positivity_local
     (a : InitialAssumptions) (c : @CoordChangeAssumptions (localA a))
@@ -801,7 +801,7 @@ end BrendleHung.Section2.Manifold
 
 namespace BrendleHung.Section2
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
+omit [InitialAssumptionsInst] [CoordChangeAssumptionsInst] in
 /-- The paper's Theorem `smooth.extension`.  On the critical set `Λ`, the
 rescaled third-order coefficient `Υ(·,0)⁻¹ V⁽³⁾` is the restriction of a
 smooth function on the whole submanifold `𝒵`. -/
@@ -829,8 +829,8 @@ theorem smooth_extension
         ∀ y ∈ U, g y ∈ t y := by
     intro z
     let ch : Manifold.Chart (N := N) (Z := Z) S z := charts z
-    letI : InitialAssumptions := Manifold.localA ch.a
-    letI : CoordChangeAssumptions := Manifold.localC ch.a ch.c
+    letI : InitialAssumptionsInst := Manifold.localA ch.a
+    letI : CoordChangeAssumptionsInst := Manifold.localC ch.a ch.c
     let Λe : Set (Fin m → ℝ) :=
       {y | ch.inverse y ∈ S.Λ} ∩ Manifold.Ωof ch.a ch.c
     have hΛeΩ : Λe ⊆ Manifold.Ωof ch.a ch.c := fun y hy => hy.2
@@ -885,7 +885,7 @@ theorem smooth_extension
   have hzmem : F z ∈ ({ratio z} : Set ℝ) := by simpa [t, hz] using hF z
   exact (Set.mem_singleton_iff.mp hzmem).symm
 
-omit [InitialAssumptions] [CoordChangeAssumptions] in
+omit [InitialAssumptionsInst] [CoordChangeAssumptionsInst] in
 /-- The paper's Theorem `positivity.manifold.version`.  Covering `𝒵` by
 finitely many charts and applying the Euclidean positivity corollary on each
 chart yields positivity of `inf u(·,s)` over `𝒩` for small positive `s`. -/
