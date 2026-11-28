@@ -14,6 +14,7 @@
   inset: (left: 8pt, bottom: 10pt, top: 1pt),
 )
 #set heading(numbering: "1.")
+#show link: set text(blue)
 
 #outline()
 
@@ -365,3 +366,22 @@ theorem positivity_manifold_version
 These two theorems require an extensive set of helper lemmas that we have implemented separately.
 
 = Conclusion
+
+The entire project contains 6270 lines of Lean code, which is a lot.
+For most intermediate results and helper lemmas, we have used AI to construct proofs.
+The combination of AI and formal verification is very powerful, because there is no chance of damage by hallucination.
+If an AI agent writes a proof, the Lean compiler can check its correctness, and reject it if it contains any errors.
+It means that the human need only write the _type signature_ of a proof (that is, to specify the proposition being proved), and let the AI fill in the proof details.
+And there is usually a lot of details, since proofs in Lean are maximally rigorous.
+For example, the fact that $a <= b$ and $b <= c$ imply $a <= c$ needs to be explicitly used in Lean, and it takes up at least one line in a Lean proof.
+
+You can see that the formalized statements are in fact more general than the statements in the original paper.
+For example, `smooth_extension` does not actually require $cal(N)$ to be a smooth manifold, but only a metric space.
+Since this statement is formally verified, we can conclude that the assumption that $cal(N)$ is a smooth manifold is in fact unnecessary.
+
+We recognize that the effort will be most valuable if the entire paper by Brendle and Hung is formalized, and we leave this work for the future.
+The current project is open-source and available on GitHub: #link("https://github.com/thornoar/brendle-hung-formal").
+
+= Acknowledgements
+
+I would like to thank my supervisor, professor Frederick Tsz-Ho Fong, for suggesting this topic to me and causing me to engage with Riemannian geometry.

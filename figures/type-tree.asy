@@ -1,7 +1,7 @@
 import smoothmanifold;
 
 defaultpen(fontsize(11pt));
-size(10cm);
+size(13.2cm, 8cm, keepAspect = false);
 
 config.smooth.nodesize = 0.8;
 
