@@ -30,7 +30,7 @@ class InitialDefinitions where
 
 /-- Hypotheses on the initial data: positivity, smoothness, normalization,
 a quadratic lower bound, and a smooth third-order expansion. -/
-structure InitialAssumptions extends InitialDefinitions where
+class InitialAssumptions extends InitialDefinitions where
   hr0 : r0 > 0
   hs0 : s0 > 0
   hσ : σ > 0
@@ -50,14 +50,10 @@ structure InitialAssumptions extends InitialDefinitions where
           (↓u0) (↓u1) (↓u2) (↓u3)
           (↓u)
 
-/-- The Section 2 hypotheses are a typeclass so that the Euclidean results can
- later be applied to different local coordinate charts. -/
-class InitialAssumptionsInst extends InitialAssumptions
-
 /-- The active choice of the Section 2 hypotheses. -/
-abbrev asm [i : InitialAssumptionsInst] : InitialAssumptionsInst := i
+abbrev asm [i : InitialAssumptions] : InitialAssumptions := i
 
-variable [InitialAssumptionsInst]
+variable [InitialAssumptions]
 
 /-- The closed coordinate ball used as the domain for parameters and `w` variables. -/
 abbrev inBounds {m : ℕ} (x : ℝ^m) : Prop
@@ -125,7 +121,7 @@ noncomputable def zJacobian (F : ℝ^m × ℝ^n → ℝ^n) (y : ℝ^m) : Matrix 
 := Matrix.of fun β α => fderiv ℝ (fun z : ℝ^n => F (y, z) β) 0 (e α : ℝ^n)
 
 /-- Locally smooth coordinate changes and the invertibility hypothesis from Section 2. -/
-structure CoordChangeAssumptions where
+class CoordChangeAssumptions [InitialAssumptions] where
   Ω : Set ℝ^m
   Ω_open : IsOpen Ω
   Ω_subset_B : Ω ⊆ B asm.r0
@@ -148,13 +144,10 @@ structure CoordChangeAssumptions where
 
   ψ_jacobian_inv : ∀ y, y ∈ Ω → IsUnit (zJacobian ψ y)
 
-/-- The Section 2 coordinate-change hypotheses are a typeclass as well. -/
-class CoordChangeAssumptionsInst extends CoordChangeAssumptions
-
 /-- The active choice of the Section 2 coordinate-change hypotheses. -/
-abbrev cca [i : CoordChangeAssumptionsInst] : CoordChangeAssumptionsInst := i
+abbrev cca [i : CoordChangeAssumptions] : CoordChangeAssumptions := i
 
-variable [CoordChangeAssumptionsInst]
+variable [CoordChangeAssumptions]
 
 /-- The four rescaled functions `v^(0)`, `v^(1)`, `v^(2)`, and `v^(3)`
 introduced in Section 2 after the coordinate change. -/

@@ -63,3 +63,5 @@ This has multiple benefits:
 - Formalization means, in particular, that all assumptions made to prove a result are explicitly stated. We may then reduce these assumptions by removing redundancies, and try to generalize the arguments made in the paper.
 
 We will begin with an overview of how dependent types and proof assistants work.
+
+= Type theory and proof assistants
